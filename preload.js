@@ -11,7 +11,7 @@ const APP = {
 let con = document.getElementById("debug-console");
 let scrolled = false;
 
-ipcRenderer.on("print", (event, message) => {
+ipcRenderer.on("print", (event, message, level) => {
   if (!con) {
     con = document.getElementById("debug-console");
   }
@@ -19,7 +19,11 @@ ipcRenderer.on("print", (event, message) => {
     document.addEventListener("scroll", () => {
       scrolled = true;
     });
-    con.textContent += message;
+    if (con.childNodes.length > 10000) con.remove(con.firstChild);
+    const text = document.createElement("SPAN");
+    text.textContent = message;
+    text.className = level;
+    con.appendChild(text);
     if (
       scrolled &&
       window.scrollY >= con.scrollHeight - window.innerHeight - 20

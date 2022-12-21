@@ -1,13 +1,31 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const fs = require("fs");
 const path = require("path");
-const { debug } = require("./debug");
+const { log } = require("./debug");
 
-let mainWin, debugWin;
+let mainWin, debugWin, config;
+
+/*
+Config options:
+scale: 1 is default, scales the application window
+debug: whether debug statements will be logged
+*/
+try {
+  config = JSON.parse(fs.readFileSync("./config.json"));
+  log.useDebug = config.debug;
+} catch (err) {
+  log.err("error");
+}
+
+log.debug("config loaded");
 
 const createWindow = () => {
+  let scale = config && config.scale ? config.scale : 1;
+  const width = 1200,
+    height = 800;
   mainWin = new BrowserWindow({
-    width: 1200,
-    height: 600,
+    width: width * scale,
+    height: height * scale,
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
@@ -32,16 +50,18 @@ const createDebug = () => {
     },
   });
 
-  debug.setWin(debugWin);
+  log.setWin(debugWin);
 
   debugWin.loadFile("src/debug/debug.html");
 
-  debugWin.webContents.openDevTools({ mode: "detach" });
+  debugWin.once("close", () => {
+    log.removeWin();
+  });
 };
 
 app.whenReady().then(() => {
-  //createWindow();
-  createDebug();
+  createWindow();
+  //createDebug();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -57,22 +77,17 @@ app.on("window-all-closed", () => {
 
 //window control
 ipcMain.on("close", () => {
-  win.close();
+  mainWin.close();
 });
 
 ipcMain.on("minimize", () => {
-  win.minimize();
+  mainWin.minimize();
 });
 
 ipcMain.on("reload", async (event, args) => {
-  win.webContents.reloadIgnoringCache();
+  mainWin.webContents.reloadIgnoringCache();
 });
 
 ipcMain.on("dev-tools", (event, args) => {
-  win.webContents.openDevTools({ mode: "detach" });
+  mainWin.webContents.openDevTools({ mode: "detach" });
 });
-
-let counter = 0;
-setInterval(() => {
-  debug.println("test" + counter++);
-}, 100);

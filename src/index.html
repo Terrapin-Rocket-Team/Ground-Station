@@ -4,9 +4,93 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="./libraries/map/leaflet/main/leaflet.css" />
+    <script src="index.js"></script>
+    <script src="./libraries/color.js"></script>
     <title>Terp Rockets Ground Station</title>
   </head>
   <body>
-    Hello World
+    <div id="top-bar">
+      <div id="top-left">
+        <img src="" alt="Logo" />
+        <span>Terp Rockets Ground Station</span>
+      </div>
+      <div id="top-right">
+        <div class="dropdown inactive" id="serial-drop">
+          <span id="serial-selected">Select Port</span>
+          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
+          <div class="options" id="serial-options">
+            <span class="interval">Hour</span>
+          </div>
+        </div>
+        <!--
+            <img src="" alt="No Connection" id="connection" />
+            <span>Signal strength: <span id="signal-strength"></span></span>
+        -->
+        <button id="reload" class="top-button" title="Reload">
+          <img src="images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="images/close.svg" alt="Close" />
+        </button>
+      </div>
+    </div>
+    <div id="main">
+      <div id="diagrams">
+        <div id="diagram-bar">
+          <div id="switcher-box">
+            <div id="switcher-highlight"></div>
+            <span id="switcher-left">Graphs</span>
+            <span id="switcher-right">Map</span>
+          </div>
+        </div>
+        <div id="main-diagram">
+          <div id="chart-wrapper" class="diagram active">
+            Altitude
+            <canvas id="alt-graph" class="chart"></canvas>
+            Speed
+            <canvas id="spd-graph" class="chart"></canvas>
+          </div>
+          <div id="map-wrapper" class="diagram">
+            <div id="map"></div>
+          </div>
+        </div>
+      </div>
+      <div id="data">
+        <div id="data-left">
+          <h2 class="data-header">Altitude</h2>
+          <p class="data" id="altitude">&#8212;</p>
+          <h2 class="data-header">Speed</h2>
+          <p class="data" id="speed">&#8212;</p>
+          <div id="main-buttons"></div>
+        </div>
+        <div id="data-right">
+          <h2 class="data-header">Latitude/Longitude</h2>
+          <p class="data" id="lat">&#8212;</p>
+          <p class="data" id="long">&#8212;</p>
+          <h2 class="data-header">Heading</h2>
+          <p class="data" id="heading">&#8212;</p>
+        </div>
+      </div>
+      <div id="stage">
+        <span id="s1" class="stage in-progress">On the Pad</span>
+        <span id="s2" class="stage">Powered Flight</span>
+        <span id="s3" class="stage">Coast</span>
+        <span id="s4" class="stage">Apogee</span>
+        <span id="s5" class="stage">Descent</span>
+        <span id="s6" class="stage">Main Parachute</span>
+        <span id="s7" class="stage">Landed</span>
+      </div>
+    </div>
+    <!--Mapping scripts, must be loaded after rest of document-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./libraries/charts.js"></script>
+    <script src="./libraries/map/leaflet/main/leaflet.js"></script>
+    <script src="./libraries/map/leaflet/tile-providers/leaflet-providers.js"></script>
+    <script src="./libraries/map/map.js"></script>
   </body>
 </html>
