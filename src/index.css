@@ -51,6 +51,10 @@ body {
   align-items: center;
 }
 
+#serial-drop {
+  margin-right: 1vw;
+}
+
 .dropdown {
   padding: 0 1vw;
   background-color: var(--main-bg);
@@ -94,7 +98,7 @@ body {
   top: 5vh;
   left: 0;
   overflow: auto;
-  width: 100%;
+  width: 120%;
   max-height: 20vh;
   z-index: 900;
 }
@@ -110,11 +114,22 @@ body {
   height: 4vh;
   padding: 1vh 1vw;
   margin: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .options span:hover {
   background-color: var(--top-hover);
   cursor: pointer;
+}
+
+#serial-connection,
+#radio-connection {
+  height: 2.5vh;
+  width: 2.5vh;
+  -webkit-user-drag: none;
+  margin-right: 1vw;
+  -webkit-app-region: no-drag;
 }
 
 .top-button {

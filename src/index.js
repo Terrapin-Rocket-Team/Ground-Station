@@ -8,6 +8,9 @@ window.onload = () => {
   document.getElementById("close").addEventListener("click", () => {
     app.close();
   });
+  document.getElementById("debug").addEventListener("click", () => {
+    app.openDebug();
+  });
 
   document.getElementById("switcher-left").addEventListener("click", () => {
     const highlight = document.getElementById("switcher-highlight");
@@ -66,5 +69,36 @@ window.onload = () => {
     drop.classList.toggle("active");
     drop.classList.toggle("inactive");
     options.classList.toggle("active");
+  });
+
+  app.getPorts().then((ports) => {
+    const options = document.getElementById("serial-options");
+    if (ports.length === 0) {
+      const span = document.createElement("SPAN");
+      span.className = "serial";
+      span.textContent = "No available ports";
+      options.appendChild(span);
+    } else {
+      const selected = document.getElementById("serial-selected");
+      ports.forEach((port) => {
+        const span = document.createElement("SPAN");
+        span.className = "serial";
+        span.textContent = port.path;
+        span.addEventListener("click", () => {
+          selected.textContent = port.path;
+          app.setPort(port.path).then((success) => {
+            const img = document.getElementById("serial-connection");
+            if (success) {
+              img.setAttribute("src", "./images/serial_connected.svg");
+              img.setAttribute("title", "Serial Connected");
+            } else {
+              img.setAttribute("src", "./images/serial_disconnected.svg");
+              img.setAttribute("title", "Connection Error");
+            }
+          });
+        });
+        options.appendChild(span);
+      });
+    }
   });
 };

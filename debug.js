@@ -3,18 +3,9 @@ const path = require("path");
 
 const getLogPrefix = (level) => {
   const e = new Error();
-  const regex = /\((.*):(\d+):(\d+)\)$/;
-  const match = regex.exec(e.stack.split("\n")[4]);
-  return (
-    "[" +
-    path.basename(match[1]) +
-    ":" +
-    match[2] +
-    "]" +
-    "[" +
-    level.toUpperCase() +
-    "] "
-  );
+  let stackArr = e.stack.split("\n")[4].split(path.sep);
+  let info = stackArr[stackArr.length - 1].split(":");
+  return "[" + info[0] + ":" + info[1] + "]" + "[" + level.toUpperCase() + "] ";
 };
 
 class Debug {
@@ -28,7 +19,7 @@ class Debug {
     this.win = win;
   }
   removeWin() {
-    this.win = {};
+    this.win = null;
   }
   println(message, level) {
     message = getLogPrefix(level) + message;
@@ -51,6 +42,6 @@ class Debug {
   }
 }
 
-let log = new Debug();
+const log = new Debug();
 
 module.exports = { log };

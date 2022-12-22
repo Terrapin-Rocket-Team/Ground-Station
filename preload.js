@@ -1,11 +1,16 @@
 const { ipcRenderer, contextBridge } = require("electron");
 
 const APP = {
+  //app control
   close: () => ipcRenderer.send("close"),
   minimize: () => ipcRenderer.send("minimize"),
   reload: () => ipcRenderer.send("reload"),
-  loadPage: (id) => ipcRenderer.send("page", id),
   devTools: () => ipcRenderer.send("dev-tools"),
+  openDebug: () => ipcRenderer.send("open-debug"),
+  //getters
+  getPorts: () => ipcRenderer.invoke("get-ports"),
+  //setters
+  setPort: (port) => ipcRenderer.invoke("set-port", port),
 };
 
 let con = document.getElementById("debug-console");

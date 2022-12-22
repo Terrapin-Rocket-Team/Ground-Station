@@ -2,13 +2,14 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
+const { radio } = require("./serial/serial");
 
 let mainWin, debugWin, config;
 
 /*
 Config options:
 scale: 1 is default, scales the application window
-debug: whether debug statements will be logged
+debug: false is default, whether debug statements will be logged
 */
 try {
   config = JSON.parse(fs.readFileSync("./config.json"));
@@ -61,7 +62,6 @@ const createDebug = () => {
 
 app.whenReady().then(() => {
   createWindow();
-  //createDebug();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -72,10 +72,11 @@ app.whenReady().then(() => {
 
 //lifecycle
 app.on("window-all-closed", () => {
-  if (process.platform === "darwin") app.dock.hide();
+  //if (process.platform === "darwin") app.dock.hide();
+  app.quit();
 });
 
-//window control
+//app control
 ipcMain.on("close", () => {
   mainWin.close();
 });
@@ -84,10 +85,38 @@ ipcMain.on("minimize", () => {
   mainWin.minimize();
 });
 
-ipcMain.on("reload", async (event, args) => {
+ipcMain.on("reload", (event, args) => {
   mainWin.webContents.reloadIgnoringCache();
 });
 
 ipcMain.on("dev-tools", (event, args) => {
   mainWin.webContents.openDevTools({ mode: "detach" });
+});
+
+ipcMain.on("open-debug", (event, args) => {
+  if (!debugWin) createDebug();
+});
+
+//getters
+ipcMain.handle("get-ports", (event, args) => {
+  return radio.getAvailablePorts();
+});
+
+//setters
+ipcMain.handle("set-port", (event, port) => {
+  return new Promise((res, rej) => {
+    radio
+      .connect(port, 115200)
+      .then((result) => {
+        res(1);
+      })
+      .catch((err) => {
+        log.err(err.toString());
+        res(0);
+      });
+  });
+});
+
+radio.on("data", (data) => {
+  log.info(data.toString());
 });
