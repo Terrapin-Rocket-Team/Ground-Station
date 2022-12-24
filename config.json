@@ -1,3 +1,6 @@
 {
-    "debug": true
+    "scale": 1,
+    "debugScale": 1,
+    "debug": true,
+    "noGUI": false
 }

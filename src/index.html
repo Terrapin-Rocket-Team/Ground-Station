@@ -4,16 +4,21 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data:; style-src 'self' 'unsafe-inline';"
+    />
     <link rel="stylesheet" href="index.css" />
     <link rel="stylesheet" href="./libraries/map/leaflet/main/leaflet.css" />
-    <script src="index.js"></script>
     <script src="./libraries/color.js"></script>
+    <script src="./libraries/APRS.js"></script>
+    <script src="index.js"></script>
     <title>Terp Rockets Ground Station</title>
   </head>
   <body>
     <div id="top-bar">
       <div id="top-left">
-        <img src="" alt="Logo" />
+        <img src="./images/logo.png" alt="Logo" />
         <span>Terp Rockets Ground Station</span>
       </div>
       <div id="top-right">

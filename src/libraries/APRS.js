@@ -233,5 +233,3 @@ class APRSBody {
       .toString();
   }
 }
-
-module.exports = { APRSMessage, APRSBody };

@@ -1,3 +1,13 @@
+/**
+ *
+ * @param {string} id the id of the HTML element for the chart
+ * @param {string} name the name of the chart
+ * @param {string} xUnits the units for the x axis
+ * @param {string} yUnits the units for the y axis
+ * @param {number} xConvert the conversion factor for the x axis
+ * @param {number} yConvert the conversion factor for the y axis
+ * @returns {Chart} the charts.js chart object
+ */
 const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
   return new Chart(document.getElementById(id), {
     type: "line",
@@ -32,6 +42,15 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
           ticks: {
             callback: (value) => `${value * yConvert} ${yUnits}`,
           },
+        },
+      },
+      elements: {
+        point: {
+          radius: 0,
+        },
+        line: {
+          backgroundColor: "#000",
+          borderColor: "#000",
         },
       },
     },

@@ -41,17 +41,17 @@
      id="layer1"
      transform="translate(-19.230001,-47.172307)">
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="m 72.094977,93.15744 70.705533,0.480987 -0.091,31.862113 -25.15927,14.36106 0.57205,62.96151 H 86.883593 l 0.870924,-63.8806 -24.38269,-12.50574 -0.415659,-33.27933 z"
        id="path967"
        sodipodi:nodetypes="cccccccccc" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="M 87.941925,93.15744 87.460933,57.083192"
        id="path1065"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="m 117.28232,93.15744 0.48099,-35.801087"
        id="path1067"
        sodipodi:nodetypes="cc" />

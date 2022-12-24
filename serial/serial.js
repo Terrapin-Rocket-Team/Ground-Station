@@ -2,12 +2,24 @@ const { SerialPort } = require("serialport");
 const { APRSMessage } = require("./APRS");
 const { EventEmitter } = require("node:events");
 
+/**
+ * A class to communicate with the radio module using serialport
+ */
 class Radio extends EventEmitter {
+  /**
+   *
+   * @param {SerialPort} [port] the serial port to listen to
+   */
   constructor(port) {
     super();
     this.port = port ? port : {};
     this.chunks = "";
   }
+
+  /**
+   *
+   * @returns {Promise<[]|Error>} array of available ports, rejects with the error if one occurs
+   */
   getAvailablePorts() {
     return new Promise((res, rej) => {
       SerialPort.list()
@@ -19,9 +31,16 @@ class Radio extends EventEmitter {
         });
     });
   }
+
+  /**
+   *
+   * @param {string} port the serial port to connect to
+   * @param {number} baudRate the baud rate of the connected device
+   * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
+   */
   connect(port, baudRate) {
     return new Promise((res, rej) => {
-      //115200
+      if (!baudRate) baudRate = 115200;
       this.port = new SerialPort(
         {
           path: port,
@@ -48,4 +67,4 @@ class Radio extends EventEmitter {
 
 const radio = new Radio();
 
-module.exports = { radio };
+module.exports = { radio, Radio };

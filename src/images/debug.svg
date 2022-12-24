@@ -41,15 +41,15 @@
      id="layer1"
      transform="translate(-19.230001,-47.172307)">
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="M 64.022499,90.041267 179.79458,89.583669 143.18681,176.98473 H 29.245116 Z"
        id="path5513" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="m 89.691332,106.51476 -22.422261,17.8463 20.134274,14.6431"
        id="path5515" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+       style="fill:none;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
        d="m 58.19941,154.40184 72.52518,0.49254"
        id="path5517" />
   </g>

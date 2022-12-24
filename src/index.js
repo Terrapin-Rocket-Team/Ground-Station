@@ -1,15 +1,15 @@
 window.onload = () => {
   document.getElementById("reload").addEventListener("click", () => {
-    app.reload();
+    api.reload();
   });
   document.getElementById("minimize").addEventListener("click", () => {
-    app.minimize();
+    api.minimize();
   });
   document.getElementById("close").addEventListener("click", () => {
-    app.close();
+    api.close();
   });
   document.getElementById("debug").addEventListener("click", () => {
-    app.openDebug();
+    api.openDebug();
   });
 
   document.getElementById("switcher-left").addEventListener("click", () => {
@@ -37,21 +37,6 @@ window.onload = () => {
   let alt = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
   let spd = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
 
-  let counter = 0;
-
-  setInterval(() => {
-    let ra = Math.random() * 10000;
-    let rs = Math.random() * 300;
-    alt.data.datasets[0].data.push({ y: ra, x: counter++ });
-    spd.data.datasets[0].data.push({ y: rs, x: counter });
-    if (counter > 10) {
-      alt.data.labels.push(counter);
-      spd.data.labels.push(counter);
-    }
-    alt.update();
-    spd.update();
-  }, 1000);
-
   document.getElementById("serial-drop").addEventListener("click", () => {
     const drop = document.getElementById("serial-drop");
     const options = document.getElementById("serial-options");
@@ -71,7 +56,7 @@ window.onload = () => {
     options.classList.toggle("active");
   });
 
-  app.getPorts().then((ports) => {
+  api.getPorts().then((ports) => {
     const options = document.getElementById("serial-options");
     if (ports.length === 0) {
       const span = document.createElement("SPAN");
@@ -86,7 +71,7 @@ window.onload = () => {
         span.textContent = port.path;
         span.addEventListener("click", () => {
           selected.textContent = port.path;
-          app.setPort(port.path).then((success) => {
+          api.setPort(port.path).then((success) => {
             const img = document.getElementById("serial-connection");
             if (success) {
               img.setAttribute("src", "./images/serial_connected.svg");
@@ -100,5 +85,55 @@ window.onload = () => {
         options.appendChild(span);
       });
     }
+  });
+
+  let counter = 0;
+  let lastCoords = [];
+
+  api.on("data", (data) => {
+    let msg = new APRSMessage(data);
+
+    //update charts
+    if (msg.getSpeed() || msg.getSpeed() === 0) {
+      spd.data.datasets[0].data.push({ y: msg.getSpeed(), x: counter });
+      if (counter > 10) spd.data.labels.push(counter);
+      spd.update();
+    }
+    if (msg.getAlt() || msg.getAlt() === 0) {
+      alt.data.datasets[0].data.push({ y: msg.getAlt(), x: counter });
+      if (counter > 10) alt.data.labels.push(counter);
+      alt.update();
+    }
+    counter++;
+
+    //update map
+    let coords = msg.getLatLong();
+    if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
+      updateMarker(
+        coords[0],
+        coords[1],
+        `<span style="font-size:1.5vh;font-weight:520;">Approximate Location: </span><br><span style="font-size:1.3vh;">${msg.getLatLongFormat()}</span>`
+      );
+      lastCoords = coords;
+    }
+
+    //update main displays
+    document.getElementById("altitude").textContent = msg.getAlt()
+      ? `${msg.getAlt()} ft`
+      : "\u2014";
+    document.getElementById("speed").textContent =
+      msg.getSpeed() || msg.getSpeed() === 0
+        ? `${msg.getSpeed()} ft/s`
+        : "\u2014";
+    let fcoords = msg.getLatLongFormat();
+    document.getElementById("lat").textContent = fcoords
+      ? fcoords.split("/")[0]
+      : "\u2014";
+    document.getElementById("long").textContent = fcoords
+      ? fcoords.split("/")[1]
+      : "\u2014";
+    document.getElementById("heading").textContent = msg.getHeading()
+      ? `${msg.getHeading()}\u00b0`
+      : "\u2014";
   });
 };
