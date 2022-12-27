@@ -34,8 +34,8 @@ window.onload = () => {
 
   buildMap("map");
 
-  let alt = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
-  let spd = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
+  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
+  let spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
 
   document.getElementById("serial-drop").addEventListener("click", () => {
     const drop = document.getElementById("serial-drop");
@@ -87,6 +87,19 @@ window.onload = () => {
     }
   });
 
+  let alt = document.getElementById("altitude");
+  let spd = document.getElementById("speed");
+  let hdg = document.getElementById("heading");
+
+  let size = document.getElementById("data").offsetWidth * 0.37;
+
+  alt.setAttribute("data-width", size);
+  alt.setAttribute("data-height", size);
+  spd.setAttribute("data-width", size);
+  spd.setAttribute("data-height", size);
+  hdg.setAttribute("data-width", size);
+  hdg.setAttribute("data-height", size);
+
   let counter = 0;
   let lastCoords = [];
 
@@ -95,14 +108,14 @@ window.onload = () => {
 
     //update charts
     if (msg.getSpeed() || msg.getSpeed() === 0) {
-      spd.data.datasets[0].data.push({ y: msg.getSpeed(), x: counter });
-      if (counter > 10) spd.data.labels.push(counter);
-      spd.update();
+      spdG.data.datasets[0].data.push({ y: msg.getSpeed(), x: counter });
+      if (counter > 10) spdG.data.labels.push(counter);
+      spdG.update();
     }
     if (msg.getAlt() || msg.getAlt() === 0) {
-      alt.data.datasets[0].data.push({ y: msg.getAlt(), x: counter });
-      if (counter > 10) alt.data.labels.push(counter);
-      alt.update();
+      altG.datasets[0].data.push({ y: msg.getAlt(), x: counter });
+      if (counter > 10) altG.data.labels.push(counter);
+      altG.update();
     }
     counter++;
 
@@ -135,5 +148,16 @@ window.onload = () => {
     document.getElementById("heading").textContent = msg.getHeading()
       ? `${msg.getHeading()}\u00b0`
       : "\u2014";
+
+    //update stage
+    let prog = document.getElementById("stage-progress");
+    //placeholder, find stage number
+    let sn = 1;
+    let percents = [14, 28, 42, 57, 71, 85, 100];
+    prog.textContent = percents[sn - 1] + "%";
+    prog.setAttribute("value", percents[sn - 1]);
+    //TODO
   });
 };
+
+//"sleep": await new Promise((r) => setTimeout(r, 1000));

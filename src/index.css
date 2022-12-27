@@ -271,6 +271,7 @@ body {
   float: right;
   background-color: var(--main-bg);
   border-left: solid 2px gray;
+  position: relative;
 }
 
 #data-left {
@@ -323,8 +324,22 @@ body {
   height: 15%;
 }
 
+#altitude {
+  position: absolute;
+  top: 2vh;
+  left: 31.5%;
+}
+
+#speed {
+  position: absolute;
+  top: 35%;
+  right: 2vw;
+}
+
 #heading {
-  height: 30%;
+  position: absolute;
+  top: 35%;
+  left: 2vw;
 }
 
 #stage {
@@ -340,7 +355,6 @@ body {
 }
 
 .stage {
-  display: block;
   height: 75%;
   width: 12%;
   border-radius: 5px;
@@ -359,4 +373,36 @@ body {
 
 .stage.complete {
   border: solid 2px var(--stage-complete);
+}
+
+progress {
+  height: 1vh;
+  width: 100%;
+  -webkit-appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--main-bg);
+  border: none;
+}
+
+progress::-webkit-progress-value {
+  background-color: black;
+  /*
+  background: linear-gradient(
+    90deg,
+    rgb(75, 145, 219) 25%,
+    rgb(120, 183, 250) 50%,
+    rgb(75, 145, 219) 75%
+  );
+  background-position: 130% 0%;
+  background-size: 200%;
+  transition: width 1s ease-in-out;
+  */
+}
+
+#stage-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
 }
