@@ -11,12 +11,17 @@ const markers = new L.featureGroup();
 const buildMap = (id) => {
   //create the map and set defaults
   map = new L.Map(id, {
-    center: new L.LatLng(37.7, -122.4),
-    maxZoom: 17,
-    zoom: 12,
+    //38.990498828259746, -76.94361131007392
+    center: new L.LatLng(38.99049, -76.943611),
+    maxZoom: 8,
+    zoom: 2,
   });
   //set the tile provider
-  L.tileLayer.provider("OpenTopoMap").addTo(map);
+  //TODO: add USGS credit
+  L.tileLayer("./libraries/map/USGS/{z}/{x}/{y}.jpg", { maxZoom: 16 }).addTo(
+    map
+  );
+  //L.tileLayer.provider("OpenTopoMap").addTo(map);
   markers.addTo(map);
 };
 

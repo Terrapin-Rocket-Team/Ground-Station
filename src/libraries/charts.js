@@ -21,7 +21,8 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
       ],
     },
     options: {
-      aspectRatio: 1.5,
+      aspectRatio: 1.6,
+      maintainAspectRatio: false,
       animation: false,
       plugins: {
         legend: {

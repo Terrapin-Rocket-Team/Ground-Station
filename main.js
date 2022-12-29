@@ -1,3 +1,7 @@
+/*
+TODO: 
+- make sure the port is not already open for serial port
+*/
 const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
@@ -11,7 +15,7 @@ Config options:
 scale: 1 is default, scales the application window
 debugScale: 1 is default, scales the debug window
 debug: false is default, whether debug statements will be logged
-noGUI: 
+noGUI: false is default, loads only the debug window
 */
 try {
   config = JSON.parse(fs.readFileSync("./config.json"));
@@ -32,7 +36,7 @@ const createWindow = () => {
   const width = 1200,
     height = 800;
   mainWin = new BrowserWindow({
-    width: width * config.scale,
+    width: 1200, //width * config.scale,
     height: height * config.scale,
     resizable: false,
     frame: false,
@@ -44,7 +48,7 @@ const createWindow = () => {
 
   mainWin.loadFile("src/index.html");
 
-  if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
+  /*if (config.debug) */ mainWin.webContents.openDevTools({ mode: "detach" });
 };
 
 const createDebug = () => {
@@ -151,5 +155,5 @@ radio.on("data", (data) => {
 });
 
 setInterval(() => {
-  //mainWin.webContents.send("data", JSON.parse(fs.readFileSync("test.json")));
+  mainWin.webContents.send("data", JSON.parse(fs.readFileSync("test.json")));
 }, 1000);

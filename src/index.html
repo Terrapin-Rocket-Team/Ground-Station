@@ -12,8 +12,7 @@
     <link rel="stylesheet" href="./libraries/map/leaflet/main/leaflet.css" />
     <script src="./libraries/color.js"></script>
     <script src="./libraries/APRS.js"></script>
-    <script src="./libraries/gauge.min.js"></script>
-    <script src="index.js"></script>
+    <script src="./libraries/gauge.js"></script>
     <title>Terp Rockets Ground Station</title>
   </head>
   <body>
@@ -56,33 +55,26 @@
     </div>
     <div id="main">
       <div id="diagrams">
-        <div id="diagram-bar">
-          <div id="switcher-box">
-            <div id="switcher-highlight"></div>
-            <span id="switcher-left">Graphs</span>
-            <span id="switcher-right">Map</span>
-          </div>
-        </div>
-        <div id="main-diagram">
-          <div id="chart-wrapper" class="diagram active">
-            Altitude
+        <div id="chart-wrapper" class="diagram active">
+          Altitude
+          <div id="alt-wrapper">
             <canvas id="alt-graph" class="chart"></canvas>
-            Speed
+          </div>
+          Speed
+          <div id="spd-wrapper">
             <canvas id="spd-graph" class="chart"></canvas>
           </div>
-          <div id="map-wrapper" class="diagram">
-            <div id="map"></div>
-          </div>
+        </div>
+        <div id="map-wrapper" class="diagram">
+          <div id="map"></div>
+        </div>
+        <div id="switcher-box">
+          <div id="switcher-highlight"></div>
+          <img id="switcher-graphs" src="./images/graphs.svg" alt="Graphs"></img>
+          <img id="switcher-map" src="./images/map.svg" alt="Map"></img>
         </div>
       </div>
       <div id="data">
-        <!--
-        <div id="data-left">
-            <h2 class="data-header">Altitude</h2>
-            <p class="data" id="altitude">&#8212;</p>
-            <h2 class="data-header">Speed</h2>
-            <p class="data" id="speed">&#8212;</p>
-          -->
         <canvas
           id="altitude"
           data-type="radial-gauge"
@@ -95,6 +87,7 @@
           data-units="ft x 1000"
           data-title="Altitude"
           data-value="0"
+          data-value-text="&#8212;"
           data-min-value="0"
           data-max-value="12"
           data-major-ticks="0,2,4,6,8,10,12"
@@ -111,6 +104,9 @@
           data-color-title="#000"
           data-color-units="#000"
           data-color-numbers="#222"
+          data-needle-type="line"
+          data-needle-start="0"
+          data-needle-end="90"
           data-color-needle-start="#f00"
           data-color-needle-end="#f00"
           data-color-needle-shadow-down="#555"
@@ -137,6 +133,7 @@
           data-units="ft/s x 100"
           data-title="Speed"
           data-value="0"
+          data-value-text="&#8212;"
           data-min-value="0"
           data-max-value="5"
           data-major-ticks="0,1,2,3,4,5"
@@ -153,6 +150,9 @@
           data-color-title="#000"
           data-color-units="#000"
           data-color-numbers="#555"
+          data-needle-type="line"
+          data-needle-start="0"
+          data-needle-end="90"
           data-color-needle-start="#f00"
           data-color-needle-end="#f00"
           data-color-needle-shadow-down="#222"
@@ -170,6 +170,7 @@
         <canvas
           id="heading"
           data-type="radial-gauge"
+          data-title="Heading"
           data-min-value="0"
           data-max-value="360"
           data-major-ticks="N,NE,E,SE,S,SW,W,NW,N"
@@ -182,6 +183,7 @@
           data-color-major-ticks="#222"
           data-color-minor-ticks="#222"
           data-color-numbers="#222"
+          data-color-title="#000"
           data-color-needle="rgba(240, 128, 128, 1)"
           data-color-needle-end="rgba(255, 160, 122, .9)"
           data-value-box="false"
@@ -203,16 +205,10 @@
           data-color-needle-shadow-down="#555"
           data-border-shadow-width="0"
         ></canvas>
-        <!--
-          </div>
-          <div id="data-right">
-            <h2 class="data-header">Latitude/Longitude</h2>
-            <p class="data" id="lat">&#8212;</p>
-            <p class="data" id="long">&#8212;</p>
-            <h2 class="data-header">Heading</h2>
-            <p class="data" id="heading">&#8212;</p>
-          </div>
-          -->
+        <div id="text-data">
+          <span id="lat-long"><span id="lat">00.0000 &#176;N</span> / <span id="long">000.0000 &#176;W</span></span>
+          <span id="t-plus">T+<span id="t">00:00:00</span></span>
+        </div>
       </div>
       <div id="stage">
         <span id="s1" class="stage in-progress">On the Pad</span>
@@ -226,10 +222,11 @@
       </div>
     </div>
     <!--Mapping scripts, must be loaded after rest of document-->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./libraries/charts/chart.umd.js"></script>
     <script src="./libraries/charts.js"></script>
     <script src="./libraries/map/leaflet/main/leaflet.js"></script>
     <script src="./libraries/map/leaflet/tile-providers/leaflet-providers.js"></script>
     <script src="./libraries/map/map.js"></script>
+    <script src="index.js"></script>
   </body>
 </html>

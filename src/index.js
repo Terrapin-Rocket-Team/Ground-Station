@@ -12,19 +12,19 @@ window.onload = () => {
     api.openDebug();
   });
 
-  document.getElementById("switcher-left").addEventListener("click", () => {
+  document.getElementById("switcher-graphs").addEventListener("click", () => {
     const highlight = document.getElementById("switcher-highlight");
-    highlight.style["border-radius"] = "0 3px 3px 0";
-    highlight.style.left = 0;
+    //highlight.style["border-radius"] = "0 0 3px 3px";
+    highlight.style.top = 0;
 
     document.getElementById("chart-wrapper").classList.toggle("active");
     document.getElementById("map-wrapper").classList.toggle("active");
   });
 
-  document.getElementById("switcher-right").addEventListener("click", () => {
+  document.getElementById("switcher-map").addEventListener("click", () => {
     const highlight = document.getElementById("switcher-highlight");
-    highlight.style["border-radius"] = "3px 0 0 3px";
-    highlight.style.left = "50.2%";
+    //highlight.style["border-radius"] = "3px 3px 0 0";
+    highlight.style.top = "50%";
 
     refreshMap();
 
@@ -91,7 +91,7 @@ window.onload = () => {
   let spd = document.getElementById("speed");
   let hdg = document.getElementById("heading");
 
-  let size = document.getElementById("data").offsetWidth * 0.37;
+  let size = document.getElementById("data").offsetWidth * 0.31;
 
   alt.setAttribute("data-width", size);
   alt.setAttribute("data-height", size);
@@ -107,16 +107,20 @@ window.onload = () => {
     let msg = new APRSMessage(data);
 
     //update charts
-    if (msg.getSpeed() || msg.getSpeed() === 0) {
-      spdG.data.datasets[0].data.push({ y: msg.getSpeed(), x: counter });
-      if (counter > 10) spdG.data.labels.push(counter);
-      spdG.update();
+    spdG.data.datasets[0].data.push({
+      y: msg.getSpeed() ? msg.getSpeed() : 0,
+      x: counter,
+    });
+    altG.data.datasets[0].data.push({
+      y: msg.getAlt() ? msg.getAlt() : 0,
+      x: counter,
+    });
+    if (counter > 10) {
+      altG.data.labels.push(counter);
+      spdG.data.labels.push(counter);
     }
-    if (msg.getAlt() || msg.getAlt() === 0) {
-      altG.datasets[0].data.push({ y: msg.getAlt(), x: counter });
-      if (counter > 10) altG.data.labels.push(counter);
-      altG.update();
-    }
+    spdG.update();
+    altG.update();
     counter++;
 
     //update map
@@ -131,6 +135,7 @@ window.onload = () => {
     }
 
     //update main displays
+    /*
     document.getElementById("altitude").textContent = msg.getAlt()
       ? `${msg.getAlt()} ft`
       : "\u2014";
@@ -138,16 +143,36 @@ window.onload = () => {
       msg.getSpeed() || msg.getSpeed() === 0
         ? `${msg.getSpeed()} ft/s`
         : "\u2014";
-    let fcoords = msg.getLatLongFormat();
-    document.getElementById("lat").textContent = fcoords
-      ? fcoords.split("/")[0]
-      : "\u2014";
-    document.getElementById("long").textContent = fcoords
-      ? fcoords.split("/")[1]
-      : "\u2014";
     document.getElementById("heading").textContent = msg.getHeading()
       ? `${msg.getHeading()}\u00b0`
       : "\u2014";
+      */
+    if (msg.getAlt() || msg.getAlt() === 0) {
+      alt.setAttribute("data-value-text", msg.getAlt());
+      alt.setAttribute("data-value", msg.getAlt() / 1000);
+    } else {
+      alt.setAttribute("data-value-text", "\u2014");
+    }
+    if (msg.getSpeed() || msg.getSpeed() === 0) {
+      spd.setAttribute("data-value-text", msg.getSpeed());
+      spd.setAttribute("data-value", msg.getSpeed() / 100);
+    } else {
+      spd.setAttribute("data-value-text", "\u2014");
+    }
+    if (msg.getHeading() || msg.getHeading() === 0) {
+      hdg.setAttribute("data-value-text", "false");
+      hdg.setAttribute("data-value", msg.getHeading());
+    } else {
+      hdg.setAttribute("data-value-text", "\u2014");
+    }
+
+    let fcoords = msg.getLatLongFormat();
+    document.getElementById("lat").textContent = fcoords
+      ? fcoords.split("/")[0]
+      : "00.0000\u00b0N";
+    document.getElementById("long").textContent = fcoords
+      ? fcoords.split("/")[1]
+      : "000.0000\u00b0W";
 
     //update stage
     let prog = document.getElementById("stage-progress");

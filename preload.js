@@ -25,7 +25,6 @@ class EventEmitter {
         const fireCallbacks = (callback) => {
           callback(data);
         };
-
         this._events[name].forEach(fireCallbacks);
       }
     };
