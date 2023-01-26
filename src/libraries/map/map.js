@@ -1,32 +1,27 @@
-//global map and geocoder variables
 let map;
-
-//stores map information and state of the queue
 const markers = new L.featureGroup();
 
 /**
- *
  * @param {string} id the id of the HTML element for the map
  */
 const buildMap = (id) => {
   //create the map and set defaults
   map = new L.Map(id, {
-    //38.990498828259746, -76.94361131007392
-    center: new L.LatLng(38.99049, -76.943611),
-    maxZoom: 8,
-    zoom: 2,
+    //38.987810, -76.942406
+    center: new L.LatLng(38.98781, -76.942406),
+    maxZoom: 15,
+    zoom: 5,
   });
-  //set the tile provider
-  //TODO: add USGS credit
-  L.tileLayer("./libraries/map/USGS/{z}/{x}/{y}.jpg", { maxZoom: 16 }).addTo(
-    map
-  );
-  //L.tileLayer.provider("OpenTopoMap").addTo(map);
+  L.tileLayer.provider("OpenTopoMap").addTo(map);
   markers.addTo(map);
+  let marker = L.marker([38.98781, -76.942406]);
+  marker.addTo(markers);
+  map.fitBounds(markers.getBounds());
+  map.setZoom(12);
+  markers.clearLayers();
 };
 
 /**
- *
  * @param {number|string} lat the latitude for the marker
  * @param {number|string} lng the longitude for the marker
  * @param {HTMLElement} html the html for the popup
@@ -37,16 +32,17 @@ const updateMarker = (lat, lng, html) => {
   marker.bindTooltip(html, { permanent: true }).openTooltip();
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
+  map.setZoom(14);
   setTimeout(() => {
-    map.setZoom(16);
+    map.setZoom(15);
   }, 2000);
 };
 
-//clear markerers and refresh map sizing, needs to be called when a page is loaded or the tiles will not load correctly
-const refreshMap = () => {
+//clear markers and refresh map sizing, needs to be called when a page is loaded or the tiles will not load correctly
+const refreshMap = (zoom) => {
   //markers.clearLayers();
   setTimeout(() => {
     map.invalidateSize();
-    map.setZoom(16);
+    map.setZoom(zoom == undefined ? 5 : zoom);
   }, 1000);
 };

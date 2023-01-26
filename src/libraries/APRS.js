@@ -3,9 +3,7 @@
  */
 class APRSMessage {
   /**
-   *
    * @param {string|APRSMessage} message the APRS message
-   *
    */
   constructor(message) {
     if (typeof message === "object") {
@@ -13,21 +11,22 @@ class APRSMessage {
       this.dest = message.dest;
       this.path = message.path;
       this.type = message.type;
+      this.rssi = message.rssi;
       this.rawBody = message.rawBody;
       this.body = new APRSBody(message.body);
     }
     if (typeof message === "string") {
-      this.src = message.match(/(?<=Source: )[^,]+(?=,)/g)[0];
-      this.dest = message.match(/(?<=Destination: )[^,]+(?=,)/g)[0];
-      this.path = message.match(/(?<=Path: )[^,]+(?=,)/g)[0];
-      this.type = message.match(/(?<=Type: )[^,]+(?=,)/g)[0];
-      this.rawBody = message.match(/(?<=Data: ).+(?=LoRa)/g)[0];
+      this.src = message.match(/(?<=Source:)[^,]+(?=,)/g)[0];
+      this.dest = message.match(/(?<=Destination:)[^,]+(?=,)/g)[0];
+      this.path = message.match(/(?<=Path:)[^,]+(?=,)/g)[0];
+      this.type = message.match(/(?<=Type:)[^,]+(?=,)/g)[0];
+      this.rssi = message.match(/(?<=RSSI:).+$/g)[0];
+      this.rawBody = message.match(/(?<=Data:).+(?=(!w[^!]+!)?RSSI)/g)[0];
       this.body = new APRSBody(this.rawBody);
     }
   }
 
   /**
-   *
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {
@@ -35,7 +34,6 @@ class APRSMessage {
   }
 
   /**
-   *
    * @param {Boolean} [dms] set true to format in degress, minutes, seconds
    * @returns {string} string containing the latitude and longitude
    */
@@ -66,7 +64,64 @@ class APRSMessage {
   }
 
   /**
-   *
+   * @returns {String} the current stage in the form s(index), ex: s0
+   */
+  getStage() {
+    return this.body.stage.toLowerCase();
+  }
+
+  /**
+   * @returns {Number} the current stage number
+   */
+  getStageNumber() {
+    return parseInt(this.body.stage.substring(1));
+  }
+
+  /**
+   * @returns {Date} a Date object containing the date of T0
+   */
+  getT0() {
+    return new Date(
+      new Date()
+        .toString()
+        .match(
+          /[A-Z][a-z][a-z] [A-Z][a-z][a-z] [0-9][0-9] [0-9][0-9][0-9][0-9] /g
+        )[0] +
+        " " +
+        this.body.t0
+    );
+  }
+
+  /**
+   * @returns {Number} the T0 time in milliseconds
+   */
+  getT0ms() {
+    return new Date(
+      new Date()
+        .toString()
+        .match(
+          /[A-Z][a-z][a-z] [A-Z][a-z][a-z] [0-9][0-9] [0-9][0-9][0-9][0-9] /g
+        )[0] +
+        " " +
+        this.body.t0
+    ).getTime();
+  }
+
+  /**
+   * @returns {String} High/Medium/Low/None signal strength, rssi range: >-60/-90<x<-60/-120<x<-90/<-120
+   */
+  getSignalStrength() {
+    let rssi = parseInt(this.rssi);
+    return rssi > -60
+      ? "High"
+      : rssi < -90 && rssi > -120
+      ? "Low"
+      : rssi > -90 && rssi < -60
+      ? "Med"
+      : "None";
+  }
+
+  /**
    * @returns {string} the APRS message object as a string
    */
   toString() {
@@ -81,7 +136,6 @@ class APRSMessage {
  */
 class APRSBody {
   /**
-   *
    * @param {APRSBody|string} body the APRS body
    */
   constructor(body) {
@@ -91,17 +145,20 @@ class APRSBody {
       this.heading = body.heading;
       this.speed = body.speed;
       this.alt = body.alt;
+      this.stage = body.stage;
+      this.t0 = body.t0;
     }
     if (typeof body === "string") {
       this.lat = body.match(/(?<=!)[^\/]+(?=\/)/g)[0];
       this.long = body.match(/(?<=\/)[^\[]+(?=\[)/g)[0];
       this.heading = body.match(/(?<=\[)[^\/]+(?=\/)/g)[0];
       this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0];
-      this.alt = body.match(/(?<=A=).+$/g)[0];
+      this.alt = body.match(/(?<=A=)-?[0-9]+/g)[0];
+      this.stage = body.match(/(?<=\/)S[0-9]+(?=\/)/g)[0];
+      this.t0 = body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0];
     }
   }
   /**
-   *
    * @param {string} rawBody
    * @returns {object} object with the same structure as an APRS body
    */
@@ -112,21 +169,23 @@ class APRSBody {
       long: rawBody.match(/(?<=\/)[^\[]+(?=\[)/g)[0],
       heading: rawBody.match(/(?<=\[)[^\/]+(?=\/)/g)[0],
       speed: rawBody.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0],
-      alt: rawBody.match(/(?<=A=).+$/g)[0],
+      alt: rawBody.match(/(?<=A=)[0-9]+/g)[0],
+      stage: body.match(/(?<=\/)S[0-9]+(?=\/)/g)[0],
+      t0: body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0],
     };
   }
   /**
-   *
    * @returns {string} the APRS body object as a string
    */
   toString() {
     return `${this.getLatLongDecimalFormatted().replace(" ", "/")} and ${
       this.alt
-    } at ${this.heading}\u00b0 ${this.speed} ft/s`;
+    } at ${this.heading}\u00b0 ${
+      this.speed
+    } ft/s during stage ${this.stage.substring(1)}, T0 was at ${this.t0}`;
   }
 
   /**
-   *
    * @returns {Number[]} [latitude, longitude]
    */
   getLatLongDecimal() {
@@ -137,7 +196,6 @@ class APRSBody {
   }
 
   /**
-   *
    * @returns {string} the latitude and longitude in decimal form formatted as a string
    */
   getLatLongDecimalFormatted() {
@@ -153,7 +211,6 @@ class APRSBody {
   }
 
   /**
-   *
    * @returns {string} the latitude and longitude in degress, minutes, seconds form as a string
    */
   getLatLongDMS() {
@@ -176,7 +233,6 @@ class APRSBody {
     );
   }
   /**
-   *
    * @param {string} coord string containing of the APRS formatted latitude or longitude
    * @param {boolean} [format] set to true to prevent use of negatives for West or South
    * @returns {number} latitude or longitude in the regular format
@@ -186,19 +242,18 @@ class APRSBody {
     if (coord.length > 8) {
       return (
         (parseInt(coord.substring(0, 3)) +
-          parseInt(coord.substring(3, coord.length - 1)) / 60) *
+          parseFloat(coord.substring(3, coord.length - 1)) / 60) *
         (dir === "S" || dir === "W" ? -1 : 1)
       );
     }
     return (
       (parseInt(coord.substring(0, 2)) +
-        parseInt(coord.substring(2, coord.length - 1)) / 60) *
+        parseFloat(coord.substring(2, coord.length - 1)) / 60) *
       (dir === "S" || dir === "W" ? -1 : 1)
     );
   }
 
   /**
-   *
    * @param {string} coord string containing of the APRS formatted latitude or longitude
    * @returns {string} the degrees part of the coordinate
    */
@@ -208,7 +263,6 @@ class APRSBody {
   }
 
   /**
-   *
    * @param {string} coord string containing of the APRS formatted latitude or longitude
    * @returns {string} the minutes part of the coordinate
    */
@@ -218,7 +272,6 @@ class APRSBody {
   }
 
   /**
-   *
    * @param {string} coord string containing of the APRS formatted latitude or longitude
    * @returns {string} the seconds part of the coordinate
    */

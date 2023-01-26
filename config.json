@@ -1,6 +1,6 @@
 {
-    "scale": 1,
-    "debugScale": 1,
-    "debug": true,
-    "noGUI": false
+	"scale": 1,
+	"debugScale": 1,
+	"debug": true,
+	"noGUI": false
 }

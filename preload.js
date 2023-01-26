@@ -1,9 +1,13 @@
 const { ipcRenderer, contextBridge } = require("electron");
 
+//custom event emitter class so event listeners can be added to the electron api in the renderer
+//all methods must be attributes due to how electron handles objects
 class EventEmitter {
   constructor() {
+    //holds the events registered to the emitter and their listeners
     this._events = {};
 
+    //adds a listener to an event
     this.on = (name, listener) => {
       if (!this._events[name]) {
         this._events[name] = [];
@@ -12,6 +16,7 @@ class EventEmitter {
       this._events[name].push(listener);
     };
 
+    //removes a listener for an event
     this.removeListener = (name, listenerToRemove) => {
       if (this._events[name]) {
         const filterListeners = (listener) => listener !== listenerToRemove;
@@ -20,6 +25,7 @@ class EventEmitter {
       }
     };
 
+    //calls all the listeners for an event
     this.emit = (name, data) => {
       if (this._events[name]) {
         const fireCallbacks = (callback) => {
@@ -35,6 +41,7 @@ class API extends EventEmitter {
   constructor() {
     super();
 
+    //Electron IPC listeners to pass events to the renderer
     ipcRenderer.on("print", (event, message, level) => {
       this.emit("print", { message, level });
     });
@@ -45,6 +52,10 @@ class API extends EventEmitter {
 
     ipcRenderer.on("data", (event, data) => {
       this.emit("data", data);
+    });
+
+    ipcRenderer.on("radio-close", (event, data) => {
+      this.emit("radio-close");
     });
 
     //app control
@@ -64,4 +75,5 @@ class API extends EventEmitter {
 
 const api = new API();
 
+//expose the api to the renderer
 contextBridge.exposeInMainWorld("api", api);

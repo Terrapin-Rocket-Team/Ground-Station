@@ -110,7 +110,7 @@ body {
   top: 5vh;
   left: 0;
   overflow: auto;
-  width: 120%;
+  width: 15vw;
   max-height: 20vh;
   z-index: 900;
 }
@@ -335,16 +335,32 @@ body {
   flex-direction: column;
 }
 
-#altitude {
+#alt-gauge-container {
   position: absolute;
   top: 4vh;
   left: 1vw;
 }
 
-#speed {
+#alt-text {
+  position: absolute;
+  font-size: 3.2vh;
+  transform: translateX(-50%);
+  bottom: 5vh;
+  left: 50%;
+}
+
+#spd-gauge-container {
   position: absolute;
   top: 4vh;
   right: 2vw;
+}
+
+#spd-text {
+  position: absolute;
+  font-size: 3.2vh;
+  transform: translateX(-50%);
+  bottom: 5vh;
+  left: 50%;
 }
 
 #heading {
@@ -385,7 +401,7 @@ body {
 }
 
 .stage {
-  height: 12%;
+  height: 15%;
   width: 75%;
   border-radius: 5px;
   border: solid 2px var(--stage-incomplete);

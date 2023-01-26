@@ -1,14 +1,12 @@
-/*
-TODO: 
-- make sure the port is not already open for serial port
-*/
+//TODO: launch the radio as a separate process (maybe) so saving data does not rely on the main app to work
+
 const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 
-let mainWin, debugWin, config;
+let mainWin, debugWin, config, closed, csvCreated;
 
 /*
 Config options:
@@ -18,25 +16,34 @@ debug: false is default, whether debug statements will be logged
 noGUI: false is default, loads only the debug window
 */
 try {
+  //load config
   config = JSON.parse(fs.readFileSync("./config.json"));
   log.useDebug = config.debug;
+  log.debug("Config loaded");
 } catch (err) {
   config = {
     scale: 1,
     debugScale: 1,
-    useDebug: false,
+    debug: false,
     noGUI: false,
   };
-  log.err("error");
+  log.warn('Failed to load config file, using defaults: "' + err.message + '"');
+  try {
+    if (!fs.existsSync("./config.json")) {
+      log.info("Config file successfully created");
+      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+    }
+  } catch (err) {
+    log.err('Failed to create config file: "' + err.message + '"');
+  }
 }
 
-log.debug("config loaded");
-
+//creates the main electron window
 const createWindow = () => {
   const width = 1200,
     height = 800;
   mainWin = new BrowserWindow({
-    width: 1200, //width * config.scale,
+    width: width * config.scale,
     height: height * config.scale,
     resizable: false,
     frame: false,
@@ -48,9 +55,19 @@ const createWindow = () => {
 
   mainWin.loadFile("src/index.html");
 
-  /*if (config.debug) */ mainWin.webContents.openDevTools({ mode: "detach" });
+  if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
+  log.debug("Main window created");
+
+  //for some reason the program does not end quickly enough after the main window is destroyed to prevent errors when debug is used
+  //this condition should stop the messages being sent to the destroyed window
+  if (config.debug) {
+    mainWin.once("close", () => {
+      closed = true;
+    });
+  }
 };
 
+//creates the debug electron window
 const createDebug = () => {
   const width = 600,
     height = 400;
@@ -70,6 +87,7 @@ const createDebug = () => {
 
   if (config.debug) debugWin.webContents.openDevTools({ mode: "detach" });
 
+  //send the debug window all previous logs once it is ready
   debugWin.webContents.once("dom-ready", () => {
     try {
       if (fs.existsSync("debug.log"))
@@ -78,16 +96,19 @@ const createDebug = () => {
           fs.readFileSync("debug.log").toString()
         );
     } catch (err) {
-      log.err(err);
+      log.err('Could not load previous logs: "' + err.message + '"');
     }
   });
 
+  //reset when the window is closed
   debugWin.once("close", () => {
     log.removeWin();
     debugWin = null;
   });
+  log.debug("Debug window created");
 };
 
+//when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
   if (!config.noGUI) {
     createWindow();
@@ -95,22 +116,29 @@ app.whenReady().then(() => {
     createDebug();
   }
 
-  //check if this line should be updated like above
+  //open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      if (!config.noGUI) {
+        createWindow();
+      } else {
+        createDebug();
+      }
+    }
   });
 
-  if (process.platform === "win32") app.setAppUserModelId(app.getName());
+  //I don't think this line is necessary
+  //if (process.platform === "win32") app.setAppUserModelId(app.getName());
 });
 
-//lifecycle
+//quit the app if all windows are closed on MacOS
 app.on("window-all-closed", () => {
-  //if (process.platform === "darwin") app.dock.hide();
   app.quit();
 });
 
 //app control
 ipcMain.on("close", () => {
+  log.debug("Closing main window");
   mainWin.close();
 });
 
@@ -119,6 +147,8 @@ ipcMain.on("minimize", () => {
 });
 
 ipcMain.on("reload", (event, args) => {
+  log.debug("Reloading main window");
+  radio.close();
   mainWin.webContents.reloadIgnoringCache();
 });
 
@@ -127,6 +157,7 @@ ipcMain.on("dev-tools", (event, args) => {
 });
 
 ipcMain.on("open-debug", (event, args) => {
+  log.debug("Debug window opened from main");
   if (!debugWin) createDebug();
 });
 
@@ -141,19 +172,41 @@ ipcMain.handle("set-port", (event, port) => {
     radio
       .connect(port, 115200)
       .then((result) => {
+        log.info("Successfully connected to port " + port);
         res(1);
       })
       .catch((err) => {
-        log.err(err.toString());
+        log.err(
+          "Failed to connect to port " + port + ': "' + err.message + '"'
+        );
         res(0);
       });
   });
 });
 
+//serial communication
 radio.on("data", (data) => {
   log.info(data.toString());
+  mainWin.webContents.send("data", data);
+  if (!csvCreated) fs.writeFileSync("data.csv", "");
+  fs.appendFileSync("data.csv", data.toCSV(csvCreated));
+  if (!csvCreated) csvCreated = true;
+  //write data from serial to be used in testing if debug is on
+  if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
 });
 
-setInterval(() => {
-  mainWin.webContents.send("data", JSON.parse(fs.readFileSync("test.json")));
-}, 1000);
+radio.on("close", () => {
+  log.info("Serial disconnected");
+  mainWin.webContents.send("radio-close");
+});
+
+//testing
+if (config.debug) {
+  setInterval(() => {
+    if (!closed)
+      mainWin.webContents.send(
+        "data",
+        JSON.parse(fs.readFileSync("test.json"))
+      );
+  }, 1000);
+}
