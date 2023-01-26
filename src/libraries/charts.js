@@ -17,6 +17,8 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
         {
           label: name,
           data: [],
+          xAxisID: "x",
+          yAxisID: "y",
         },
       ],
     },
@@ -35,7 +37,12 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
       scales: {
         x: {
           ticks: {
-            callback: (value) => `${value * xConvert} ${xUnits}`,
+            callback: (value) =>
+              `${
+                (value * xConvert) % 1 > 0
+                  ? (value * xConvert).toFixed(2)
+                  : value * xConvert
+              } ${xUnits}`,
           },
         },
         y: {

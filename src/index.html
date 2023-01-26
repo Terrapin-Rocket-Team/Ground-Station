@@ -16,12 +16,16 @@
     <title>Terp Rockets Ground Station</title>
   </head>
   <body>
+    <!--Application top bar-->
     <div id="top-bar">
+      <!--Name and logo-->
       <div id="top-left">
         <img src="./images/logo.png" alt="Logo" />
         <span>Terp Rockets Ground Station</span>
       </div>
+      <!--Buttons and application control-->
       <div id="top-right">
+        <!--Custom dropdown-->
         <div class="dropdown inactive" id="serial-drop">
           <span id="serial-selected">Select Port</span>
           <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
@@ -53,7 +57,9 @@
         </button>
       </div>
     </div>
+    <!--Contains all elements besides the top bar-->
     <div id="main">
+      <!--The charts and map container-->
       <div id="diagrams">
         <div id="chart-wrapper" class="diagram active">
           Altitude
@@ -74,99 +80,109 @@
           <img id="switcher-map" src="./images/map.svg" alt="Map"></img>
         </div>
       </div>
+      <!--Contains the elements that display up to date data-->
       <div id="data">
-        <canvas
-          id="altitude"
-          data-type="radial-gauge"
-          data-width="300"
-          data-height="300"
-          data-borders="true"
-          data-border-inner-width="0"
-          data-border-middle-width="0"
-          data-border-outer-width="2"
-          data-units="ft x 1000"
-          data-title="Altitude"
-          data-value="0"
-          data-value-text="&#8212;"
-          data-min-value="0"
-          data-max-value="12"
-          data-major-ticks="0,2,4,6,8,10,12"
-          data-minor-ticks="5"
-          data-stroke-ticks="false"
-          data-highlights='[
-            { "from": 0, "to": 10, "color": "rgba(0,255,0,.15)" },
-            { "from": 10, "to": 11, "color": "rgba(255,255,0,.15)" },
-            { "from": 11, "to": 12, "color": "rgba(255,0,0,.15)" }
-        ]'
-          data-color-plate="#fff"
-          data-color-major-ticks="#222"
-          data-color-minor-ticks="#222"
-          data-color-title="#000"
-          data-color-units="#000"
-          data-color-numbers="#222"
-          data-needle-type="line"
-          data-needle-start="0"
-          data-needle-end="90"
-          data-color-needle-start="#f00"
-          data-color-needle-end="#f00"
-          data-color-needle-shadow-down="#555"
-          data-value-box="true"
-          data-value-text-shadow="false"
-          data-value-int="5"
-          data-value-dec="0"
-          data-value-box-border-radius="0"
-          data-color-value-box-rect="#fff"
-          data-color-value-box-rect-end="#fff"
-          data-color-value-box-shadow="false"
-          data-color-value-box-background="#fff"
-          data-border-shadow-width="0"
-        ></canvas>
-        <canvas
-          id="speed"
-          data-type="radial-gauge"
-          data-width="300"
-          data-height="300"
-          data-borders="true"
-          data-border-inner-width="0"
-          data-border-middle-width="0"
-          data-border-outer-width="2"
-          data-units="ft/s x 100"
-          data-title="Speed"
-          data-value="0"
-          data-value-text="&#8212;"
-          data-min-value="0"
-          data-max-value="5"
-          data-major-ticks="0,1,2,3,4,5"
-          data-minor-ticks="5"
-          data-stroke-ticks="false"
-          data-highlights='[
-            { "from": 0, "to": 3, "color": "rgba(0,255,0,.15)" },
-            { "from": 3, "to": 4, "color": "rgba(255,255,0,.15)" },
-            { "from": 4, "to": 5, "color": "rgba(255,0,0,.15)" }
-        ]'
-          data-color-plate="#fff"
-          data-color-major-ticks="#222"
-          data-color-minor-ticks="#222"
-          data-color-title="#000"
-          data-color-units="#000"
-          data-color-numbers="#555"
-          data-needle-type="line"
-          data-needle-start="0"
-          data-needle-end="90"
-          data-color-needle-start="#f00"
-          data-color-needle-end="#f00"
-          data-color-needle-shadow-down="#222"
-          data-value-box="true"
-          data-value-text-shadow="false"
-          data-value-int="3"
-          data-value-dec="0"
-          data-value-box-border-radius="0"
-          data-color-value-box-rect="#fff"
-          data-color-value-box-rect-end="#fff"
-          data-color-value-box-shadow="false"
-          data-color-value-box-background="#fff"
-          data-border-shadow-width="0"
-        ></canvas>
+        <!--gauge.js custom gauge-->
+        <div id="alt-gauge-container">
+          <canvas
+            id="altitude"
+            data-type="radial-gauge"
+            data-width="300"
+            data-height="300"
+            data-borders="true"
+            data-border-inner-width="0"
+            data-border-middle-width="0"
+            data-border-outer-width="2"
+            data-units="ft x 1000"
+            data-title="Altitude"
+            data-value="0"
+            data-value-text="&#8212;"
+            data-min-value="0"
+            data-max-value="12"
+            data-major-ticks="0,2,4,6,8,10,12"
+            data-minor-ticks="5"
+            data-stroke-ticks="false"
+            data-highlights='[
+              { "from": 0, "to": 10, "color": "rgba(0,255,0,.15)" },
+              { "from": 10, "to": 11, "color": "rgba(255,255,0,.15)" },
+              { "from": 11, "to": 12, "color": "rgba(255,0,0,.15)" }
+          ]'
+            data-color-plate="#fff"
+            data-color-major-ticks="#222"
+            data-color-minor-ticks="#222"
+            data-color-title="#000"
+            data-color-units="#000"
+            data-color-numbers="#222"
+            data-needle-type="line"
+            data-needle-start="0"
+            data-needle-end="90"
+            data-color-needle-start="#f00"
+            data-color-needle-end="#f00"
+            data-color-needle-shadow-down="#555"
+            data-value-box="false"
+            data-value-text-shadow="false"
+            data-value-int="5"
+            data-value-dec="0"
+            data-value-box-border-radius="0"
+            data-color-value-box-rect="#fff"
+            data-color-value-box-rect-end="#fff"
+            data-color-value-box-shadow="false"
+            data-color-value-box-background="#fff"
+            data-border-shadow-width="0"
+          ></canvas>
+          <span id="alt-text">&#8212;</span>
+        </div>
+        <!--gauge.js custom gauge-->
+        <div id="spd-gauge-container">
+          <canvas
+            id="speed"
+            data-type="radial-gauge"
+            data-width="300"
+            data-height="300"
+            data-borders="true"
+            data-border-inner-width="0"
+            data-border-middle-width="0"
+            data-border-outer-width="2"
+            data-units="ft/s x 100"
+            data-title="Speed"
+            data-value="0"
+            data-value-text="&#8212;"
+            data-min-value="0"
+            data-max-value="5"
+            data-major-ticks="0,1,2,3,4,5"
+            data-minor-ticks="5"
+            data-stroke-ticks="false"
+            data-highlights='[
+              { "from": 0, "to": 3, "color": "rgba(0,255,0,.15)" },
+              { "from": 3, "to": 4, "color": "rgba(255,255,0,.15)" },
+              { "from": 4, "to": 5, "color": "rgba(255,0,0,.15)" }
+          ]'
+            data-color-plate="#fff"
+            data-color-major-ticks="#222"
+            data-color-minor-ticks="#222"
+            data-color-title="#000"
+            data-color-units="#000"
+            data-color-numbers="#555"
+            data-needle-type="line"
+            data-needle-start="0"
+            data-needle-end="90"
+            data-color-needle-start="#f00"
+            data-color-needle-end="#f00"
+            data-color-needle-shadow-down="#222"
+            data-value-box="false"
+            data-value-text-shadow="false"
+            data-value-int="3"
+            data-value-dec="0"
+            data-value-box-border-radius="0"
+            data-color-value-box-rect="#fff"
+            data-color-value-box-rect-end="#fff"
+            data-color-value-box-shadow="false"
+            data-color-value-box-background="#fff"
+            data-border-shadow-width="0"
+          ></canvas>
+          <span id="spd-text">&#8212;</span>
+        </div>
+        <!--gauge.js custom gauge-->
         <canvas
           id="heading"
           data-type="radial-gauge"
@@ -205,23 +221,24 @@
           data-color-needle-shadow-down="#555"
           data-border-shadow-width="0"
         ></canvas>
+        <!--Elements for data that does not use a gauge-->
         <div id="text-data">
           <span id="lat-long"><span id="lat">00.0000 &#176;N</span> / <span id="long">000.0000 &#176;W</span></span>
           <span id="t-plus">T+<span id="t">00:00:00</span></span>
         </div>
       </div>
+      <!--Stage panel-->
       <div id="stage">
-        <span id="s1" class="stage in-progress">On the Pad</span>
-        <span id="s2" class="stage">Powered Flight</span>
-        <span id="s3" class="stage">Coast</span>
-        <span id="s4" class="stage">Apogee</span>
-        <span id="s5" class="stage">Descent</span>
-        <span id="s6" class="stage">Main Parachute</span>
-        <span id="s7" class="stage">Landed</span>
+        <span id="s0" class="stage">On the Pad</span>
+        <span id="s1" class="stage">Powered Flight</span>
+        <span id="s2" class="stage">Coast</span>
+        <span id="s3" class="stage">Drogue Deploy</span>
+        <span id="s4" class="stage">Main Parachute</span>
+        <span id="s5" class="stage">Landed</span>
         <progress id="stage-progress" value="0" max="100">0%</progress>
       </div>
     </div>
-    <!--Mapping scripts, must be loaded after rest of document-->
+    <!--3rd party libraries, must be loaded after rest of document-->
     <script src="./libraries/charts/chart.umd.js"></script>
     <script src="./libraries/charts.js"></script>
     <script src="./libraries/map/leaflet/main/leaflet.js"></script>
