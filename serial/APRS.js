@@ -162,13 +162,27 @@ class APRSBody {
       this.t0 = body.t0;
     }
     if (typeof body === "string") {
-      this.lat = body.match(/(?<=!)[^\/]+(?=\/)/g)[0];
-      this.long = body.match(/(?<=\/)[^\[]+(?=\[)/g)[0];
-      this.heading = body.match(/(?<=\[)[^\/]+(?=\/)/g)[0];
-      this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0];
-      this.alt = body.match(/(?<=A=)-?[0-9]+/g)[0];
-      this.stage = body.match(/(?<=\/)S[0-9]+(?=\/)/g)[0];
-      this.t0 = body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0];
+      this.lat = body.match(/(?<=!)[^\/]+(?=\/)/g)
+        ? body.match(/(?<=!)[^\/]+(?=\/)/g)[0]
+        : "";
+      this.long = body.match(/(?<=\/)[^\[]+(?=\[)/g)
+        ? body.match(/(?<=\/)[^\[]+(?=\[)/g)[0]
+        : "";
+      this.heading = body.match(/(?<=\[)[^\/]+(?=\/)/g)
+        ? body.match(/(?<=\[)[^\/]+(?=\/)/g)[0]
+        : "";
+      this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)
+        ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
+        : "";
+      this.alt = body.match(/(?<=A=)-?[0-9]+/g)
+        ? body.match(/(?<=A=)-?[0-9]+/g)[0]
+        : "";
+      this.stage = body.match(/(?<=\/)S[0-9]+(?=\/)/g)
+        ? body.match(/(?<=\/)S[0-9]+(?=\/)/g)[0]
+        : "";
+      this.t0 = body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)
+        ? body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0]
+        : "";
     }
   }
   /**
@@ -178,13 +192,27 @@ class APRSBody {
   decodeBody(rawBody) {
     //based on a specific radio module library, will not work with other libraries
     return {
-      lat: rawBody.match(/(?<=!)[^\/]+(?=\/)/g)[0],
-      long: rawBody.match(/(?<=\/)[^\[]+(?=\[)/g)[0],
-      heading: rawBody.match(/(?<=\[)[^\/]+(?=\/)/g)[0],
-      speed: rawBody.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0],
-      alt: rawBody.match(/(?<=A=)[0-9]+/g)[0],
-      stage: body.match(/(?<=\/)S[0-9]+(?=\/)/g)[0],
-      t0: body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0],
+      lat: rawBody.match(/(?<=!)[^\/]+(?=\/)/g)
+        ? rawBody.match(/(?<=!)[^\/]+(?=\/)/g)[0]
+        : "",
+      long: rawBody.match(/(?<=\/)[^\[]+(?=\[)/g)
+        ? rawBody.match(/(?<=\/)[^\[]+(?=\[)/g)[0]
+        : "",
+      heading: rawBody.match(/(?<=\[)[^\/]+(?=\/)/g)
+        ? rawBody.match(/(?<=\[)[^\/]+(?=\/)/g)[0]
+        : "",
+      speed: rawBody.match(/(?<=\/)[^\/\[]+(?=\/)/g)
+        ? rawBody.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
+        : "",
+      alt: rawBody.match(/(?<=A=)-?[0-9]+/g)
+        ? rawBody.match(/(?<=A=)-?[0-9]+/g)[0]
+        : "",
+      stage: rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)
+        ? rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)[0]
+        : "",
+      t0: rawBody.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)
+        ? rawBody.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0]
+        : "",
     };
   }
   /**

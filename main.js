@@ -1,12 +1,13 @@
 //TODO: launch the radio as a separate process (maybe) so saving data does not rely on the main app to work
 
 const { app, BrowserWindow, ipcMain } = require("electron");
+if (require("electron-squirrel-startup")) app.quit(); //for app maker
 const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 
-let mainWin, debugWin, config, closed, csvCreated;
+let mainWin, debugWin, config, closed, csvCreated, lastHeading, lastSpeed;
 
 /*
 Config options:
@@ -42,12 +43,20 @@ try {
 const createWindow = () => {
   const width = 1200,
     height = 800;
+
+  const iconSuffix =
+    process.platform === "win32"
+      ? ".ico"
+      : process.platform === "darwin"
+      ? ".icns"
+      : ".png";
   mainWin = new BrowserWindow({
     width: width * config.scale,
     height: height * config.scale,
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
+    icon: "assets/icon" + iconSuffix,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -186,13 +195,28 @@ ipcMain.handle("set-port", (event, port) => {
 
 //serial communication
 radio.on("data", (data) => {
+  if (!data.getHeading() && !data.getSpeed()) {
+    data.body.heading = lastHeading;
+    data.body.speed = lastSpeed;
+  } else {
+    lastHeading = data.body.heading;
+    lastSpeed = data.body.speed;
+  }
   log.info(data.toString());
   mainWin.webContents.send("data", data);
-  if (!csvCreated) fs.writeFileSync("data.csv", "");
-  fs.appendFileSync("data.csv", data.toCSV(csvCreated));
-  if (!csvCreated) csvCreated = true;
-  //write data from serial to be used in testing if debug is on
-  if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
+  try {
+    if (!csvCreated) fs.writeFileSync("data.csv", "");
+    fs.appendFileSync("data.csv", data.toCSV(csvCreated));
+    if (!csvCreated) csvCreated = true;
+    //write data from serial to be used in testing if debug is on
+    if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
+  } catch (err) {
+    log.err("Error writing data: " + err.message);
+  }
+});
+
+radio.on("error", (message) => {
+  log.err("Error parsing APRS message: " + message);
 });
 
 radio.on("close", () => {
