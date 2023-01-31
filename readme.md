@@ -6,12 +6,37 @@ The easiest way to install is to download the executable for your platform from 
 
 Make sure to install [Node.js](https://nodejs.org/en/) and [npm](https://www.npmjs.com/).
 
-Then install depedencies and build the application.
+Then install depedencies.
 ```bash
-npm install
-npm build   
+npm install 
 ```
-The executable should be located in the build folder at the root directory of the project.
+
+If you want to generate an installer in addtion to the basic zip file, add the maker for your platform from makers.txt under config.makers in package.json.
+```json
+{
+...
+"config": {
+    "forge": {
+      "packagerConfig": {
+        "icon": "assets/icon"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-zip"
+        }
+      ]
+    }
+  },
+...
+}
+```
+
+Then make the app using npm.
+```bash
+npm run make
+```
+
+The executable will be located under out/Terp Rockets Ground Station and the output from the makers at out/make/"name of the maker".
 
 ## Usage
 To get started, first plug in a device that will send messages over serial in the following format:
@@ -52,7 +77,7 @@ There are a few configuration options available in the config.json file, which i
 From here, you can modify
 - the application window and debug window scale (in case the application windows are too big/small on different resolution screens)
 - turn on debug mode (which will save recieved messages to test.json so they can be used without connecting to the device physically, logs debug statements, and opens the chromium dev tools used by Electron)
-- and turn on noGUI mode(which will only open the debug window).
+- and turn on noGUI mode (which will only open the debug window)
 
 ## Future development
 
