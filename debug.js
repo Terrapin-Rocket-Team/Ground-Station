@@ -11,7 +11,18 @@ const getLogPrefix = (level) => {
   const e = new Error();
   let stackArr = e.stack.split("\n")[4].split(path.sep);
   let info = stackArr[stackArr.length - 1].split(":");
-  return "[" + info[0] + ":" + info[1] + "]" + "[" + level.toUpperCase() + "] ";
+  return (
+    "[" +
+    info[0] +
+    ":" +
+    info[1] +
+    "]" +
+    "[" +
+    level.toUpperCase() +
+    " " +
+    new Date().toString().match(/[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g) +
+    "] "
+  );
 };
 
 /**

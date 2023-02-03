@@ -69,11 +69,11 @@ const createWindow = () => {
 
   //for some reason the program does not end quickly enough after the main window is destroyed to prevent errors when debug is used
   //this condition should stop the messages being sent to the destroyed window
-  if (config.debug) {
-    mainWin.once("close", () => {
-      closed = true;
-    });
-  }
+  mainWin.once("close", () => {
+    closed = true;
+    radio.close();
+    debugWin.close();
+  });
 };
 
 //creates the debug electron window
@@ -221,7 +221,7 @@ radio.on("error", (message) => {
 
 radio.on("close", () => {
   log.info("Serial disconnected");
-  mainWin.webContents.send("radio-close");
+  if (!closed) mainWin.webContents.send("radio-close");
 });
 
 //testing

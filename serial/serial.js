@@ -65,22 +65,27 @@ class Radio extends EventEmitter {
           } catch (err) {
             this.emit("error", err.message);
           }
-          this.chunks = "";
+          if (this.chunks.match(/s\r\n/g).length > 1) {
+            this.chunks = this.chunks.substring(
+              this.chunks.lastIndexOf("s\r\n")
+            );
+          } else {
+            this.chunks = "";
+          }
         }
       });
 
       //if the serial port is disconnected, emit the close event
       this.port.on("close", () => {
-        this.emit("close");
         this.port = null;
+        this.emit("close");
       });
     });
   }
 
   close() {
-    if (this.port) {
+    if (this.port.isOpen) {
       this.port.close();
-      this.port = null;
     }
   }
 }
