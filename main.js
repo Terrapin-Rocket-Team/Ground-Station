@@ -7,7 +7,14 @@ const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 
-let mainWin, debugWin, config, closed, csvCreated, lastHeading, lastSpeed;
+let mainWin,
+  debugWin,
+  config,
+  closed,
+  csvCreated,
+  lastHeading,
+  lastSpeed,
+  currentCSV;
 
 /*
 Config options:
@@ -205,8 +212,12 @@ radio.on("data", (data) => {
   log.info(data.toString());
   mainWin.webContents.send("data", data);
   try {
-    if (!csvCreated) fs.writeFileSync("data.csv", "");
-    fs.appendFileSync("data.csv", data.toCSV(csvCreated));
+    if (!csvCreated) {
+      if (!fs.existsSync("data")) fs.mkdirSync("data");
+      currentCSV = new Date().toISOString().replace(/:/g, "-") + ".csv";
+      fs.writeFileSync(path.join("data", currentCSV), "");
+    }
+    fs.appendFileSync(path.join("data", currentCSV), data.toCSV(csvCreated));
     if (!csvCreated) csvCreated = true;
     //write data from serial to be used in testing if debug is on
     if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
