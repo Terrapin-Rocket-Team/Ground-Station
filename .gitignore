@@ -1,7 +1,7 @@
 /node_modules
 /src/libraries/map/USGS
 debug.log
-data.csv
+data/
 test.json
 config.json
 out/
