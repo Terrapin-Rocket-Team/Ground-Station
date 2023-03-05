@@ -340,15 +340,17 @@ window.onload = () => {
     let prog = document.getElementById("stage-progress");
     let sn = msg.getStageNumber();
     let percents = [16, 33, 50, 67, 84, 100];
-    prog.textContent = percents[sn] + "%";
-    prog.setAttribute("value", percents[sn]);
-    document.getElementById("s" + sn).className = "stage in-progress";
-    if (sn > 0)
-      document.getElementById("s" + (sn - 1)).className = "stage complete";
-    for (let i = lastStage; i < sn; i++) {
-      document.getElementById("s" + i).className = "stage complete";
+    if (sn >= 0) {
+      prog.textContent = percents[sn] + "%";
+      prog.setAttribute("value", percents[sn]);
+      document.getElementById("s" + sn).className = "stage in-progress";
+      if (sn > 0)
+        document.getElementById("s" + (sn - 1)).className = "stage complete";
+      for (let i = lastStage; i < sn; i++) {
+        document.getElementById("s" + i).className = "stage complete";
+      }
+      lastStage = sn;
     }
-    lastStage = sn;
   });
 
   //update UI if serial connection is lost

@@ -21,7 +21,7 @@ class APRSMessage {
       this.path = message.match(/(?<=Path:)[^,]+(?=,)/g)[0];
       this.type = message.match(/(?<=Type:)[^,]+(?=,)/g)[0];
       this.rssi = message.match(/(?<=RSSI:).+$/g)[0];
-      this.rawBody = message.match(/(?<=Data:).+(?=(!w[^!]+!)?RSSI)/g)[0];
+      this.rawBody = message.match(/(?<=Data:).+(?=,(!w[^!]+!)?RSSI)/g)[0];
       this.body = new APRSBody(this.rawBody);
     }
   }
@@ -127,7 +127,7 @@ class APRSMessage {
   toString() {
     return `Source: ${this.src}, Dest: ${this.dest}, Path: ${
       this.path
-    }, Type: ${this.type}, Body: ${this.body.toString()}`;
+    }, Type: ${this.type}, Body: ${this.body.toString()}, RSSI: ${this.rssi}`;
   }
 
   //convert lat/long to a better format
@@ -135,11 +135,12 @@ class APRSMessage {
     let csv = "";
     if (!csvCreated) {
       csv =
-        "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0\r\n";
+        "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0,Signal Strength\r\n";
     }
+    console.log(this.rawBody);
     csv += `${this.src},${this.dest},${this.path},${this.type},${
       this.rawBody
-    },${this.body.toCSV()}\r\n`;
+    },${this.body.toCSV()},${this.rssi}\r\n`;
     return csv;
   }
 }
