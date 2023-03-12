@@ -84,7 +84,7 @@ class Radio extends EventEmitter {
   }
 
   close() {
-    if (this.port.isOpen) {
+    if (this.port != null && this.port.isOpen) {
       this.port.close();
     }
   }

@@ -64,6 +64,9 @@ class API extends EventEmitter {
     this.reload = () => ipcRenderer.send("reload");
     this.devTools = () => ipcRenderer.send("dev-tools");
     this.openDebug = () => ipcRenderer.send("open-debug");
+    this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
+    this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
+    this.getTile = (coords) => ipcRenderer.invoke("get-tile", coords);
 
     //getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");

@@ -4,12 +4,14 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 if (require("electron-squirrel-startup")) app.quit(); //for app maker
 const fs = require("fs");
 const path = require("path");
+const { Blob } = require("node:buffer");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 
 let mainWin,
   debugWin,
   config,
+  cacheMeta,
   closed,
   csvCreated,
   lastHeading,
@@ -22,6 +24,7 @@ scale: 1 is default, scales the application window
 debugScale: 1 is default, scales the debug window
 debug: false is default, whether debug statements will be logged
 noGUI: false is default, loads only the debug window
+cacheMaxSize: 1000000 (1MB) is default, max tile cache size in bytes
 */
 try {
   //load config
@@ -38,11 +41,38 @@ try {
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
     if (!fs.existsSync("./config.json")) {
-      log.info("Config file successfully created");
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+      log.info("Config file successfully created");
     }
   } catch (err) {
     log.err('Failed to create config file: "' + err.message + '"');
+  }
+}
+
+try {
+  //load cache metadata
+  cacheMeta = JSON.parse(fs.readFileSync("./cachedtiles/metadata.json"));
+  log.debug("Cache metadata loaded");
+} catch (err) {
+  cacheMeta = {
+    tiles: {},
+    fileList: [],
+    runningSize: 0,
+  };
+  log.warn(
+    'Failed to load cache metadata file, using defaults: "' + err.message + '"'
+  );
+  try {
+    if (!fs.existsSync("./cachedtiles")) fs.mkdirSync("./cachedtiles");
+    if (!fs.existsSync("./cachedtiles/metadata.json")) {
+      fs.writeFileSync(
+        "./cachedtiles/metadata.json",
+        JSON.stringify(cacheMeta, null, "\t")
+      );
+      log.info("Metadata file successfully created");
+    }
+  } catch (err) {
+    log.err('Failed to create metadata file: "' + err.message + '"');
   }
 }
 
@@ -177,6 +207,129 @@ ipcMain.on("open-debug", (event, args) => {
   if (!debugWin) createDebug();
 });
 
+ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
+  try {
+    tilePath = [
+      String(tilePathNums[0]),
+      String(tilePathNums[1]),
+      String(tilePathNums[2]),
+    ];
+    while (cacheMeta.runningSize + tile.byteLength > config.cacheMaxSize) {
+      // shift off the fileList and delete file and containing folders if necessary
+      let oldTile = cacheMeta.fileList.shift();
+      let oldFolders = oldTile.split(path.sep);
+      let fileSize = fs.lstatSync(
+        path.join("cachedtiles", oldTile + ".png")
+      ).size;
+
+      //remove the file
+      fs.rmSync(path.join("cachedtiles", oldTile + ".png"));
+
+      cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
+        cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(oldFolders[2]),
+        1
+      );
+
+      //remove the folder one level above the file if it is empty
+      if (
+        fs.readdirSync(path.join("cachedtiles", oldFolders[0], oldFolders[1]))
+          .length === 0
+      ) {
+        fs.rmdirSync(path.join("cachedtiles", oldFolders[0], oldFolders[1]));
+        delete cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
+      }
+
+      //remove the folder two levels above the file if it is empty
+      if (
+        fs.readdirSync(path.join("cachedtiles", oldFolders[0])).length === 0
+      ) {
+        fs.rmdirSync(path.join("cachedtiles", oldFolders[0]));
+        delete cacheMeta.tiles[oldFolders[0]];
+      }
+
+      cacheMeta.runningSize -= fileSize;
+    }
+
+    let folderPath = path.join("cachedtiles", tilePath[0], tilePath[1]);
+
+    //create folders if necessary
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, {
+        recursive: true,
+      });
+    }
+
+    //see what folders/files already exist
+    let hasZoom = cacheMeta.tiles[tilePath[0]];
+    let hasX = hasZoom ? cacheMeta.tiles[tilePath[0]][tilePath[1]] : 0;
+    let hasY = hasX
+      ? cacheMeta.tiles[tilePath[0]][tilePath[1]].includes(tilePath[2])
+      : 0;
+
+    //add the appropriate amount of stucture to the metadata
+    if (!hasZoom) {
+      cacheMeta.tiles[tilePath[0]] = {
+        [tilePath[1]]: [tilePath[2]],
+      };
+    } else if (!hasX) {
+      cacheMeta.tiles[tilePath[0]][tilePath[1]] = [tilePath[2]];
+    } else if (!hasY) {
+      cacheMeta.tiles[tilePath[0]][tilePath[1]].push(tilePath[2]);
+    }
+
+    if (hasY) {
+      //if the file already exists, check if it is a different size
+      let fileSize = fs.lstatSync(
+        path.join(folderPath, tilePath[2] + ".png")
+      ).size;
+      if (fileSize != tile.byteLength) {
+        cacheMeta.runningSize -= fileSize;
+        cacheMeta.runningSize += tile.byteLength;
+        fs.writeFileSync(
+          path.join(folderPath, tilePath[2] + ".png"),
+          Buffer.from(tile)
+        );
+      }
+    } else {
+      //add the file
+      cacheMeta.runningSize += tile.byteLength;
+      cacheMeta.fileList.push(path.join(tilePath[0], tilePath[1], tilePath[2]));
+      fs.writeFileSync(
+        path.join(folderPath, tilePath[2] + ".png"),
+        Buffer.from(tile)
+      );
+    }
+
+    //write metadata
+    fs.writeFileSync(
+      "./cachedtiles/metadata.json",
+      JSON.stringify(cacheMeta, null, "\t")
+    );
+  } catch (err) {
+    log.err('Error caching tile: "' + err.message + '"');
+  }
+});
+
+ipcMain.handle("get-tiles", () => {
+  return cacheMeta.tiles;
+});
+
+ipcMain.handle("get-tile", (event, coords) => {
+  try {
+    return fs.readFileSync(
+      path.join(
+        "cachedtiles",
+        String(coords[0]),
+        String(coords[1]),
+        String(coords[2]) + ".png"
+      )
+    ).buffer;
+  } catch (err) {
+    log.err('Error getting tile: "' + err.message + '"');
+    return null;
+  }
+});
+
 //getters
 ipcMain.handle("get-ports", (event, args) => {
   return radio.getAvailablePorts();
@@ -222,7 +375,7 @@ radio.on("data", (data) => {
     //write data from serial to be used in testing if debug is on
     if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
   } catch (err) {
-    log.err("Error writing data: " + err.message);
+    log.err('Error writing data: "' + err.message + '"');
   }
 });
 
