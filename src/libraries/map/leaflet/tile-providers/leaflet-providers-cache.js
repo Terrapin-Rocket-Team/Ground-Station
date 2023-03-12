@@ -74,7 +74,75 @@
 
       // Compute final options combining provider options with any user overrides
       var layerOpts = L.Util.extend({}, provider.options, options);
+      api.getCachedTiles().then((cachedTiles) => {
+        this.cachedTiles = cachedTiles;
+      });
+      this.activeCachedTiles = [];
       L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
+
+      this.on("tileunload", (arg) => {
+        let coords = arg.coords.toString();
+        let len = this.activeCachedTiles.length;
+        for (let i = 0; i < len; i++) {
+          if (this.activeCachedTiles[i].coords === coords) {
+            this.activeCachedTiles[i].deleteBlob();
+            this.activeCachedTiles.splice(i, 1);
+            break;
+          }
+        }
+      });
+    },
+    createTile: function (coords) {
+      let tile = document.createElement("IMG");
+
+      //stock leaflet code
+      tile.alt = "";
+
+      tile.setAttribute("role", "presentation");
+      api.getCachedTiles().then((cachedTiles) => {
+        this.cachedTiles = cachedTiles;
+
+        //cache code
+        if (
+          this.cachedTiles &&
+          this.cachedTiles[coords.z] &&
+          this.cachedTiles[coords.z][coords.x] &&
+          this.cachedTiles[coords.z][coords.x].includes(String(coords.y))
+        ) {
+          api.getTile([coords.z, coords.x, coords.y]).then((ab) => {
+            let tileBlob = new CacheTile([ab], coords.toString());
+            tile.src = tileBlob.getURL();
+            this.activeCachedTiles.push(tileBlob);
+          });
+        } else {
+          let src = this.getTileUrl(coords);
+          //cache: no-store prevents the use of the browser cache
+          if (navigator.onLine) {
+            fetch(src, { cache: "no-store" })
+              .then(
+                (img) => img.blob(),
+                (err) => {
+                  console.warn(err);
+                }
+              )
+              .then(async (res) => {
+                if (res) {
+                  let ab = await res.arrayBuffer();
+                  let tileBlob = new CacheTile([ab], coords.toString());
+                  tile.src = tileBlob.getURL();
+                  this.activeCachedTiles.push(tileBlob);
+                  api.cacheTile(ab, [coords.z, coords.x, coords.y]);
+                }
+              });
+          } else {
+            tile.src = "#";
+          }
+        }
+      });
+      return tile;
+    },
+    _onTileRemove: (e) => {
+      e.tile.onload = null;
     },
   });
 

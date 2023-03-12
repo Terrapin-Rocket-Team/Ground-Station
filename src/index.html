@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data:; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self'; connect-src 'self' https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; style-src 'self' 'unsafe-inline';"
     />
     <link rel="stylesheet" href="index.css" />
     <link rel="stylesheet" href="./libraries/map/leaflet/main/leaflet.css" />
     <script src="./libraries/color.js"></script>
     <script src="./libraries/APRS.js"></script>
     <script src="./libraries/gauge.js"></script>
+    <script src="./libraries/cacheTile.js"></script>
     <title>Terp Rockets Ground Station</title>
   </head>
   <body>
@@ -242,7 +243,7 @@
     <script src="./libraries/charts/chart.umd.js"></script>
     <script src="./libraries/charts.js"></script>
     <script src="./libraries/map/leaflet/main/leaflet.js"></script>
-    <script src="./libraries/map/leaflet/tile-providers/leaflet-providers.js"></script>
+    <script src="./libraries/map/leaflet/tile-providers/leaflet-providers-cache.js"></script>
     <script src="./libraries/map/map.js"></script>
     <script src="index.js"></script>
   </body>
