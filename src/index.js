@@ -130,6 +130,12 @@ window.onload = () => {
   api.on("data", (data) => {
     let msg = new APRSMessage(data);
 
+    let recvStatus = document.getElementById("recv-status");
+
+    recvStatus.setAttribute("src", "./images/recv_on.svg");
+    recvStatus.setAttribute("title", "Receiving Message");
+    recvStatus.setAttribute("alt", "On");
+
     //update signal strength
     let ss = msg.getSignalStrength();
     const serialEl = document.getElementById("radio-connection");
@@ -351,6 +357,12 @@ window.onload = () => {
       }
       lastStage = sn;
     }
+
+    setTimeout(() => {
+      recvStatus.setAttribute("src", "./images/recv_off.svg");
+      recvStatus.setAttribute("title", "No Message");
+      recvStatus.setAttribute("alt", "Off");
+    }, 600);
   });
 
   //update UI if serial connection is lost

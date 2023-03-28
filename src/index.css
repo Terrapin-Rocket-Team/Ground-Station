@@ -137,7 +137,8 @@ body {
 }
 
 #serial-connection,
-#radio-connection {
+#radio-connection,
+#recv-status {
   height: 2.5vh;
   width: 2.5vh;
   -webkit-user-drag: none;

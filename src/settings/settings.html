@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; style-src 'self' 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <script src="settings.js"></script>
+    <title>Settings</title>
+  </head>
+  <body>
+    <!--Application top bar-->
+    <div id="top-bar">
+      <!--Name and logo-->
+      <div id="top-left">
+        <img src="../images/logo.png" alt="Logo" />
+        <span>Terp Rockets Ground Station</span>
+      </div>
+      <!--Buttons and application control-->
+      <div id="top-right">
+        <button id="debug" class="top-button" title="Debug Window">
+          <img src="../images/debug.svg" alt="Debug" />
+        </button>
+        <a href="../index.html" id="settings" class="top-button"
+          ><img src="../images/home.svg" alt="Home"
+        /></a>
+        <button id="reload" class="top-button" title="Reload">
+          <img src="../images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="../images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="../images/close.svg" alt="Close" />
+        </button>
+      </div>
+    </div>
+    <!--Contains all elements besides the top bar-->
+    <div id="main">
+      <!--dropdown for scale-->
+      <!--dropdown for debugScale-->
+      <!--toggle for debug-->
+      <!--toggle for noGUI-->
+      <!--number input for cacheMaxSize-->
+      <!--number input for baudRate-->
+      <!--reset to defaults-->
+    </div>
+  </body>
+</html>
