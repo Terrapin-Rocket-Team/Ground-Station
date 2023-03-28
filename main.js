@@ -1,10 +1,9 @@
-//TODO: launch the radio as a separate process (maybe) so saving data does not rely on the main app to work
+//TODO: launch the radio and data logging as a separate process (maybe) so saving data does not rely on the main app to work
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 if (require("electron-squirrel-startup")) app.quit(); //for app maker
 const fs = require("fs");
 const path = require("path");
-const { Blob } = require("node:buffer");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 
@@ -24,7 +23,8 @@ scale: 1 is default, scales the application window
 debugScale: 1 is default, scales the debug window
 debug: false is default, whether debug statements will be logged
 noGUI: false is default, loads only the debug window
-cacheMaxSize: 1000000 (1MB) is default, max tile cache size in bytes
+cacheMaxSize: 100000000 (100MB) is default, max tile cache size in bytes
+baudRate: 115200 is default, baudrate to use with the connected serial port
 */
 try {
   //load config
@@ -37,6 +37,8 @@ try {
     debugScale: 1,
     debug: false,
     noGUI: false,
+    cacheMaxSize: 100000000,
+    baudRate: 115200,
   };
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
@@ -339,7 +341,7 @@ ipcMain.handle("get-ports", (event, args) => {
 ipcMain.handle("set-port", (event, port) => {
   return new Promise((res, rej) => {
     radio
-      .connect(port, 115200)
+      .connect(port, config.baudRate)
       .then((result) => {
         log.info("Successfully connected to port " + port);
         res(1);
@@ -351,6 +353,27 @@ ipcMain.handle("set-port", (event, port) => {
         res(0);
       });
   });
+});
+
+ipcMain.on("update-settings", (event, settings) => {
+  if (settings) {
+    config = {
+      scale: settings.scale ? settings.scale : config.scale,
+      debugScale: settings.debugScale ? settings.debugScale : config.debugScale,
+      debug: settings.debug ? settings.debug : config.debug,
+      noGUI: settings.noGUI ? settings.noGUI : config.noGUI,
+      cacheMaxSize: settings.cacheMaxSize
+        ? settings.cacheMaxSize
+        : config.cacheMaxSize,
+      baudRate: settings.baudRate ? settings.baudRate : config.baudRate,
+    };
+    try {
+      fs.writeFileSync("config.json", JSON.stringify(config, null, "\t"));
+      log.debug("Successfully updated settings");
+    } catch (err) {
+      log.err('Failed to update settings: "' + err.message + '"');
+    }
+  }
 });
 
 //serial communication
@@ -396,5 +419,5 @@ if (config.debug) {
         "data",
         JSON.parse(fs.readFileSync("test.json"))
       );
-  }, 1000);
+  }, 2000);
 }
