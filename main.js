@@ -195,9 +195,23 @@ ipcMain.on("minimize", () => {
 });
 
 ipcMain.on("reload", (event, args) => {
-  log.debug("Reloading main window");
+  log.debug("Reloading windows");
   radio.close();
-  mainWin.webContents.reloadIgnoringCache();
+  if (mainWin) mainWin.webContents.reloadIgnoringCache();
+  if (debugWin) {
+    debugWin.webContents.reloadIgnoringCache();
+    debugWin.webContents.once("dom-ready", () => {
+      try {
+        if (fs.existsSync("debug.log"))
+          debugWin.webContents.send(
+            "previous-logs",
+            fs.readFileSync("debug.log").toString()
+          );
+      } catch (err) {
+        log.err('Could not load previous logs: "' + err.message + '"');
+      }
+    });
+  }
 });
 
 ipcMain.on("dev-tools", (event, args) => {
@@ -332,9 +346,17 @@ ipcMain.handle("get-tile", (event, coords) => {
   }
 });
 
+ipcMain.on("close-port", (event, args) => {
+  radio.close();
+});
+
 //getters
 ipcMain.handle("get-ports", (event, args) => {
   return radio.getAvailablePorts();
+});
+
+ipcMain.handle("get-port-status", (event, args) => {
+  return radio.isConnected();
 });
 
 //setters
@@ -412,7 +434,7 @@ radio.on("close", () => {
 });
 
 //testing
-if (config.debug) {
+if (config.debug && !config.noGUI) {
   setInterval(() => {
     if (!closed)
       mainWin.webContents.send(
