@@ -12,6 +12,7 @@ class Radio extends EventEmitter {
   constructor(port) {
     super();
     this.port = port ? port : null;
+    this.connected = false;
     this.chunks = "";
   }
 
@@ -51,6 +52,7 @@ class Radio extends EventEmitter {
 
       //if the port is successfully open resolve the promise
       this.port.on("open", () => {
+        this.connected = true;
         res(1);
       });
 
@@ -81,6 +83,13 @@ class Radio extends EventEmitter {
         this.emit("close");
       });
     });
+  }
+
+  isConnected() {
+    return {
+      connected: this.connected,
+      port: this.port ? this.port.path : null,
+    };
   }
 
   close() {

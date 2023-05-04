@@ -12,13 +12,25 @@ const buildMap = (id) => {
     maxZoom: 15,
     zoom: 5,
   });
+
   L.tileLayer.provider("OpenTopoMap").addTo(map);
+
   markers.addTo(map);
+
   let marker = L.marker([38.98781, -76.942406]);
+
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
   map.setZoom(12);
   markers.clearLayers();
+
+  L.easyButton(
+    '<img src="../src/images/home_map.svg" style="width:100%;height;100%;">',
+    (btn, map) => {
+      map.setView([38.98781, -76.942406]);
+      map.setZoom(15);
+    }
+  ).addTo(map);
 };
 
 /**
