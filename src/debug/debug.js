@@ -49,6 +49,10 @@ window.onload = () => {
   });
 
   inputBoxText.addEventListener("keyup", (event) => {
+    if (event.key === "Backspace") upArrowCounter = 0;
+  });
+
+  inputBoxText.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
 
@@ -58,14 +62,10 @@ window.onload = () => {
       previousCommands.push(cmd);
       if (previousCommands.length > 50) previousCommands.shift();
 
-      CMDS.executeCmd(cmd.split(" "));
+      CMDS.executeCmd(cmd.trim().split(" "));
 
       inputBoxText.innerHTML = "";
     }
-    if (event.key === "Backspace") upArrowCounter = 0;
-  });
-
-  inputBoxText.addEventListener("keydown", (event) => {
     if (event.key === "ArrowUp") {
       event.preventDefault();
       if (upArrowCounter !== previousCommands.length) {

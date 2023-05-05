@@ -109,9 +109,12 @@ const createWindow = () => {
   //for some reason the program does not end quickly enough after the main window is destroyed to prevent errors when debug is used
   //this condition should stop the messages being sent to the destroyed window
   mainWin.once("close", () => {
-    closed = true;
-    radio.close();
-    debugWin.close();
+    if (!config.noGUI) {
+      closed = true;
+      radio.close();
+    }
+    if (!config.noGUI && debugWin) debugWin.close();
+    mainWin = null;
   });
 };
 
@@ -150,7 +153,12 @@ const createDebug = () => {
 
   //reset when the window is closed
   debugWin.once("close", () => {
+    if (config.noGUI) {
+      closed = true;
+      radio.close();
+    }
     log.removeWin();
+    if (config.noGUI && mainWin) mainWin.close();
     debugWin = null;
   });
   log.debug("Debug window created");
@@ -215,7 +223,13 @@ ipcMain.on("reload", (event, args) => {
 });
 
 ipcMain.on("dev-tools", (event, args) => {
-  mainWin.webContents.openDevTools({ mode: "detach" });
+  if (mainWin) mainWin.webContents.openDevTools({ mode: "detach" });
+  if (debugWin) debugWin.webContents.openDevTools({ mode: "detach" });
+});
+
+ipcMain.on("open-gui", (event, args) => {
+  log.debug("Main window opened from debug");
+  if (!mainWin) createWindow();
 });
 
 ipcMain.on("open-debug", (event, args) => {
@@ -408,7 +422,7 @@ radio.on("data", (data) => {
     lastSpeed = data.body.speed;
   }
   log.info(data.toString());
-  mainWin.webContents.send("data", data);
+  if (mainWin) mainWin.webContents.send("data", data);
   try {
     if (!csvCreated) {
       if (!fs.existsSync("data")) fs.mkdirSync("data");
@@ -430,13 +444,13 @@ radio.on("error", (message) => {
 
 radio.on("close", () => {
   log.info("Serial disconnected");
-  if (!closed) mainWin.webContents.send("radio-close");
+  if (!closed && mainWin) mainWin.webContents.send("radio-close");
 });
 
 //testing
 if (config.debug && !config.noGUI) {
   setInterval(() => {
-    if (!closed)
+    if (!closed && mainWin)
       mainWin.webContents.send(
         "data",
         JSON.parse(fs.readFileSync("test.json"))

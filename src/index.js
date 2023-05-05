@@ -123,6 +123,8 @@ window.onload = () => {
   let counter = 0;
   let lastCoords = [];
   let lastStage = 0;
+  let lastAlt = 0;
+  let apogeeCounter = 0;
   let tPlusSet = false;
   let chartState = "seconds";
   let startTime = 0;
@@ -357,6 +359,13 @@ window.onload = () => {
       }
       lastStage = sn;
     }
+
+    if (msg.getAlt() > lastAlt) {
+      lastAlt = msg.getAlt();
+      apogeeCounter = 0;
+    }
+    if (msg.getAlt() < lastAlt) apogeeCounter++;
+    if (apogeeCounter === 3) alert("Apogee at " + lastAlt + "ft");
 
     setTimeout(() => {
       recvStatus.setAttribute("src", "./images/recv_off.svg");

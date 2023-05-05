@@ -100,6 +100,12 @@ let commands = [
         }
       }
     ),
+    new CmdNode("-devtools", "Opens the chromium devtools", null, () => {
+      api.devTools();
+    }),
+    new CmdNode("-opengui", "Opens the ground station GUI", null, () => {
+      api.openGUI();
+    }),
   ]),
   new CmdNode("serial", "Controls the serial port connections", [
     new CmdNode(
@@ -133,7 +139,7 @@ let commands = [
         printM("Available ports: ", 1);
         if (ports.length > 0) {
           ports.forEach((port) => {
-            printM(port.name, 2);
+            printM(port.path, 2);
           });
         } else {
           printM("None", 2);

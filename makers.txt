@@ -1,3 +1,7 @@
+{
+  "name": "@electron-forge/maker-zip"
+}
+
 // Windows
 {
     "name": "@electron-forge/maker-squirrel",
