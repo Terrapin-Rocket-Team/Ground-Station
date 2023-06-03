@@ -25,9 +25,6 @@
         throw "No such provider (" + providerName + ")";
       }
 
-      //this is what we want to change
-      //modify the url if the tile exists in the database
-      //tile metadata should already be in the renderer when it is initialized
       var provider = {
         url: providers[providerName].url,
         options: providers[providerName].options,
@@ -74,69 +71,59 @@
 
       // Compute final options combining provider options with any user overrides
       var layerOpts = L.Util.extend({}, provider.options, options);
-      api.getCachedTiles().then((cachedTiles) => {
-        this.cachedTiles = cachedTiles;
-      });
-      this.activeCachedTiles = [];
-      L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
 
-      this.on("tileunload", (arg) => {
-        let coords = arg.coords.toString();
-        let len = this.activeCachedTiles.length;
-        for (let i = 0; i < len; i++) {
-          if (this.activeCachedTiles[i].coords === coords) {
-            this.activeCachedTiles[i].deleteBlob();
-            this.activeCachedTiles.splice(i, 1);
-            break;
-          }
-        }
-      });
+      L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
     },
     createTile: function (coords) {
       let tile = document.createElement("IMG");
 
-      //stock leaflet code
+      // object that stors coords as strings instead of numbers
+      let coordsStr = {
+        z: String(coords.z),
+        x: String(coords.x),
+        y: String(coords.y),
+      };
+
+      // stock leaflet code
       tile.alt = "";
 
       tile.setAttribute("role", "presentation");
-      api.getCachedTiles().then((cachedTiles) => {
-        this.cachedTiles = cachedTiles;
 
-        //cache code
+      // get url before async part starts to avoid weird things happening
+      let tileUrl = this.getTileUrl(coords);
+      api.getCachedTiles().then((cachedTiles) => {
+        // check if a tile is in the cache
         if (
-          this.cachedTiles &&
-          this.cachedTiles[coords.z] &&
-          this.cachedTiles[coords.z][coords.x] &&
-          this.cachedTiles[coords.z][coords.x].includes(String(coords.y))
+          cachedTiles &&
+          cachedTiles[coordsStr.z] &&
+          cachedTiles[coordsStr.z][coordsStr.x] &&
+          cachedTiles[coordsStr.z][coordsStr.x].includes(coordsStr.y)
         ) {
-          api.getTile([coords.z, coords.x, coords.y]).then((ab) => {
-            let tileBlob = new CacheTile([ab], coords.toString());
-            tile.src = tileBlob.getURL();
-            this.activeCachedTiles.push(tileBlob);
-          });
-        } else {
-          let src = this.getTileUrl(coords);
-          //cache: no-store prevents the use of the browser cache
-          if (navigator.onLine) {
-            fetch(src, { cache: "no-store" })
-              .then(
-                (img) => img.blob(),
-                (err) => {
-                  console.warn(err);
-                }
-              )
-              .then(async (res) => {
-                if (res) {
-                  let ab = await res.arrayBuffer();
-                  let tileBlob = new CacheTile([ab], coords.toString());
-                  tile.src = tileBlob.getURL();
-                  this.activeCachedTiles.push(tileBlob);
-                  api.cacheTile(ab, [coords.z, coords.x, coords.y]);
-                }
-              });
-          } else {
-            tile.src = "#";
+          // since the tiles are stored in src they can be loaded directly
+          try {
+            // attempt to load from cache
+            tile.src =
+              "cachedtiles/" +
+              [coordsStr.z, coordsStr.x, coordsStr.y].join("/") +
+              ".png";
+          } catch (err) {
+            // if that fails and causes an error (it might not), try loading it from the source
+            console.warn(
+              'Error loading tile from cache: "' + err.message + '"'
+            );
+            fetchTileOnline(tileUrl, tile, coords, [
+              coordsStr.z,
+              coordsStr.x,
+              coordsStr.y,
+            ]);
           }
+        } else {
+          // if the tile is not in the cache load it from the source
+          fetchTileOnline(tileUrl, tile, coords, [
+            coordsStr.z,
+            coordsStr.x,
+            coordsStr.y,
+          ]);
         }
       });
       return tile;
@@ -145,6 +132,41 @@
       e.tile.onload = null;
     },
   });
+  const fetchTileOnline = (src, tile, coords, coordsS) => {
+    //cache: no-store prevents the use of the browser cache
+    if (navigator.onLine) {
+      fetch(src, { cache: "no-store" })
+        .then(
+          (img) => {
+            // check if a response was received and has an ok status (we don't want to store http responses as images)
+            if (img && img.ok) return img.blob();
+            // throw a new error to be caught and logged below, the http error will also probably be automatically logged
+            throw new Error("An error occured loading the tile at: " + img.url);
+          },
+          (err) => {
+            console.warn(err);
+          }
+        )
+        .then(async (res) => {
+          if (res) {
+            // create an image blob and use that as the source
+            tile.src = URL.createObjectURL(res);
+            // send the blob to main to be stored in the src/cachedtiles/coordsS[0]/coordsS[1]/coordsS[2].png folder
+            api.cacheTile(await res.arrayBuffer(), [
+              coordsS[0],
+              coordsS[1],
+              coordsS[2],
+            ]);
+          }
+        })
+        .catch((err) => {
+          console.warn(err);
+        });
+    } else {
+      // if nothing else works set the source to #
+      tile.src = "#";
+    }
+  };
 
   /**
    * Definition of providers.

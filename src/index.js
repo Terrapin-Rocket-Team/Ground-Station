@@ -1,3 +1,5 @@
+//TODO: preserve gui state (charts) when switching to settings
+
 window.onload = () => {
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
