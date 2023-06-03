@@ -67,15 +67,17 @@ class API extends EventEmitter {
     this.openGUI = () => ipcRenderer.send("open-gui");
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
-    this.getTile = (coords) => ipcRenderer.invoke("get-tile", coords);
     this.closePort = () => ipcRenderer.send("close-port");
+    this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
 
     //getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
+    this.getSettings = () => ipcRenderer.invoke("get-settings");
 
     //setters
     this.setPort = (port) => ipcRenderer.invoke("set-port", port);
+    this.setSettings = (config) => ipcRenderer.send("update-settings", config);
   }
 }
 

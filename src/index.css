@@ -457,3 +457,22 @@ progress::-webkit-progress-value {
   transform: rotate(90deg);
   width: 95vh;
 }
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: inherit;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ca0000;
+  border-radius: inherit;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #970000;
+  cursor: pointer;
+}

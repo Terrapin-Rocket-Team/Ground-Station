@@ -53,7 +53,7 @@ try {
 
 try {
   //load cache metadata
-  cacheMeta = JSON.parse(fs.readFileSync("./cachedtiles/metadata.json"));
+  cacheMeta = JSON.parse(fs.readFileSync("./src/cachedtiles/metadata.json"));
   log.debug("Cache metadata loaded");
 } catch (err) {
   cacheMeta = {
@@ -65,10 +65,10 @@ try {
     'Failed to load cache metadata file, using defaults: "' + err.message + '"'
   );
   try {
-    if (!fs.existsSync("./cachedtiles")) fs.mkdirSync("./cachedtiles");
-    if (!fs.existsSync("./cachedtiles/metadata.json")) {
+    if (!fs.existsSync("./src/cachedtiles")) fs.mkdirSync("./src/cachedtiles");
+    if (!fs.existsSync("./src/cachedtiles/metadata.json")) {
       fs.writeFileSync(
-        "./cachedtiles/metadata.json",
+        "./src/cachedtiles/metadata.json",
         JSON.stringify(cacheMeta, null, "\t")
       );
       log.info("Metadata file successfully created");
@@ -239,21 +239,17 @@ ipcMain.on("open-debug", (event, args) => {
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
   try {
-    tilePath = [
-      String(tilePathNums[0]),
-      String(tilePathNums[1]),
-      String(tilePathNums[2]),
-    ];
+    tilePath = [tilePathNums[0], tilePathNums[1], tilePathNums[2]];
     while (cacheMeta.runningSize + tile.byteLength > config.cacheMaxSize) {
       // shift off the fileList and delete file and containing folders if necessary
       let oldTile = cacheMeta.fileList.shift();
       let oldFolders = oldTile.split(path.sep);
       let fileSize = fs.lstatSync(
-        path.join("cachedtiles", oldTile + ".png")
+        path.join("src", "cachedtiles", oldTile + ".png")
       ).size;
 
       //remove the file
-      fs.rmSync(path.join("cachedtiles", oldTile + ".png"));
+      fs.rmSync(path.join("src", "cachedtiles", oldTile + ".png"));
 
       cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
         cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(oldFolders[2]),
@@ -262,25 +258,29 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 
       //remove the folder one level above the file if it is empty
       if (
-        fs.readdirSync(path.join("cachedtiles", oldFolders[0], oldFolders[1]))
-          .length === 0
+        fs.readdirSync(
+          path.join("src", "cachedtiles", oldFolders[0], oldFolders[1])
+        ).length === 0
       ) {
-        fs.rmdirSync(path.join("cachedtiles", oldFolders[0], oldFolders[1]));
+        fs.rmdirSync(
+          path.join("src", "cachedtiles", oldFolders[0], oldFolders[1])
+        );
         delete cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
       }
 
       //remove the folder two levels above the file if it is empty
       if (
-        fs.readdirSync(path.join("cachedtiles", oldFolders[0])).length === 0
+        fs.readdirSync(path.join("src", "cachedtiles", oldFolders[0]))
+          .length === 0
       ) {
-        fs.rmdirSync(path.join("cachedtiles", oldFolders[0]));
+        fs.rmdirSync(path.join("src", "cachedtiles", oldFolders[0]));
         delete cacheMeta.tiles[oldFolders[0]];
       }
 
       cacheMeta.runningSize -= fileSize;
     }
 
-    let folderPath = path.join("cachedtiles", tilePath[0], tilePath[1]);
+    let folderPath = path.join("src", "cachedtiles", tilePath[0], tilePath[1]);
 
     //create folders if necessary
     if (!fs.existsSync(folderPath)) {
@@ -332,7 +332,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 
     //write metadata
     fs.writeFileSync(
-      "./cachedtiles/metadata.json",
+      "./src/cachedtiles/metadata.json",
       JSON.stringify(cacheMeta, null, "\t")
     );
   } catch (err) {
@@ -344,24 +344,27 @@ ipcMain.handle("get-tiles", () => {
   return cacheMeta.tiles;
 });
 
-ipcMain.handle("get-tile", (event, coords) => {
-  try {
-    return fs.readFileSync(
-      path.join(
-        "cachedtiles",
-        String(coords[0]),
-        String(coords[1]),
-        String(coords[2]) + ".png"
-      )
-    ).buffer;
-  } catch (err) {
-    log.err('Error getting tile: "' + err.message + '"');
-    return null;
-  }
-});
-
 ipcMain.on("close-port", (event, args) => {
   radio.close();
+});
+
+ipcMain.on("clear-tile-cache", (event, args) => {
+  try {
+    if (fs.existsSync(path.join("src", "cachedtiles"))) {
+      cacheMeta = {
+        tiles: {},
+        fileList: [],
+        runningSize: 0,
+      };
+      fs.rmSync(path.join("src", "cachedtiles"), {
+        recursive: true,
+        force: true,
+      });
+      log.debug("Tile cache successfully cleared");
+    }
+  } catch (err) {
+    log.err('Error clearing tile cache: "' + err.message + '"');
+  }
 });
 
 //getters
@@ -371,6 +374,10 @@ ipcMain.handle("get-ports", (event, args) => {
 
 ipcMain.handle("get-port-status", (event, args) => {
   return radio.isConnected();
+});
+
+ipcMain.handle("get-settings", (event, args) => {
+  return config;
 });
 
 //setters
@@ -393,16 +400,7 @@ ipcMain.handle("set-port", (event, port) => {
 
 ipcMain.on("update-settings", (event, settings) => {
   if (settings) {
-    config = {
-      scale: settings.scale ? settings.scale : config.scale,
-      debugScale: settings.debugScale ? settings.debugScale : config.debugScale,
-      debug: settings.debug ? settings.debug : config.debug,
-      noGUI: settings.noGUI ? settings.noGUI : config.noGUI,
-      cacheMaxSize: settings.cacheMaxSize
-        ? settings.cacheMaxSize
-        : config.cacheMaxSize,
-      baudRate: settings.baudRate ? settings.baudRate : config.baudRate,
-    };
+    config = settings;
     try {
       fs.writeFileSync("config.json", JSON.stringify(config, null, "\t"));
       log.debug("Successfully updated settings");

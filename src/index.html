@@ -6,11 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src 'self' https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self'; connect-src 'self' blob: https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; object-src 'self' blob:; style-src 'self' 'unsafe-inline';"
     />
     <link rel="stylesheet" href="index.css" />
     <link rel="stylesheet" href="./libraries/map/leaflet/main/leaflet.css" />
-    <link rel="stylesheet" href="./libraries/map/leaflet/easy-button/easy-button.css">
+    <link
+      rel="stylesheet"
+      href="./libraries/map/leaflet/easy-button/easy-button.css"
+    />
     <script src="./libraries/color.js"></script>
     <script src="./libraries/APRS.js"></script>
     <script src="./libraries/gauge.js"></script>
@@ -27,7 +30,12 @@
       </div>
       <!--Buttons and application control-->
       <div id="top-right">
-        <img src="./images/recv_off.svg" alt="Off" id="recv-status" title="No Message">
+        <img
+          src="./images/recv_off.svg"
+          alt="Off"
+          id="recv-status"
+          title="No Message"
+        />
         <!--Custom dropdown-->
         <div class="dropdown inactive" id="serial-drop">
           <span id="serial-selected">Select Port</span>
@@ -49,7 +57,13 @@
         <button id="debug" class="top-button" title="Debug Window">
           <img src="./images/debug.svg" alt="Debug" />
         </button>
-        <a href="#" id="settings" class="top-button" title="Work in Progress"><img src="./images/settings.svg" alt="Settings"></a>
+        <a
+          href="./settings/settings.html"
+          id="settings"
+          class="top-button"
+          title="Work in Progress"
+          ><img src="./images/settings.svg" alt="Settings"
+        /></a>
         <button id="reload" class="top-button" title="Reload">
           <img src="images/reload.svg" alt="Reload" />
         </button>
@@ -80,8 +94,8 @@
         </div>
         <div id="switcher-box">
           <div id="switcher-highlight"></div>
-          <img id="switcher-graphs" src="./images/graphs.svg" alt="Graphs"></img>
-          <img id="switcher-map" src="./images/map.svg" alt="Map"></img>
+          <img id="switcher-graphs" src="./images/graphs.svg" alt="Graphs" />
+          <img id="switcher-map" src="./images/map.svg" alt="Map" />
         </div>
       </div>
       <!--Contains the elements that display up to date data-->
@@ -227,7 +241,10 @@
         ></canvas>
         <!--Elements for data that does not use a gauge-->
         <div id="text-data">
-          <span id="lat-long"><span id="lat">00.0000 &#176;N</span> / <span id="long">000.0000 &#176;W</span></span>
+          <span id="lat-long"
+            ><span id="lat">00.0000 &#176;N</span> /
+            <span id="long">000.0000 &#176;W</span></span
+          >
           <span id="t-plus">T+<span id="t">00:00:00</span></span>
         </div>
       </div>
