@@ -1,7 +1,7 @@
 {
   "name": "terp-rockets-ground-station",
   "productName": "Terp Rockets Ground Station",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ground station application for the Terrapin Rocket Team at University of Maryland",
   "main": "main.js",
   "scripts": {
