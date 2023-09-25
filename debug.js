@@ -37,7 +37,7 @@ class Debug {
   constructor(win, logPath) {
     this.win = win;
     this.useDebug = false;
-    if (!logPath) logPath = "debug.log";
+    if (!logPath) logPath = "./debug.log";
     this.ws = fs.createWriteStream(logPath);
   }
 
