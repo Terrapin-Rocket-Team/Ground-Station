@@ -53,7 +53,9 @@ try {
 
 try {
   //load cache metadata
-  cacheMeta = JSON.parse(fs.readFileSync("./src/cachedtiles/metadata.json"));
+  cacheMeta = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "src/cachedtiles/metadata.json"))
+  );
   log.debug("Cache metadata loaded");
 } catch (err) {
   cacheMeta = {
@@ -65,10 +67,11 @@ try {
     'Failed to load cache metadata file, using defaults: "' + err.message + '"'
   );
   try {
-    if (!fs.existsSync("./src/cachedtiles")) fs.mkdirSync("./src/cachedtiles");
-    if (!fs.existsSync("./src/cachedtiles/metadata.json")) {
+    if (!fs.existsSync(path.join(__dirname, "src/cachedtiles")))
+      fs.mkdirSync(path.join(__dirname, "src/cachedtiles"));
+    if (!fs.existsSync(path.join(__dirname, "src/cachedtiles/metadata.json"))) {
       fs.writeFileSync(
-        "./src/cachedtiles/metadata.json",
+        path.join(__dirname, "src/cachedtiles/metadata.json"),
         JSON.stringify(cacheMeta, null, "\t")
       );
       log.info("Metadata file successfully created");
@@ -101,7 +104,7 @@ const createWindow = () => {
     },
   });
 
-  mainWin.loadFile("src/index.html");
+  mainWin.loadFile(path.join(__dirname, "src/index.html"));
 
   if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
   log.debug("Main window created");
@@ -134,17 +137,17 @@ const createDebug = () => {
 
   log.setWin(debugWin);
 
-  debugWin.loadFile("src/debug/debug.html");
+  debugWin.loadFile(path.join(__dirname, "src/debug/debug.html"));
 
   if (config.debug) debugWin.webContents.openDevTools({ mode: "detach" });
 
   //send the debug window all previous logs once it is ready
   debugWin.webContents.once("dom-ready", () => {
     try {
-      if (fs.existsSync("debug.log"))
+      if (fs.existsSync("./debug.log"))
         debugWin.webContents.send(
           "previous-logs",
-          fs.readFileSync("debug.log").toString()
+          fs.readFileSync("./debug.log").toString()
         );
     } catch (err) {
       log.err('Could not load previous logs: "' + err.message + '"');
@@ -210,10 +213,10 @@ ipcMain.on("reload", (event, args) => {
     debugWin.webContents.reloadIgnoringCache();
     debugWin.webContents.once("dom-ready", () => {
       try {
-        if (fs.existsSync("debug.log"))
+        if (fs.existsSync("./debug.log"))
           debugWin.webContents.send(
             "previous-logs",
-            fs.readFileSync("debug.log").toString()
+            fs.readFileSync("./debug.log").toString()
           );
       } catch (err) {
         log.err('Could not load previous logs: "' + err.message + '"');
@@ -245,11 +248,11 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       let oldTile = cacheMeta.fileList.shift();
       let oldFolders = oldTile.split(path.sep);
       let fileSize = fs.lstatSync(
-        path.join("src", "cachedtiles", oldTile + ".png")
+        path.join(__dirname, "src", "cachedtiles", oldTile + ".png")
       ).size;
 
       //remove the file
-      fs.rmSync(path.join("src", "cachedtiles", oldTile + ".png"));
+      fs.rmSync(path.join(__dirname, "src", "cachedtiles", oldTile + ".png"));
 
       cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
         cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(oldFolders[2]),
@@ -259,28 +262,47 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       //remove the folder one level above the file if it is empty
       if (
         fs.readdirSync(
-          path.join("src", "cachedtiles", oldFolders[0], oldFolders[1])
+          path.join(
+            __dirname,
+            "src",
+            "cachedtiles",
+            oldFolders[0],
+            oldFolders[1]
+          )
         ).length === 0
       ) {
         fs.rmdirSync(
-          path.join("src", "cachedtiles", oldFolders[0], oldFolders[1])
+          path.join(
+            __dirname,
+            "src",
+            "cachedtiles",
+            oldFolders[0],
+            oldFolders[1]
+          )
         );
         delete cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
       }
 
       //remove the folder two levels above the file if it is empty
       if (
-        fs.readdirSync(path.join("src", "cachedtiles", oldFolders[0]))
-          .length === 0
+        fs.readdirSync(
+          path.join(__dirname, "src", "cachedtiles", oldFolders[0])
+        ).length === 0
       ) {
-        fs.rmdirSync(path.join("src", "cachedtiles", oldFolders[0]));
+        fs.rmdirSync(path.join(__dirname, "src", "cachedtiles", oldFolders[0]));
         delete cacheMeta.tiles[oldFolders[0]];
       }
 
       cacheMeta.runningSize -= fileSize;
     }
 
-    let folderPath = path.join("src", "cachedtiles", tilePath[0], tilePath[1]);
+    let folderPath = path.join(
+      __dirname,
+      "src",
+      "cachedtiles",
+      tilePath[0],
+      tilePath[1]
+    );
 
     //create folders if necessary
     if (!fs.existsSync(folderPath)) {
@@ -332,7 +354,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 
     //write metadata
     fs.writeFileSync(
-      "./src/cachedtiles/metadata.json",
+      path.join(__dirname, "src/cachedtiles/metadata.json"),
       JSON.stringify(cacheMeta, null, "\t")
     );
   } catch (err) {
@@ -350,13 +372,13 @@ ipcMain.on("close-port", (event, args) => {
 
 ipcMain.on("clear-tile-cache", (event, args) => {
   try {
-    if (fs.existsSync(path.join("src", "cachedtiles"))) {
+    if (fs.existsSync(path.join(__dirname, "src", "cachedtiles"))) {
       cacheMeta = {
         tiles: {},
         fileList: [],
         runningSize: 0,
       };
-      fs.rmSync(path.join("src", "cachedtiles"), {
+      fs.rmSync(path.join(__dirname, "src", "cachedtiles"), {
         recursive: true,
         force: true,
       });
@@ -402,7 +424,7 @@ ipcMain.on("update-settings", (event, settings) => {
   if (settings) {
     config = settings;
     try {
-      fs.writeFileSync("config.json", JSON.stringify(config, null, "\t"));
+      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
       log.debug("Successfully updated settings");
     } catch (err) {
       log.err('Failed to update settings: "' + err.message + '"');
@@ -423,14 +445,14 @@ radio.on("data", (data) => {
   if (mainWin) mainWin.webContents.send("data", data);
   try {
     if (!csvCreated) {
-      if (!fs.existsSync("data")) fs.mkdirSync("data");
+      if (!fs.existsSync("./data")) fs.mkdirSync("./data");
       currentCSV = new Date().toISOString().replace(/:/g, "-") + ".csv";
-      fs.writeFileSync(path.join("data", currentCSV), "");
+      fs.writeFileSync(path.join("./data", currentCSV), "");
     }
-    fs.appendFileSync(path.join("data", currentCSV), data.toCSV(csvCreated));
+    fs.appendFileSync(path.join("./data", currentCSV), data.toCSV(csvCreated));
     if (!csvCreated) csvCreated = true;
     //write data from serial to be used in testing if debug is on
-    if (config.debug) fs.writeFileSync("test.json", JSON.stringify(data));
+    if (config.debug) fs.writeFileSync("./test.json", JSON.stringify(data));
   } catch (err) {
     log.err('Error writing data: "' + err.message + '"');
   }
@@ -451,7 +473,7 @@ if (config.debug && !config.noGUI) {
     if (!closed && mainWin)
       mainWin.webContents.send(
         "data",
-        JSON.parse(fs.readFileSync("test.json"))
+        JSON.parse(fs.readFileSync("./test.json"))
       );
   }, 2000);
 }
