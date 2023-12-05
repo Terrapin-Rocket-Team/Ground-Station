@@ -1,5 +1,7 @@
 //TODO: preserve gui state (charts) when switching to settings
 
+myInteger = 0;
+
 window.onload = () => {
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
@@ -20,19 +22,48 @@ window.onload = () => {
     const highlight = document.getElementById("switcher-highlight");
     highlight.style.top = 0;
 
+    if (myInteger != 0) {
+      document.getElementById("chart-wrapper").classList.toggle("active");
+      document.getElementById("map-wrapper").classList.toggle("active");
+      myInteger = 0;
+    }
+    /*if (highlight.style.top == "50%") {
+      highlight.style.top = "0";
+    } else {
+      highlight.style.top = "50%";
+    }
+    //highlight.style.top = 0;
+
     document.getElementById("chart-wrapper").classList.toggle("active");
-    document.getElementById("map-wrapper").classList.toggle("active");
+    document.getElementById("map-wrapper").classList.toggle("active");*/
+    
+    
   });
 
   //listener that switches to the map in the diagrams panel
+  
   document.getElementById("switcher-map").addEventListener("click", () => {
     const highlight = document.getElementById("switcher-highlight");
     highlight.style.top = "50%";
 
+    if (myInteger != 1) {
+      refreshMap(14);
+
+      document.getElementById("chart-wrapper").classList.toggle("active");
+      document.getElementById("map-wrapper").classList.toggle("active");
+      myInteger = 1;
+    }
+    /*
+    if (highlight.style.top == "50%") {
+      highlight.style.top = "0";
+    } else {
+      highlight.style.top = "50%";
+    }
+
     refreshMap(14);
 
     document.getElementById("chart-wrapper").classList.toggle("active");
-    document.getElementById("map-wrapper").classList.toggle("active");
+    document.getElementById("map-wrapper").classList.toggle("active");*/
   });
 
   //create map and chart elements
