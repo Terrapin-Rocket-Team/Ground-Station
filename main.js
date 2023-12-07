@@ -469,24 +469,11 @@ radio.on("close", () => {
 
 //testing
 if (config.debug && !config.noGUI) {
-  try {
-    if ("test.json".exists()) {
-      setInterval(() => {
-        if (!closed && mainWin) {
-          try {
-            mainWin.webContents.send(
-              "data",
-              JSON.parse(fs.readFileSync("test.json"))
-            );
-          } catch (e) {
-            //log error message
-            (console.error || console.log).call(console, e.stack || e);
-          }
-        }
-      }, 2000);
-    }
-  } catch (e) {
-    //log error message
-    (console.error || console.log).call(console, e.stack || e);
-  }
+  setInterval(() => {
+    if (!closed && mainWin)
+      mainWin.webContents.send(
+        "data",
+        JSON.parse(fs.readFileSync("./test.json"))
+      );
+  }, 2000);
 }
