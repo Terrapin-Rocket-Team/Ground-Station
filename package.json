@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "node assets/generateIcons.js && electron-forge make"
+    "make": "electron-forge make",
+    "make-icons": "node assets/generateIcons.js"
   },
   "author": "Joseph Hauerstein",
   "license": "ISC",
