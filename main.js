@@ -23,6 +23,7 @@ scale: 1 is default, scales the application window
 debugScale: 1 is default, scales the debug window
 debug: false is default, whether debug statements will be logged
 noGUI: false is default, loads only the debug window
+tileCache: true by default, whether tiles will be cached - work in progress
 cacheMaxSize: 100000000 (100MB) is default, max tile cache size in bytes
 baudRate: 115200 is default, baudrate to use with the connected serial port
 */
@@ -37,6 +38,7 @@ try {
     debugScale: 1,
     debug: false,
     noGUI: false,
+    //tileCache: true, //added tile toggling here - work in progress
     cacheMaxSize: 100000000,
     baudRate: 115200,
   };
@@ -98,7 +100,7 @@ const createWindow = () => {
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
-    icon: "assets/icon" + iconSuffix,
+    icon: "assets/logo" + iconSuffix,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -109,8 +111,7 @@ const createWindow = () => {
   if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
   log.debug("Main window created");
 
-  //for some reason the program does not end quickly enough after the main window is destroyed to prevent errors when debug is used
-  //this condition should stop the messages being sent to the destroyed window
+  //make sure messages are not sent to a destroyed window
   mainWin.once("close", () => {
     if (!config.noGUI) {
       closed = true;
@@ -185,9 +186,6 @@ app.whenReady().then(() => {
       }
     }
   });
-
-  //I don't think this line is necessary
-  //if (process.platform === "win32") app.setAppUserModelId(app.getName());
 });
 
 //quit the app if all windows are closed on MacOS
@@ -469,24 +467,27 @@ radio.on("close", () => {
 
 //testing
 if (config.debug && !config.noGUI) {
-  try {
-    if ("test.json".exists()) {
+  //test to see whether the json file exists
+  fs.stat("./test.json", (err1, stats) => {
+    if (err1) { 
+      log.warn(
+        'Failed to find test.json file: "' + err1.message + '"'
+      );
+    } else {
       setInterval(() => {
-        if (!closed && mainWin) {
+        if (!closed && mainWin)
+          //throw an error if the file cannot be read
           try {
             mainWin.webContents.send(
               "data",
-              JSON.parse(fs.readFileSync("test.json"))
+              JSON.parse(fs.readFileSync("./test.json"))
             );
-          } catch (e) {
-            //log error message
-            (console.error || console.log).call(console, e.stack || e);
+          } catch(err) {
+            log.warn(
+              'Failed to read test.json file: "' + err.message + '"'
+            );
           }
-        }
       }, 2000);
     }
-  } catch (e) {
-    //log error message
-    (console.error || console.log).call(console, e.stack || e);
-  }
+  });
 }
