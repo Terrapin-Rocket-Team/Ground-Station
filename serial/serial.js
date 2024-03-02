@@ -59,7 +59,7 @@ class Radio extends EventEmitter {
       //get data from the serial port, and once a full message has been recieved, emit the data with the data event
       this.port.on("data", (data) => {
         this.chunks += data.toString();
-        //console.log(this.chunks);
+        // console.log(this.chunks);
         if (this.chunks.match(/^s\r\nSource:.+\r\ne\r\n/g)) {
           try {
             let msg = new APRSMessage(this.chunks.split("\r\n")[1]);
@@ -67,13 +67,10 @@ class Radio extends EventEmitter {
           } catch (err) {
             this.emit("error", err.message);
           }
-          if (this.chunks.match(/s\r\n/g).length > 1) {
-            this.chunks = this.chunks.substring(
-              this.chunks.lastIndexOf("s\r\n")
-            );
-          } else {
-            this.chunks = "";
-          }
+        }
+        let extra = this.chunks.match(/s\r\n/g);
+        if (extra && extra.length > 1) {
+          this.chunks = this.chunks.substring(this.chunks.lastIndexOf("s\r\n"));
         }
       });
 
