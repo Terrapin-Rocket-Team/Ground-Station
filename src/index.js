@@ -244,7 +244,7 @@ window.onload = () => {
     };
 
     //set T+
-    if (!tPlusSet) {
+    if (!tPlusSet && msg.getStageNumber() > 0) {
       let time = Date.now() - msg.getT0ms();
       let t = document.getElementById("t");
       t.textContent = mstohhmmss(time);
@@ -270,23 +270,24 @@ window.onload = () => {
       processCharts();
 
       setInterval(() => {
-        let time = Date.now() - msg.getT0ms();
-        t.textContent = mstohhmmss(time);
         counter++;
-
-        let factor = chartState == "minutes" ? 60 : 3600;
-        let label =
-          (counter / factor) % 1 > 0
-            ? (counter / factor).toFixed(2)
-            : counter / factor;
-
-        altG.data.labels.push(label);
-        spdG.data.labels.push(label);
-        altG.options.scales.x.max = counter + 10;
-        spdG.options.scales.x.max = counter + 10;
-
-        processCharts();
       }, 1000);
+    } else {
+      let time = Date.now() - msg.getT0ms();
+      t.textContent = mstohhmmss(time);
+
+      let factor = chartState == "minutes" ? 60 : 3600;
+      let label =
+        (counter / factor) % 1 > 0
+          ? (counter / factor).toFixed(2)
+          : counter / factor;
+
+      altG.data.labels.push(label);
+      spdG.data.labels.push(label);
+      altG.options.scales.x.max = counter + 10;
+      spdG.options.scales.x.max = counter + 10;
+
+      processCharts();
     }
 
     //update charts
@@ -366,14 +367,15 @@ window.onload = () => {
       lastAlt = msg.getAlt();
       apogeeCounter = 0;
     }
-    if (msg.getAlt() < lastAlt) apogeeCounter++;
+    if (msg.getAlt() < lastAlt && sn > 0) apogeeCounter++;
+    else apogeeCounter = 0;
     if (apogeeCounter === 3) alert("Apogee at " + lastAlt + "ft");
 
     setTimeout(() => {
       recvStatus.setAttribute("src", "./images/recv_off.svg");
       recvStatus.setAttribute("title", "No Message");
       recvStatus.setAttribute("alt", "Off");
-    }, 600);
+    }, 100);
   });
 
   //update UI if serial connection is lost
