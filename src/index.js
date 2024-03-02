@@ -1,6 +1,7 @@
 //TODO: preserve gui state (charts) when switching to settings
 
 window.onload = () => {
+  let switcherState = 0;
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
     api.reload();
@@ -20,8 +21,12 @@ window.onload = () => {
     const highlight = document.getElementById("switcher-highlight");
     highlight.style.top = 0;
 
-    document.getElementById("chart-wrapper").classList.toggle("active");
-    document.getElementById("map-wrapper").classList.toggle("active");
+    if (switcherState) {
+      document.getElementById("chart-wrapper").classList.toggle("active");
+      document.getElementById("map-wrapper").classList.toggle("active");
+      switcherState = 0;
+    }
+
   });
 
   //listener that switches to the map in the diagrams panel
@@ -31,8 +36,13 @@ window.onload = () => {
 
     refreshMap(14);
 
-    document.getElementById("chart-wrapper").classList.toggle("active");
-    document.getElementById("map-wrapper").classList.toggle("active");
+    if (!switcherState) {
+      refreshMap(14);
+
+      document.getElementById("chart-wrapper").classList.toggle("active");
+      document.getElementById("map-wrapper").classList.toggle("active");
+      switcherState = 1;
+    }
   });
 
   //create map and chart elements
