@@ -21,10 +21,10 @@ window.onload = () => {
     const highlight = document.getElementById("switcher-highlight");
     highlight.style.top = 0;
 
-    if (myInteger) {
+    if (switcherState) {
       document.getElementById("chart-wrapper").classList.toggle("active");
       document.getElementById("map-wrapper").classList.toggle("active");
-      myInteger = 0;
+      switcherState = 0;
     }
 
   });
@@ -36,12 +36,12 @@ window.onload = () => {
 
     refreshMap(14);
 
-    if (!myInteger) {
+    if (!switcherState) {
       refreshMap(14);
 
       document.getElementById("chart-wrapper").classList.toggle("active");
       document.getElementById("map-wrapper").classList.toggle("active");
-      myInteger = 1;
+      switcherState = 1;
     }
   });
 
