@@ -137,7 +137,7 @@ class APRSMessage {
       csv =
         "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0,Signal Strength\r\n";
     }
-    console.log(this.rawBody);
+    // console.log(this.rawBody);
     csv += `${this.src},${this.dest},${this.path},${this.type},${
       this.rawBody
     },${this.body.toCSV()},${this.rssi}\r\n`;

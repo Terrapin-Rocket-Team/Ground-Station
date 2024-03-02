@@ -98,7 +98,7 @@ const createWindow = () => {
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
-    icon: "assets/icon" + iconSuffix,
+    icon: "assets/logo" + iconSuffix,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -109,8 +109,7 @@ const createWindow = () => {
   if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
   log.debug("Main window created");
 
-  //for some reason the program does not end quickly enough after the main window is destroyed to prevent errors when debug is used
-  //this condition should stop the messages being sent to the destroyed window
+  //make sure messages are not sent to a destroyed window
   mainWin.once("close", () => {
     if (!config.noGUI) {
       closed = true;
@@ -185,9 +184,6 @@ app.whenReady().then(() => {
       }
     }
   });
-
-  //I don't think this line is necessary
-  //if (process.platform === "win32") app.setAppUserModelId(app.getName());
 });
 
 //quit the app if all windows are closed on MacOS
