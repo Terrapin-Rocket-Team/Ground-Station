@@ -64,6 +64,8 @@ class Radio extends EventEmitter {
           try {
             let msg = new APRSMessage(this.chunks.split("\r\n")[1]);
             this.emit("data", msg);
+            this.chunks = "";
+            this.port.flush();
           } catch (err) {
             this.emit("error", err.message);
           }
