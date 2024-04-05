@@ -60,17 +60,17 @@ class Radio extends EventEmitter {
       this.port.on("data", (data) => {
         this.chunks += data.toString();
         // console.log(this.chunks);
-        if (this.chunks.match(/^s\r\nSource:.+\r\ne\r\n/g)) {
+        if (this.chunks.match(/s\nSource:.+\ne\n/g)) {
           try {
-            let msg = new APRSMessage(this.chunks.split("\r\n")[1]);
+            let msg = new APRSMessage(this.chunks.split("\n")[1]);
             this.emit("data", msg);
           } catch (err) {
             this.emit("error", err.message);
           }
         }
-        let extra = this.chunks.match(/s\r\n/g);
+        let extra = this.chunks.match(/s\n/g);
         if (extra && extra.length > 1) {
-          this.chunks = this.chunks.substring(this.chunks.lastIndexOf("s\r\n"));
+          this.chunks = this.chunks.substring(this.chunks.lastIndexOf("s\n"));
         }
       });
 
