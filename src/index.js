@@ -26,7 +26,6 @@ window.onload = () => {
       document.getElementById("map-wrapper").classList.toggle("active");
       switcherState = 0;
     }
-
   });
 
   //listener that switches to the map in the diagrams panel
@@ -255,11 +254,11 @@ window.onload = () => {
 
     //set T+
     if (!tPlusSet && msg.getStageNumber() > 0) {
-      let time = Date.now() - msg.getT0ms();
       let t = document.getElementById("t");
-      t.textContent = mstohhmmss(time);
-
       tPlusSet = true;
+
+      let time = Date.now() - msg.getT0ms();
+      t.textContent = mstohhmmss(time);
 
       counter = parseInt(time / 1000);
 
@@ -280,11 +279,13 @@ window.onload = () => {
       processCharts();
 
       setInterval(() => {
+        let time = Date.now() - msg.getT0ms();
+        t.textContent = mstohhmmss(time);
         counter++;
       }, 1000);
     } else {
-      let time = Date.now() - msg.getT0ms();
-      t.textContent = mstohhmmss(time);
+      // let time = Date.now() - msg.getT0ms();
+      // t.textContent = mstohhmmss(time);
 
       let factor = chartState == "minutes" ? 60 : 3600;
       let label =
