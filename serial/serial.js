@@ -1,10 +1,6 @@
 const { SerialPort } = require("serialport");
 const { APRSMessage } = require("./APRS");
 const { EventEmitter } = require("node:events");
-const fs = require("fs");
-const { spawn } = require("child_process");
-const stream = require("stream");
-const { stdout } = require("node:process");
 
 /**
  * A class to communicate with the radio module using serialport
@@ -18,7 +14,6 @@ class Radio extends EventEmitter {
     this.port = port ? port : null;
     this.connected = false;
     this.chunks = "";
-    this.player = spawn("ffplay", ["-"], { stdin: "pipe", shell: true });
   }
 
   /**
@@ -55,8 +50,6 @@ class Radio extends EventEmitter {
         }
       );
 
-      let wr = fs.createWriteStream("out.av1");
-
       //if the port is successfully opened resolve the promise
       this.port.on("open", () => {
         this.connected = true;
@@ -66,9 +59,7 @@ class Radio extends EventEmitter {
       //get data from the serial port, and once a full message has been recieved, emit the data with the data event
       this.port.on("data", (data) => {
         this.chunks += data.toString();
-        console.log(this.chunks);
-        // wr.write(data);
-        // stdout.write(data);
+        // console.log(this.chunks);W
         if (this.chunks.match(/^s\r\nSource:.+\r\ne\r\n/g)) {
           try {
             let msg = new APRSMessage(this.chunks.split("\r\n")[1]);
