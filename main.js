@@ -117,7 +117,11 @@ const createWindow = () => {
       closed = true;
       radio.close();
     }
+    mainWin.webContents.send("close"); // unused
     if (!config.noGUI && debugWin) debugWin.close();
+  });
+
+  mainWin.once("closed", () => {
     mainWin = null;
   });
 };
@@ -161,8 +165,12 @@ const createDebug = () => {
       closed = true;
       radio.close();
     }
+    debugWin.webContents.send("close"); // unused
     log.removeWin();
     if (config.noGUI && mainWin) mainWin.close();
+  });
+
+  debugWin.once("closed", () => {
     debugWin = null;
   });
   log.debug("Debug window created");
@@ -469,10 +477,8 @@ radio.on("close", () => {
 if (config.debug && !config.noGUI) {
   //test to see whether the json file exists
   fs.stat("./test.json", (err1, stats) => {
-    if (err1) { 
-      log.warn(
-        'Failed to find test.json file: "' + err1.message + '"'
-      );
+    if (err1) {
+      log.warn('Failed to find test.json file: "' + err1.message + '"');
     } else {
       setInterval(() => {
         if (!closed && mainWin)
@@ -482,10 +488,8 @@ if (config.debug && !config.noGUI) {
               "data",
               JSON.parse(fs.readFileSync("./test.json"))
             );
-          } catch(err) {
-            log.warn(
-              'Failed to read test.json file: "' + err.message + '"'
-            );
+          } catch (err) {
+            log.warn('Failed to read test.json file: "' + err.message + '"');
           }
       }, 2000);
     }
