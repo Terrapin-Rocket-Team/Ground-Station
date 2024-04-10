@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
+const { APRSMessage } = require("./serial/APRS");
 
 let mainWin,
   debugWin,
@@ -486,7 +487,7 @@ if (config.debug && !config.noGUI) {
           try {
             mainWin.webContents.send(
               "data",
-              JSON.parse(fs.readFileSync("./test.json"))
+              new APRSMessage(JSON.parse(fs.readFileSync("./test.json")))
             );
           } catch (err) {
             log.warn('Failed to read test.json file: "' + err.message + '"');
