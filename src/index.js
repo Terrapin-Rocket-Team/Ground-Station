@@ -347,7 +347,7 @@ window.onload = () => {
     }
 
     // apogee check
-    if (msg.getAlt() >= lastAlt) {
+    if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
       lastAlt = msg.getAlt();
       apogeeTime = Date.now();
     }
