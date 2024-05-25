@@ -1,6 +1,8 @@
 const { SerialPort } = require("serialport");
 const { APRSMessage } = require("./APRS");
 const { EventEmitter } = require("node:events");
+const fs = require("fs");
+const { spawn } = require("node:child_process");
 
 /**
  * A class to communicate with the radio module using serialport
@@ -50,15 +52,41 @@ class Radio extends EventEmitter {
         }
       );
 
+      let ffplay;
+      let ffplayLog = fs.createWriteStream("ffplay.log");
+
       //if the port is successfully opened resolve the promise
       this.port.on("open", () => {
         this.connected = true;
+        ffplay = spawn("ffplay", [
+          "-vf",
+          "transpose=1",
+          "-framerate",
+          "30/1",
+          "-",
+        ]);
+        ffplay.stdout.pipe(ffplayLog);
+        ffplay.stderr.pipe(ffplayLog);
         res(1);
       });
 
+      let bytes = 0;
+      let lastBytes = new Date();
+      setInterval(() => {
+        let thisBytes = new Date();
+        process.stderr.write(
+          "Bitrate: " + (bytes * 8) / (thisBytes - lastBytes) + "\n"
+        );
+        lastBytes = thisBytes;
+        bytes = 0;
+      }, 1000);
+
       //get data from the serial port, and once a full message has been recieved, emit the data with the data event
       this.port.on("data", (data) => {
-        this.chunks += data.toString();
+        bytes += data.length;
+        process.stdout.write(data);
+        ffplay.stdin.write(data);
+        // this.chunks += data.toString();
         // console.log(this.chunks);
         if (this.chunks.match(/^s\r\nSource:.+\r\ne\r\n/g)) {
           try {
