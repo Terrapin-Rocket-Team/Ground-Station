@@ -7,13 +7,12 @@ const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 const { APRSMessage } = require("./serial/APRS");
-const ffmpeg = require("ffmpeg-static-electron");
-
-log.info(ffmpeg.path);
+const { FileStreamSource } = require("./video/video");
 
 let mainWin,
   debugWin,
   videoWin,
+  videoStreams = [],
   config,
   cacheMeta,
   closed,
@@ -215,7 +214,7 @@ const createVideo = () => {
   videoWin.once("closed", () => {
     videoWin = null;
   });
-  log.debug("Video streaming window created");
+
   videoWin.on("enter-full-screen", () => {
     console.log("Enter video fullscreen");
     videoWin.webContents.send("fullscreen-change", {
@@ -223,6 +222,7 @@ const createVideo = () => {
       isFullscreen: true,
     });
   });
+
   videoWin.on("leave-full-screen", () => {
     log.debug("Leave video fullscreen");
     videoWin.webContents.send("fullscreen-change", {
@@ -230,6 +230,7 @@ const createVideo = () => {
       isFullscreen: false,
     });
   });
+  log.debug("Video streaming window created");
 };
 
 //when electron has initialized, create the appropriate window
@@ -493,6 +494,16 @@ ipcMain.handle("get-settings", (event, args) => {
   return config;
 });
 
+ipcMain.handle("get-video", (event, args) => {
+  let videoData = [];
+  videoStreams.forEach((stream) => {
+    if (stream.hasData())
+      videoData.push({ name: stream.name, data: stream.readData() });
+    else videoData.push(null);
+  });
+  return videoData;
+});
+
 //setters
 ipcMain.handle("set-port", (event, port) => {
   return new Promise((res, rej) => {
@@ -559,24 +570,49 @@ radio.on("close", () => {
 });
 
 //testing
-if (config.debug && !config.noGUI) {
+if (config.debug) {
   //test to see whether the json file exists
-  fs.stat("./test.json", (err1, stats) => {
-    if (err1) {
-      log.warn('Failed to find test.json file: "' + err1.message + '"');
+  if (fs.existsSync("./test.json")) {
+    setInterval(() => {
+      if (!closed && mainWin) {
+        //throw an error if the file cannot be read
+        try {
+          mainWin.webContents.send(
+            "data",
+            new APRSMessage(JSON.parse(fs.readFileSync("./test.json")))
+          );
+        } catch (err) {
+          log.err('Failed to read test.json file: "' + err.message + '"');
+        }
+      }
+    }, 2000);
+  } else {
+    log.warn("Could not find test.json");
+  }
+  if (config.video) {
+    if (fs.existsSync("./video0.av1")) {
+      videoStreams.push(
+        new FileStreamSource("./video0.av1", {
+          resolution: { width: 640, height: 832 },
+          framerate: 30,
+          rotation: "cw",
+          createLog: config.debug,
+        })
+      );
     } else {
-      setInterval(() => {
-        if (!closed && mainWin)
-          //throw an error if the file cannot be read
-          try {
-            mainWin.webContents.send(
-              "data",
-              new APRSMessage(JSON.parse(fs.readFileSync("./test.json")))
-            );
-          } catch (err) {
-            log.warn('Failed to read test.json file: "' + err.message + '"');
-          }
-      }, 2000);
+      log.warn("Could not find video0.av1");
     }
-  });
+    if (fs.existsSync("./video1.av1")) {
+      videoStreams.push(
+        new FileStreamSource("./video1.av1", {
+          resolution: { width: 640, height: 832 },
+          framerate: 30,
+          rotation: "cw",
+          createLog: config.debug,
+        })
+      );
+    } else {
+      log.warn("Could not find video1.av1");
+    }
+  }
 }
