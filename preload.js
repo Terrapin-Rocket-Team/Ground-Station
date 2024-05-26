@@ -58,14 +58,20 @@ class API extends EventEmitter {
       this.emit("radio-close");
     });
 
+    ipcRenderer.on("fullscreen-change", (event, change) => {
+      this.emit("fullscreen-change", change);
+    });
+
     ipcRenderer.on("close", (event, data) => {
       this.emit("close");
     }); // unused
 
     //app control
-    this.close = () => ipcRenderer.send("close");
-    this.minimize = () => ipcRenderer.send("minimize");
-    this.reload = () => ipcRenderer.send("reload");
+    this.close = (win) => ipcRenderer.send("close", win);
+    this.minimize = (win) => ipcRenderer.send("minimize", win);
+    this.fullscreen = (win, isFullscreen) =>
+      ipcRenderer.send("fullscreen", win, isFullscreen);
+    this.reload = (win) => ipcRenderer.send("reload", win);
     this.devTools = () => ipcRenderer.send("dev-tools");
     this.openDebug = () => ipcRenderer.send("open-debug");
     this.openGUI = () => ipcRenderer.send("open-gui");

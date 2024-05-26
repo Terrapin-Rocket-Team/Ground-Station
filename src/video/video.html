@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="video.css" />
+    <script src="video.js"></script>
+    <title>Video Window</title>
+  </head>
+  <body>
+    <!--Application top bar-->
+    <div id="top-bar">
+      <!--Name and logo-->
+      <div id="top-left">
+        <img src="../images/logo.svg" alt="Logo" />
+        <span>TRGS Video Stream</span>
+      </div>
+      <!--Buttons and application control-->
+      <div id="top-right">
+        <img
+          src="./images/serial_disconnected.svg"
+          alt="No Connection"
+          id="serial-connection"
+          title="Serial Disconnected"
+        />
+        <img
+          src="./images/no_signal.svg"
+          alt="No Connection"
+          id="radio-connection"
+          title="No Signal"
+        />
+        <button id="debug" class="top-button" title="Debug Window">
+          <img src="./images/debug.svg" alt="Debug" />
+        </button>
+        <button id="reload" class="top-button" title="Reload">
+          <img src="../images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="../images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="fullscreen" class="top-button" title="Fullscreen">
+          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="../images/close.svg" alt="Close" />
+        </button>
+      </div>
+    </div>
+    <!--Contains all elements besides the top bar-->
+    <div id="main"></div>
+  </body>
+</html>

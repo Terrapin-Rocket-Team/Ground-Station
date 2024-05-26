@@ -5,13 +5,13 @@ window.onload = () => {
 
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
-    api.reload();
+    api.reload("main");
   });
   document.getElementById("minimize").addEventListener("click", () => {
-    api.minimize();
+    api.minimize("main");
   });
   document.getElementById("close").addEventListener("click", () => {
-    api.close();
+    api.close("main");
   });
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();
@@ -46,6 +46,7 @@ window.onload = () => {
     debugScale = document.getElementById("debug-scale-selected"),
     debugToggle = document.getElementById("debug-toggle"),
     noGUIToggle = document.getElementById("noGUI-toggle"),
+    videoToggle = document.getElementById("video-toggle"),
     //tileToggle = document.getElementById("tile-toggle"), //added tile toggling here
     cacheMaxSize = document.getElementById("cacheMaxSize-input"),
     baudRate = document.getElementById("baudRate-input");
@@ -57,6 +58,13 @@ window.onload = () => {
     debugScale.textContent = config.debugScale.toFixed(2);
     setToggle(config.debug, debugToggle);
     setToggle(config.noGUI, noGUIToggle);
+    if (config.video === undefined) {
+      console.warn(
+        "Older config is being used, this will be corrected when settings are saved"
+      );
+      config.video = false;
+    }
+    setToggle(config.video, videoToggle);
     //setToggle(config.noGUI, tileToggle); //added tile toggling here
     cacheMaxSize.value = config.cacheMaxSize;
     baudRate.value = config.baudRate;
@@ -133,6 +141,11 @@ window.onload = () => {
     setToggle(config.noGUI, noGUIToggle);
   });
 
+  videoToggle.addEventListener("click", () => {
+    config.video = !config.video;
+    setToggle(config.video, videoToggle);
+  });
+
   // click listener for the reset settings button
   document.getElementById("reset-settings").addEventListener("click", () => {
     // reset the object (should be the same as the default settings in main.js)
@@ -141,6 +154,7 @@ window.onload = () => {
       debugScale: 1,
       debug: false,
       noGUI: false,
+      video: false,
       cacheMaxSize: 100000000,
       baudRate: 115200,
     };
@@ -150,6 +164,7 @@ window.onload = () => {
     debugScale.textContent = config.debugScale.toFixed(2);
     setToggle(config.debug, debugToggle);
     setToggle(config.noGUI, noGUIToggle);
+    setToggle(config.video, videoToggle);
     cacheMaxSize.value = config.cacheMaxSize;
     baudRate.value = config.baudRate;
 
