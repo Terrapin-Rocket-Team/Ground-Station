@@ -8,4 +8,5 @@ config.json
 /out/
 /src/cachedtiles/
 *.av1
+*.yuv
 *.xz
