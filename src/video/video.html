@@ -9,6 +9,7 @@
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
     />
     <link rel="stylesheet" href="video.css" />
+    <script src="../libraries/video/yuv-canvas.js"></script>
     <script src="video.js"></script>
     <title>Video Window</title>
   </head>
@@ -52,6 +53,8 @@
       </div>
     </div>
     <!--Contains all elements besides the top bar-->
-    <div id="main"></div>
+    <div id="main">
+      <canvas id="video-0"></canvas>
+    </div>
   </body>
 </html>
