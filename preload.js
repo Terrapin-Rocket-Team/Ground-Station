@@ -62,6 +62,10 @@ class API extends EventEmitter {
       this.emit("fullscreen-change", change);
     });
 
+    ipcRenderer.on("frame-ready", (event, frame) => {
+      this.emit("frame-ready", frame);
+    });
+
     ipcRenderer.on("close", (event, data) => {
       this.emit("close");
     }); // unused
@@ -84,6 +88,8 @@ class API extends EventEmitter {
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
+    this.getVideo = () => ipcRenderer.invoke("get-video");
+    this.testVideo = () => ipcRenderer.invoke("test-video");
 
     //setters
     this.setPort = (port) => ipcRenderer.invoke("set-port", port);

@@ -7,7 +7,7 @@ const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 const { APRSMessage } = require("./serial/APRS");
-const { FileStreamSource } = require("./video/video");
+const { FileStreamSource } = require("./video/video-source");
 
 let mainWin,
   debugWin,
@@ -216,7 +216,7 @@ const createVideo = () => {
   });
 
   videoWin.on("enter-full-screen", () => {
-    console.log("Enter video fullscreen");
+    log.debug("Enter video fullscreen");
     videoWin.webContents.send("fullscreen-change", {
       win: "video",
       isFullscreen: true,
@@ -231,6 +231,34 @@ const createVideo = () => {
     });
   });
   log.debug("Video streaming window created");
+
+  let st = new FileStreamSource("./serial/out5.av1", {
+    resolution: { width: 640, height: 832 },
+    framerate: 30,
+    rotation: "cw",
+    createLog: true,
+  });
+  let frame = [];
+  st.on("data", (chunk) => {
+    frame = frame.concat(Array.from(chunk));
+    if (frame.length > (640 * 832 * 3) / 2) {
+      let thisFrame = frame.splice(0, (640 * 832 * 3) / 2);
+      videoWin.webContents.send("frame-ready", {
+        y: Buffer.from(thisFrame.slice(0, 0 + 640 * 832)),
+        u: Buffer.from(thisFrame.slice(640 * 832, 640 * 832 + (640 * 832) / 4)),
+        v: Buffer.from(
+          thisFrame.slice(
+            640 * 832 + (640 * 832) / 4,
+            640 * 832 + (640 * 832) / 4 + 640 * 832 + (640 * 832) / 4
+          )
+        ),
+      });
+    }
+  });
+  setTimeout(() => {
+    console.log("started video");
+    st.startOutput();
+  }, 1000 * 10);
 };
 
 //when electron has initialized, create the appropriate window
