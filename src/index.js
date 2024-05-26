@@ -1,13 +1,13 @@
 window.onload = () => {
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
-    api.reload();
+    api.reload("main");
   });
   document.getElementById("minimize").addEventListener("click", () => {
-    api.minimize();
+    api.minimize("main");
   });
   document.getElementById("close").addEventListener("click", () => {
-    api.close();
+    api.close("main");
   });
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();

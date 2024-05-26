@@ -149,7 +149,7 @@ window.onload = () => {
         "Reloads debug window and closes serial port connections",
         null,
         () => {
-          api.reload();
+          api.reload("debug");
         }
       ),
       new CmdNode(

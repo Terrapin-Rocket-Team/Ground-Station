@@ -7,9 +7,13 @@ const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 const { APRSMessage } = require("./serial/APRS");
+const ffmpeg = require("ffmpeg-static-electron");
+
+log.info(ffmpeg.path);
 
 let mainWin,
   debugWin,
+  videoWin,
   config,
   cacheMeta,
   closed,
@@ -24,6 +28,7 @@ scale: 1 is default, scales the application window
 debugScale: 1 is default, scales the debug window
 debug: false is default, whether debug statements will be logged
 noGUI: false is default, loads only the debug window
+video: false is default, whether the ground station launches with video streaming enabled
 tileCache: true by default, whether tiles will be cached - work in progress
 cacheMaxSize: 100000000 (100MB) is default, max tile cache size in bytes
 baudRate: 115200 is default, baudrate to use with the connected serial port
@@ -31,6 +36,10 @@ baudRate: 115200 is default, baudrate to use with the connected serial port
 try {
   //load config
   config = JSON.parse(fs.readFileSync("./config.json"));
+  if (config.video === undefined)
+    log.warn(
+      "Older config version detected, save your settings to remove this warning"
+    );
   log.useDebug = config.debug;
   log.debug("Config loaded");
 } catch (err) {
@@ -39,6 +48,7 @@ try {
     debugScale: 1,
     debug: false,
     noGUI: false,
+    video: false,
     //tileCache: true, //added tile toggling here - work in progress
     cacheMaxSize: 100000000,
     baudRate: 115200,
@@ -120,6 +130,7 @@ const createWindow = () => {
     }
     mainWin.webContents.send("close"); // unused
     if (!config.noGUI && debugWin) debugWin.close();
+    if (config.video && videoWin) videoWin.close();
   });
 
   mainWin.once("closed", () => {
@@ -169,12 +180,56 @@ const createDebug = () => {
     debugWin.webContents.send("close"); // unused
     log.removeWin();
     if (config.noGUI && mainWin) mainWin.close();
+    if (config.video && videoWin) videoWin.close();
   });
 
   debugWin.once("closed", () => {
     debugWin = null;
   });
   log.debug("Debug window created");
+};
+
+//creates the debug electron window
+const createVideo = () => {
+  const width = 1280,
+    height = 720;
+  videoWin = new BrowserWindow({
+    width: width * config.debugScale,
+    height: height * config.debugScale,
+    frame: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  videoWin.loadFile(path.join(__dirname, "src/video/video.html"));
+
+  if (config.debug) videoWin.webContents.openDevTools({ mode: "detach" });
+
+  //reset when the window is closed
+  videoWin.once("close", () => {
+    videoWin.webContents.send("close"); // unused
+  });
+
+  videoWin.once("closed", () => {
+    videoWin = null;
+  });
+  log.debug("Video streaming window created");
+  videoWin.on("enter-full-screen", () => {
+    console.log("Enter video fullscreen");
+    videoWin.webContents.send("fullscreen-change", {
+      win: "video",
+      isFullscreen: true,
+    });
+  });
+  videoWin.on("leave-full-screen", () => {
+    log.debug("Leave video fullscreen");
+    videoWin.webContents.send("fullscreen-change", {
+      win: "video",
+      isFullscreen: false,
+    });
+  });
 };
 
 //when electron has initialized, create the appropriate window
@@ -185,6 +240,7 @@ app.whenReady().then(() => {
     createDebug();
   }
 
+  if (config.video) createVideo();
   //open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -193,6 +249,7 @@ app.whenReady().then(() => {
       } else {
         createDebug();
       }
+      if (config.video) createVideo();
     }
   });
 });
@@ -203,43 +260,70 @@ app.on("window-all-closed", () => {
 });
 
 //app control
-ipcMain.on("close", () => {
-  log.debug("Closing main window");
-  mainWin.close();
+ipcMain.on("close", (event, win) => {
+  if (win === "main") {
+    log.debug("Closing main window");
+    mainWin.close();
+  }
+  if (win === "video") {
+    log.debug("Closing video window");
+    videoWin.close();
+  }
 });
 
-ipcMain.on("minimize", () => {
-  mainWin.minimize();
+ipcMain.on("minimize", (event, win) => {
+  if (win === "main") {
+    mainWin.minimize();
+  }
+  if (win === "video") {
+    videoWin.minimize();
+  }
 });
 
-ipcMain.on("reload", (event, args) => {
-  log.debug("Reloading windows");
-  radio.close();
-  if (mainWin) mainWin.webContents.reloadIgnoringCache();
-  if (debugWin) {
-    debugWin.webContents.reloadIgnoringCache();
-    debugWin.webContents.once("dom-ready", () => {
-      try {
-        if (fs.existsSync("./debug.log"))
-          debugWin.webContents.send(
-            "previous-logs",
-            fs.readFileSync("./debug.log").toString()
-          );
-      } catch (err) {
-        log.err('Could not load previous logs: "' + err.message + '"');
-      }
-    });
+ipcMain.on("fullscreen", (event, win, isFullscreen) => {
+  if (win === "main") {
+    mainWin.setFullScreen(isFullscreen);
+  }
+  if (win === "video") {
+    videoWin.setFullScreen(isFullscreen);
+  }
+});
+
+ipcMain.on("reload", (event, win) => {
+  log.debug("Reloading window");
+  if (win === "main" || win === "debug") {
+    radio.close();
+    if (mainWin) mainWin.webContents.reloadIgnoringCache();
+    if (debugWin) {
+      debugWin.webContents.reloadIgnoringCache();
+      debugWin.webContents.once("dom-ready", () => {
+        try {
+          if (fs.existsSync("./debug.log"))
+            debugWin.webContents.send(
+              "previous-logs",
+              fs.readFileSync("./debug.log").toString()
+            );
+        } catch (err) {
+          log.err('Could not load previous logs: "' + err.message + '"');
+        }
+      });
+    }
+  }
+  if (win === "video") {
+    if (videoWin) videoWin.webContents.reloadIgnoringCache();
   }
 });
 
 ipcMain.on("dev-tools", (event, args) => {
   if (mainWin) mainWin.webContents.openDevTools({ mode: "detach" });
   if (debugWin) debugWin.webContents.openDevTools({ mode: "detach" });
+  if (videoWin) videoWin.webContents.openDevTools({ mode: "detach" });
 });
 
 ipcMain.on("open-gui", (event, args) => {
   log.debug("Main window opened from debug");
   if (!mainWin) createWindow();
+  if (config.video && !videoWin) createVideo();
 });
 
 ipcMain.on("open-debug", (event, args) => {
