@@ -1,5 +1,4 @@
 const VideoSource = require("./VideoSource");
-const ffmpegPath = require("ffmpeg-static-electron");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");

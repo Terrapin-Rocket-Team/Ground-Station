@@ -231,36 +231,10 @@ const createVideo = () => {
     });
   });
   log.debug("Video streaming window created");
-
-  let st = new FileStreamSource("./serial/out5.av1", {
-    resolution: { width: 640, height: 832 },
-    framerate: 30,
-    rotation: "cw",
-    createLog: true,
-  });
-  // let frame = [];
-  // st.on("data", (chunk) => {
-  //   frame = frame.concat(Array.from(chunk));
-  //   if (frame.length > (640 * 832 * 3) / 2) {
-  //     let thisFrame = frame.splice(0, (640 * 832 * 3) / 2);
-  //     videoWin.webContents.send("frame-ready", {
-  //       y: Buffer.from(thisFrame.slice(0, 0 + 640 * 832)),
-  //       u: Buffer.from(thisFrame.slice(640 * 832, 640 * 832 + (640 * 832) / 4)),
-  //       v: Buffer.from(
-  //         thisFrame.slice(
-  //           640 * 832 + (640 * 832) / 4,
-  //           640 * 832 + (640 * 832) / 4 + 640 * 832 + (640 * 832) / 4
-  //         )
-  //       ),
-  //     });
-  //   }
-  // });
-  setTimeout(() => {
-    console.log("started video");
-    st.startOutput();
-    videoStreams.push(st);
-  }, 1000 * 10);
 };
+
+app.commandLine.appendSwitch("high-dpi-support", 1);
+app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
 //when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
@@ -316,6 +290,11 @@ ipcMain.on("fullscreen", (event, win, isFullscreen) => {
   }
   if (win === "video") {
     videoWin.setFullScreen(isFullscreen);
+    if (isFullscreen) {
+      videoWin.setSize(1920, 1080);
+    } else {
+      videoWin.setSize(1280, 720);
+    }
   }
 });
 
@@ -620,26 +599,30 @@ if (config.debug) {
   }
   if (config.video) {
     if (fs.existsSync("./video0.av1")) {
-      videoStreams.push(
-        new FileStreamSource("./video0.av1", {
-          resolution: { width: 640, height: 832 },
-          framerate: 30,
-          rotation: "cw",
-          createLog: config.debug,
-        })
-      );
+      let vs = new FileStreamSource("./video0.av1", {
+        resolution: { width: 640, height: 832 },
+        framerate: 30,
+        rotation: "cw",
+        createLog: config.debug,
+      });
+      videoStreams.push(vs);
+      setTimeout(() => {
+        vs.startOutput();
+      }, 1000);
     } else {
       log.warn("Could not find video0.av1");
     }
     if (fs.existsSync("./video1.av1")) {
-      videoStreams.push(
-        new FileStreamSource("./video1.av1", {
-          resolution: { width: 640, height: 832 },
-          framerate: 30,
-          rotation: "cw",
-          createLog: config.debug,
-        })
-      );
+      let vs = new FileStreamSource("./video1.av1", {
+        resolution: { width: 640, height: 832 },
+        framerate: 30,
+        rotation: "cw",
+        createLog: config.debug,
+      });
+      videoStreams.push(vs);
+      setTimeout(() => {
+        vs.startOutput();
+      }, 1000);
     } else {
       log.warn("Could not find video1.av1");
     }
