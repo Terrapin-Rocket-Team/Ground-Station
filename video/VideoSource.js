@@ -11,19 +11,20 @@ class VideoSource extends EventEmitter {
     this.name = name;
     this.i = input;
     this.o = null;
-    this.data = [];
+    this.frames = [];
   }
 
   startOutput() {
     return this.o;
   }
 
-  hasData() {
-    return this.data.length > 0;
+  hasFrame() {
+    return this.frames.length > 0;
   }
 
-  readData() {
-    return this.data.splice(0, data.length);
+  readFrame() {
+    if (this.frames.length > 0) return this.frames.shift();
+    else return null;
   }
 }
 

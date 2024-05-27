@@ -36,17 +36,24 @@ window.onload = () => {
   });
   frame = YUVBuffer.frame(format);
 
-  api.on("frame-ready", (frame) => {
-    frameQueue.push(frame);
-  });
+  //   api.on("frame-ready", (frame) => {
+  //     frameQueue.push(frame);
+  //   });
 
   setInterval(() => {
+    api.getVideo().then((f) => {
+      if (f && f.length > 0) frameQueue.push(f);
+    });
     if (frameQueue.length > 0) {
       thisFrame = frameQueue.shift();
-      frame.y.bytes = thisFrame.y;
-      frame.u.bytes = thisFrame.u;
-      frame.v.bytes = thisFrame.v;
-      video0.drawFrame(frame);
+      thisFrame.forEach((video) => {
+        if (video) {
+          frame.y.bytes = video.data.y;
+          frame.u.bytes = video.data.u;
+          frame.v.bytes = video.data.v;
+          video0.drawFrame(frame);
+        }
+      });
     }
   }, 20);
 };

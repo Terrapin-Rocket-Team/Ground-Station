@@ -28,6 +28,10 @@ class FileStreamSource extends VideoSource {
     this.options = options;
     this.ffmpeg = null;
     this.logFile = null;
+    this.data = Buffer.alloc(
+      this.options.resolution.width * this.options.resolution.height * 2
+    );
+    this.dataLen = 0;
     if (this.options.rotation === undefined) {
       this.ffmpeg = spawn("ffmpeg", [
         "-re",
@@ -45,18 +49,6 @@ class FileStreamSource extends VideoSource {
         this.options.framerate + "/1",
         "-",
       ]);
-      //   this.ffmpeg = exec(
-      //     "ffmpeg -re -framerate " +
-      //       this.options.framerate +
-      //       "/1 -i - -f rawvideo -pix_fmt yuv420p -s " +
-      //       this.options.resolution.width +
-      //       "x" +
-      //       this.options.resolution.height +
-      //       " -framerate " +
-      //       this.options.framerate +
-      //       "/1 -",
-      //     { shell: "cmd.exe" }
-      //   );
     } else {
       let r = 0;
       if (this.options.rotation === "ccw") r = 0;
@@ -81,20 +73,6 @@ class FileStreamSource extends VideoSource {
         this.options.framerate + "/1",
         "-",
       ]);
-      //   this.ffmpeg = exec(
-      //     "ffmpeg -re -framerate " +
-      //       this.options.framerate +
-      //       "/1 -i - -f rawvideo -pix_fmt yuv420p -vf transpose=" +
-      //       r +
-      //       " -s " +
-      //       this.options.resolution.width +
-      //       "x" +
-      //       this.options.resolution.height +
-      //       " -framerate " +
-      //       this.options.framerate +
-      //       "/1 -",
-      //     { shell: "cmd.exe" }
-      //   );
     }
     if (this.ffmpeg !== null) {
       if (this.options.createLog) {
@@ -112,45 +90,64 @@ class FileStreamSource extends VideoSource {
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.ffmpeg.stdin);
 
-    let out = fs.createWriteStream("out2.av1");
-    this.o.pipe(out);
+    this.o.on("data", (chunks) => {
+      chunks.copy(this.data, this.dataLen, 0, chunks.length);
+      this.dataLen += chunks.length;
+      if (
+        this.dataLen >
+        (this.options.resolution.width * this.options.resolution.height * 3) / 2
+      ) {
+        this.frames.push(
+          Buffer.from(
+            this.data.subarray(
+              0,
+              (this.options.resolution.width *
+                this.options.resolution.height *
+                3) /
+                2
+            )
+          )
+        );
+        this.data.copy(
+          this.data,
+          0,
+          (this.options.resolution.width * this.options.resolution.height * 3) /
+            2,
+          this.datalen
+        );
+        this.dataLen -=
+          (this.options.resolution.width * this.options.resolution.height * 3) /
+          2;
+      }
+    });
 
-    // this.o.on("data", (chunks) => {
-    //   this.data = this.data.concat(Array.from(chunks));
-    //   if (
-    //     this.data.length >
-    //     (this.options.resolution.width * this.options.resolution.height * 3) / 2
-    //   ) {
-    //     this.emit(
-    //       "data",
-    //       this.data.splice(
-    //         0,
-    //         (this.options.resolution.width *
-    //           this.options.resolution.height *
-    //           3) /
-    //           2
-    //       )
-    //     );
-    //   }
-    // });
+    this.o.on("close", () => {
+      this.emit("close");
+    });
 
-    // this.o.on("close", () => {
-    //   this.emit("close");
-    // });
-
-    // this.o.on("error", (err) => {
-    //   this.emit("error", err);
-    // });
+    this.o.on("error", (err) => {
+      this.emit("error", err);
+    });
 
     return this.o;
   }
 
   decomposeYUV(YUVarr, width, height) {
     return {
-      y: YUVarr.slice(0, width * height),
-      u: YUVarr.slice(width * height, (width * height * 5) / 4),
-      v: YUVarr.slice((width * height * 5) / 4, (width * height * 3) / 2),
+      y: YUVarr.subarray(0, width * height),
+      u: YUVarr.subarray(width * height, (width * height * 5) / 4),
+      v: YUVarr.subarray((width * height * 5) / 4, (width * height * 3) / 2),
     };
+  }
+
+  readFrame() {
+    if (this.frames.length > 0)
+      return this.decomposeYUV(
+        this.frames.shift(),
+        this.options.resolution.width,
+        this.options.resolution.height
+      );
+    else return null;
   }
 }
 
