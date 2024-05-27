@@ -48,35 +48,40 @@ window.onload = () => {
   let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
   let spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
 
-  //custom dropdown listener
-  document.getElementById("serial-drop").addEventListener("click", () => {
-    const drop = document.getElementById("serial-drop");
-    const options = document.getElementById("serial-options");
-    if (drop.classList.contains("active")) {
-      options.style.display = "none";
-      document
-        .getElementById("serial-arrow")
-        .setAttribute("src", "./images/arrow_right.svg");
-    } else {
-      options.style.display = "block";
-      getAvailPorts();
-      document
-        .getElementById("serial-arrow")
-        .setAttribute("src", "./images/arrow_down.svg");
-    }
-    drop.classList.toggle("active");
-    drop.classList.toggle("inactive");
-    options.classList.toggle("active");
-  });
+  let portsInUse = [];
+  //custom dropdown setup
+  const setupDropdown = (idPrefix) => {
+    document
+      .getElementById(idPrefix + "-drop")
+      .addEventListener("click", () => {
+        const drop = document.getElementById(idPrefix + "-drop");
+        const options = document.getElementById(idPrefix + "-options");
+        if (drop.classList.contains("active")) {
+          options.style.display = "none";
+          document
+            .getElementById(idPrefix + "-arrow")
+            .setAttribute("src", "./images/arrow_right.svg");
+        } else {
+          options.style.display = "block";
+          getAvailPorts(idPrefix);
+          document
+            .getElementById(idPrefix + "-arrow")
+            .setAttribute("src", "./images/arrow_down.svg");
+        }
+        drop.classList.toggle("active");
+        drop.classList.toggle("inactive");
+        options.classList.toggle("active");
+      });
+  };
 
   //adds available ports to the custom dropdown
-  const getAvailPorts = () => {
+  const getAvailPorts = (idPrefix) => {
     api.getPorts().then((ports) => {
-      const options = document.getElementById("serial-options");
+      const options = document.getElementById(idPrefix + "-options");
       while (options.childElementCount > 0) {
         options.removeChild(options.firstChild);
       }
-      const selected = document.getElementById("serial-selected");
+      const selected = document.getElementById(idPrefix + "-selected");
       if (ports.length === 0) {
         const span = document.createElement("SPAN");
         span.className = "serial";
@@ -87,29 +92,32 @@ window.onload = () => {
         options.appendChild(span);
       } else {
         ports.forEach((port) => {
-          const span = document.createElement("SPAN");
-          span.className = "serial";
-          span.textContent = port.path;
-          span.addEventListener("click", () => {
-            api.setPort(port.path).then((success) => {
-              const img = document.getElementById("serial-connection");
-              if (success) {
-                selected.textContent = port.path;
-                img.setAttribute("src", "./images/serial_connected.svg");
-                img.setAttribute("title", "Serial Connected");
-              } else {
-                img.setAttribute("src", "./images/serial_disconnected.svg");
-                img.setAttribute("title", "Connection Error");
-              }
+          if (!portsInUse.some((el) => el.path === port.path)) {
+            const span = document.createElement("SPAN");
+            span.className = "serial";
+            span.textContent = port.path;
+            span.addEventListener("click", () => {
+              api.setPort({ idPrefix, path: port.path }).then((success) => {
+                const img = document.getElementById(idPrefix + "-connection");
+                if (success) {
+                  portsInUse.push({ idPrefix, path: port.path });
+                  selected.textContent = port.path;
+                  img.setAttribute("src", "./images/serial_connected.svg");
+                  img.setAttribute("title", "Serial Connected");
+                } else {
+                  img.setAttribute("src", "./images/serial_disconnected.svg");
+                  img.setAttribute("title", "Connection Error");
+                }
+              });
             });
-          });
-          options.appendChild(span);
+            options.appendChild(span);
+          }
         });
       }
     });
   };
 
-  getAvailPorts();
+  setupDropdown("serial");
 
   //set gauge.js gauge sizing
   let alt = document.getElementById("altitude");
@@ -166,26 +174,26 @@ window.onload = () => {
 
     //update signal strength
     let ss = msg.getSignalStrength();
-    const serialEl = document.getElementById("radio-connection");
+    const connectionEl = document.getElementById("radio-connection");
     if (ss === "High") {
-      serialEl.setAttribute("src", "./images/signal_strong.svg");
-      serialEl.setAttribute("alt", "Signal Strong");
-      serialEl.title = "Signal Strong";
+      connectionEl.setAttribute("src", "./images/signal_strong.svg");
+      connectionEl.setAttribute("alt", "Signal Strong");
+      connectionEl.title = "Signal Strong";
     }
     if (ss === "Med") {
-      serialEl.setAttribute("src", "./images/signal_mid.svg");
-      serialEl.setAttribute("alt", "Signal Medium");
-      serialEl.title = "Signal Medium";
+      connectionEl.setAttribute("src", "./images/signal_mid.svg");
+      connectionEl.setAttribute("alt", "Signal Medium");
+      connectionEl.title = "Signal Medium";
     }
     if (ss === "Low") {
-      serialEl.setAttribute("src", "./images/signal_weak.svg");
-      serialEl.setAttribute("alt", "Signal Weak");
-      serialEl.title = "Signal Weak";
+      connectionEl.setAttribute("src", "./images/signal_weak.svg");
+      connectionEl.setAttribute("alt", "Signal Weak");
+      connectionEl.title = "Signal Weak";
     }
     if (ss === "None") {
-      serialEl.setAttribute("src", "./images/no_signal.svg");
-      serialEl.setAttribute("alt", "No Signal");
-      serialEl.title = "No Signal";
+      connectionEl.setAttribute("src", "./images/no_signal.svg");
+      connectionEl.setAttribute("alt", "No Signal");
+      connectionEl.title = "No Signal";
     }
 
     //set T+
@@ -364,15 +372,18 @@ window.onload = () => {
   });
 
   //update UI if serial connection is lost
-  api.on("radio-close", () => {
-    const img = document.getElementById("serial-connection");
-    img.setAttribute("src", "./images/serial_disconnected.svg");
-    img.setAttribute("title", "Connection Error");
+  api.on("radio-close", (portPath) => {
+    let connection = portsInUse.find((el) => el.path === portPath);
+    if (connection) {
+      const img = document.getElementById(connection.idPrefix + "-connection");
+      img.setAttribute("src", "./images/serial_disconnected.svg");
+      img.setAttribute("title", "Connection Error");
 
-    const serialEl = document.getElementById("radio-connection");
-    serialEl.setAttribute("src", "./images/no_signal.svg");
-    serialEl.setAttribute("alt", "No Signal");
-    serialEl.title = "No Signal";
+      // const telemetryEl = document.getElementById("radio-connection");
+      // telemetryEl.setAttribute("src", "./images/no_signal.svg");
+      // telemetryEl.setAttribute("alt", "No Signal");
+      // telemetryEl.title = "No Signal";
+    }
   });
 };
 

@@ -54,8 +54,8 @@ class API extends EventEmitter {
       this.emit("data", data);
     });
 
-    ipcRenderer.on("radio-close", (event, data) => {
-      this.emit("radio-close");
+    ipcRenderer.on("radio-close", (event, portPath) => {
+      this.emit("radio-close", portPath);
     });
 
     ipcRenderer.on("fullscreen-change", (event, change) => {
@@ -92,7 +92,7 @@ class API extends EventEmitter {
     this.testVideo = () => ipcRenderer.invoke("test-video");
 
     //setters
-    this.setPort = (port) => ipcRenderer.invoke("set-port", port);
+    this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
   }
 }

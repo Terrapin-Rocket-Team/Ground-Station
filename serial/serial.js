@@ -106,8 +106,9 @@ class Radio extends EventEmitter {
 
       //if the serial port is disconnected, emit the close event
       this.port.on("close", () => {
+        let path = this.port.path;
         this.port = null;
-        this.emit("close");
+        this.emit("close", path);
       });
     });
   }

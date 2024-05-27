@@ -35,24 +35,25 @@
           id="recv-status"
           title="No Message"
         />
-        <!--Custom dropdown-->
-        <div class="dropdown inactive" id="serial-drop">
-          <span id="serial-selected">Select Port</span>
-          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
-          <div class="options" id="serial-options"></div>
-        </div>
-        <img
-          src="./images/serial_disconnected.svg"
-          alt="No Connection"
-          id="serial-connection"
-          title="Serial Disconnected"
-        />
         <img
           src="./images/no_signal.svg"
           alt="No Connection"
           id="radio-connection"
           title="No Signal"
         />
+        <!--Custom dropdowns-->
+        <div class="dropdown inactive" id="serial-drop">
+          <img
+            src="./images/serial_disconnected.svg"
+            alt="No Connection"
+            id="serial-connection"
+            class="serial-connection"
+            title="Serial Disconnected"
+          />
+          <span id="serial-selected">Select Port</span>
+          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
+          <div class="options" id="serial-options"></div>
+        </div>
         <button id="debug" class="top-button" title="Debug Window">
           <img src="./images/debug.svg" alt="Debug" />
         </button>
