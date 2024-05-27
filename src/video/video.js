@@ -11,9 +11,6 @@ window.onload = () => {
   document.getElementById("close").addEventListener("click", () => {
     api.close("video");
   });
-  document.getElementById("debug").addEventListener("click", () => {
-    api.openDebug();
-  });
   document.getElementById("fullscreen").addEventListener("click", () => {
     fullscreen = !fullscreen;
     api.fullscreen("video", fullscreen);

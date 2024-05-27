@@ -1,7 +1,26 @@
 //TODO: comments
 
 window.onload = () => {
-  let config;
+  let config, newConfig;
+
+  // saves the settings when the page is unloaded
+  const handleNavigateAway = (showAlert) => {
+    if (cacheMaxSize.value != "") {
+      newConfig.cacheMaxSize = parseInt(cacheMaxSize.value);
+    }
+    if (baudRate.value != "") {
+      newConfig.baudRate = parseInt(baudRate.value);
+    }
+    newConfig.scale = parseFloat(scale.textContent);
+    newConfig.debugScale = parseFloat(debugScale.textContent);
+    if (!configEquals(config, newConfig)) {
+      api.setSettings(newConfig);
+      if (showAlert)
+        alert(
+          "Application settings have changed. Please restart for changes to take affect!"
+        );
+    }
+  };
 
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
@@ -11,10 +30,15 @@ window.onload = () => {
     api.minimize("main");
   });
   document.getElementById("close").addEventListener("click", () => {
+    handleNavigateAway(false);
     api.close("main");
   });
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();
+  });
+
+  document.getElementById("home").addEventListener("click", () => {
+    handleNavigateAway(true);
   });
 
   /**
@@ -54,6 +78,7 @@ window.onload = () => {
   // get the current settings from main and set each input accordingly
   api.getSettings().then((c) => {
     config = c;
+    newConfig = JSON.parse(JSON.stringify(config));
     scale.textContent = config.scale.toFixed(2);
     debugScale.textContent = config.debugScale.toFixed(2);
     setToggle(config.debug, debugToggle);
@@ -132,24 +157,24 @@ window.onload = () => {
 
   // click listeners for the toggles
   debugToggle.addEventListener("click", () => {
-    config.debug = !config.debug;
-    setToggle(config.debug, debugToggle);
+    newConfig.debug = !newConfig.debug;
+    setToggle(newConfig.debug, debugToggle);
   });
 
   noGUIToggle.addEventListener("click", () => {
-    config.noGUI = !config.noGUI;
-    setToggle(config.noGUI, noGUIToggle);
+    newConfig.noGUI = !newConfig.noGUI;
+    setToggle(newConfig.noGUI, noGUIToggle);
   });
 
   videoToggle.addEventListener("click", () => {
-    config.video = !config.video;
-    setToggle(config.video, videoToggle);
+    newConfig.video = !newConfig.video;
+    setToggle(newConfig.video, videoToggle);
   });
 
   // click listener for the reset settings button
   document.getElementById("reset-settings").addEventListener("click", () => {
     // reset the object (should be the same as the default settings in main.js)
-    config = {
+    newConfig = {
       scale: 1,
       debugScale: 1,
       debug: false,
@@ -160,16 +185,13 @@ window.onload = () => {
     };
 
     // reset the inputs
-    scale.textContent = config.scale.toFixed(2);
-    debugScale.textContent = config.debugScale.toFixed(2);
-    setToggle(config.debug, debugToggle);
-    setToggle(config.noGUI, noGUIToggle);
-    setToggle(config.video, videoToggle);
-    cacheMaxSize.value = config.cacheMaxSize;
-    baudRate.value = config.baudRate;
-
-    // save the settings
-    api.setSettings(config);
+    scale.textContent = newConfig.scale.toFixed(2);
+    debugScale.textContent = newConfig.debugScale.toFixed(2);
+    setToggle(newConfig.debug, debugToggle);
+    setToggle(newConfig.noGUI, noGUIToggle);
+    setToggle(newConfig.video, videoToggle);
+    cacheMaxSize.value = newConfig.cacheMaxSize;
+    baudRate.value = newConfig.baudRate;
   });
 
   // click listener for the clear map cache button
@@ -177,16 +199,24 @@ window.onload = () => {
     api.clearTileCache();
   });
 
-  // saves the settings when the page is unloaded
-  addEventListener("unload", () => {
-    if (cacheMaxSize.value != "") {
-      config.cacheMaxSize = parseInt(cacheMaxSize.value);
-    }
-    if (baudRate.value != "") {
-      config.baudRate = parseInt(baudRate.value);
-    }
-    config.scale = parseFloat(scale.textContent);
-    config.debugScale = parseFloat(debugScale.textContent);
-    api.setSettings(config);
-  });
+  const configEquals = (config1, config2) => {
+    console.log(
+      config1.scale === config2.scale,
+      config1.debugScale === config2.debugScale,
+      config1.debug === config2.debug,
+      config1.noGUI === config2.noGUI,
+      config1.video === config2.video,
+      config1.cacheMaxSize === config2.cacheMaxSize,
+      config1.baudRate === config2.baudRate
+    );
+    return (
+      config1.scale === config2.scale &&
+      config1.debugScale === config2.debugScale &&
+      config1.debug === config2.debug &&
+      config1.noGUI === config2.noGUI &&
+      config1.video === config2.video &&
+      config1.cacheMaxSize === config2.cacheMaxSize &&
+      config1.baudRate === config2.baudRate
+    );
+  };
 };

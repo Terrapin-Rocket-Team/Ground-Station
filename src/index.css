@@ -40,7 +40,7 @@ body {
 
 #top-left {
   float: left;
-  width: 50%;
+  width: 30%;
   height: 100%;
   display: flex;
   justify-content: flex-start;
@@ -55,19 +55,21 @@ body {
 
 #top-right {
   float: right;
-  width: 50%;
+  width: 70%;
   height: 100%;
   display: flex;
   justify-content: flex-end;
   align-items: center;
 }
 
-#serial-drop {
+#serial-drop,
+#serial1-drop,
+#serial2-drop {
   margin-right: 1vw;
 }
 
 .dropdown {
-  padding: 0 1vw;
+  padding: 0 0.5vw;
   background-color: var(--top-bg);
   display: flex;
   align-items: center;
@@ -92,15 +94,23 @@ body {
   float: left;
   margin: 0;
   padding: 0;
-  padding-right: 2vw;
+  padding-right: 1vw;
 }
 
 .dropdown img {
-  position: absolute;
+  /* position: absolute;
   right: 0.7vw;
   margin: 0;
-  padding: 0;
+  padding: 0; */
   height: 2.5vh;
+}
+
+.dropdown .serial-connection {
+  float: left;
+  height: 2.5vh;
+  -webkit-user-drag: none;
+  margin-right: 1vw;
+  -webkit-app-region: no-drag;
 }
 
 .options {
@@ -136,7 +146,6 @@ body {
   cursor: pointer;
 }
 
-#serial-connection,
 #radio-connection,
 #recv-status {
   height: 2.5vh;

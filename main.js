@@ -129,7 +129,7 @@ const createWindow = () => {
     }
     mainWin.webContents.send("close"); // unused
     if (!config.noGUI && debugWin) debugWin.close();
-    if (config.video && videoWin) videoWin.close();
+    if (videoWin) videoWin.close();
   });
 
   mainWin.once("closed", () => {
@@ -179,7 +179,7 @@ const createDebug = () => {
     debugWin.webContents.send("close"); // unused
     log.removeWin();
     if (config.noGUI && mainWin) mainWin.close();
-    if (config.video && videoWin) videoWin.close();
+    if (videoWin) videoWin.close();
   });
 
   debugWin.once("closed", () => {
@@ -513,17 +513,21 @@ ipcMain.handle("get-video", (event, args) => {
 });
 
 //setters
-ipcMain.handle("set-port", (event, port) => {
+ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
     radio
-      .connect(port, config.baudRate)
+      .connect(portConfig.path, config.baudRate)
       .then((result) => {
-        log.info("Successfully connected to port " + port);
+        log.info("Successfully connected to port " + portConfig.path);
         res(1);
       })
       .catch((err) => {
         log.err(
-          "Failed to connect to port " + port + ': "' + err.message + '"'
+          "Failed to connect to port " +
+            portConfig.path +
+            ': "' +
+            err.message +
+            '"'
         );
         res(0);
       });
@@ -572,9 +576,9 @@ radio.on("error", (message) => {
   log.err("Error parsing APRS message: " + message);
 });
 
-radio.on("close", () => {
+radio.on("close", (path) => {
   log.info("Serial disconnected");
-  if (!closed && mainWin) mainWin.webContents.send("radio-close");
+  if (!closed && mainWin) mainWin.webContents.send("radio-close", path);
 });
 
 //testing
