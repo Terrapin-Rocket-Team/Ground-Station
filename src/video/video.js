@@ -26,19 +26,28 @@ window.onload = () => {
     }
   });
 
-  const video0Canvas = document.getElementById("video-0"),
-    video0 = YUVCanvas.attach(video0Canvas);
-  let format = YUVBuffer.format({
-    width: 640,
-    height: 832,
-    chromaWidth: 640 / 2,
-    chromaHeight: 832 / 2,
-  });
-  frame = YUVBuffer.frame(format);
+  const setupVideoCanvas = (id) => {
+    const LVCanvas = document.getElementById(id),
+      LV = YUVCanvas.attach(LVCanvas);
+    let format = YUVBuffer.format({
+      width: 640,
+      height: 832,
+      chromaWidth: 640 / 2,
+      chromaHeight: 832 / 2,
+    });
+    frame = YUVBuffer.frame(format);
 
-  //   api.on("frame-ready", (frame) => {
-  //     frameQueue.push(frame);
-  //   });
+    return { canvas: LVCanvas, ctx: LV, frame };
+  };
+
+  const video0 = document.getElementById("video-0"),
+    video1 = document.getElementById("video-1");
+
+  let LV0 = setupVideoCanvas("live-video-0"),
+    LV1 = setupVideoCanvas("live-video-1");
+
+  video0.appendChild(LV0.canvas);
+  video1.appendChild(LV1.canvas);
 
   setInterval(() => {
     api.getVideo().then((f) => {
@@ -48,10 +57,18 @@ window.onload = () => {
       thisFrame = frameQueue.shift();
       thisFrame.forEach((video) => {
         if (video) {
-          frame.y.bytes = video.data.y;
-          frame.u.bytes = video.data.u;
-          frame.v.bytes = video.data.v;
-          video0.drawFrame(frame);
+          if (video.name === "video0.av1") {
+            LV0.frame.y.bytes = video.data.y;
+            LV0.frame.u.bytes = video.data.u;
+            LV0.frame.v.bytes = video.data.v;
+            LV0.ctx.drawFrame(LV0.frame);
+          }
+          if (video.name === "video1.av1") {
+            LV1.frame.y.bytes = video.data.y;
+            LV1.frame.u.bytes = video.data.u;
+            LV1.frame.v.bytes = video.data.v;
+            LV1.ctx.drawFrame(LV1.frame);
+          }
         }
       });
     }
