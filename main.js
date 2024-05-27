@@ -238,26 +238,27 @@ const createVideo = () => {
     rotation: "cw",
     createLog: true,
   });
-  let frame = [];
-  st.on("data", (chunk) => {
-    frame = frame.concat(Array.from(chunk));
-    if (frame.length > (640 * 832 * 3) / 2) {
-      let thisFrame = frame.splice(0, (640 * 832 * 3) / 2);
-      videoWin.webContents.send("frame-ready", {
-        y: Buffer.from(thisFrame.slice(0, 0 + 640 * 832)),
-        u: Buffer.from(thisFrame.slice(640 * 832, 640 * 832 + (640 * 832) / 4)),
-        v: Buffer.from(
-          thisFrame.slice(
-            640 * 832 + (640 * 832) / 4,
-            640 * 832 + (640 * 832) / 4 + 640 * 832 + (640 * 832) / 4
-          )
-        ),
-      });
-    }
-  });
+  // let frame = [];
+  // st.on("data", (chunk) => {
+  //   frame = frame.concat(Array.from(chunk));
+  //   if (frame.length > (640 * 832 * 3) / 2) {
+  //     let thisFrame = frame.splice(0, (640 * 832 * 3) / 2);
+  //     videoWin.webContents.send("frame-ready", {
+  //       y: Buffer.from(thisFrame.slice(0, 0 + 640 * 832)),
+  //       u: Buffer.from(thisFrame.slice(640 * 832, 640 * 832 + (640 * 832) / 4)),
+  //       v: Buffer.from(
+  //         thisFrame.slice(
+  //           640 * 832 + (640 * 832) / 4,
+  //           640 * 832 + (640 * 832) / 4 + 640 * 832 + (640 * 832) / 4
+  //         )
+  //       ),
+  //     });
+  //   }
+  // });
   setTimeout(() => {
     console.log("started video");
     st.startOutput();
+    videoStreams.push(st);
   }, 1000 * 10);
 };
 
@@ -525,8 +526,8 @@ ipcMain.handle("get-settings", (event, args) => {
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoStreams.forEach((stream) => {
-    if (stream.hasData())
-      videoData.push({ name: stream.name, data: stream.readData() });
+    if (stream.hasFrame())
+      videoData.push({ name: stream.name, data: stream.readFrame() });
     else videoData.push(null);
   });
   return videoData;
