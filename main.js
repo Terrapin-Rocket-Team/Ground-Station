@@ -42,6 +42,7 @@ try {
   log.useDebug = config.debug;
   log.debug("Config loaded");
 } catch (err) {
+  //load defaults if no config file
   config = {
     scale: 1,
     debugScale: 1,
@@ -52,6 +53,7 @@ try {
     cacheMaxSize: 100000000,
     baudRate: 115200,
   };
+  //create new config file
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
     if (!fs.existsSync("./config.json")) {
@@ -70,6 +72,7 @@ try {
   );
   log.debug("Cache metadata loaded");
 } catch (err) {
+  //load defaults if no metadata file
   cacheMeta = {
     tiles: {},
     fileList: [],
@@ -78,6 +81,7 @@ try {
   log.warn(
     'Failed to load cache metadata file, using defaults: "' + err.message + '"'
   );
+  //create new metadata file
   try {
     if (!fs.existsSync(path.join(__dirname, "src/cachedtiles")))
       fs.mkdirSync(path.join(__dirname, "src/cachedtiles"));
@@ -141,11 +145,18 @@ const createWindow = () => {
 const createDebug = () => {
   const width = 600,
     height = 400;
+  const iconSuffix =
+    process.platform === "win32"
+      ? ".ico"
+      : process.platform === "darwin"
+      ? ".icns"
+      : ".png";
   debugWin = new BrowserWindow({
     width: width * config.debugScale,
     height: height * config.debugScale,
     resizable: false,
     autoHideMenuBar: true,
+    icon: "assets/logo" + iconSuffix,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -192,11 +203,18 @@ const createDebug = () => {
 const createVideo = () => {
   const width = 1280,
     height = 720;
+  const iconSuffix =
+    process.platform === "win32"
+      ? ".ico"
+      : process.platform === "darwin"
+      ? ".icns"
+      : ".png";
   videoWin = new BrowserWindow({
     width: width * config.debugScale,
     height: height * config.debugScale,
     frame: false,
     autoHideMenuBar: true,
+    icon: "assets/logo" + iconSuffix,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -215,6 +233,7 @@ const createVideo = () => {
     videoWin = null;
   });
 
+  //handle fullscreen changes
   videoWin.on("enter-full-screen", () => {
     log.debug("Enter video fullscreen");
     videoWin.webContents.send("fullscreen-change", {
@@ -233,6 +252,7 @@ const createVideo = () => {
   log.debug("Video streaming window created");
 };
 
+//tells electron to ignore OS level display scaling
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
@@ -290,11 +310,6 @@ ipcMain.on("fullscreen", (event, win, isFullscreen) => {
   }
   if (win === "video") {
     videoWin.setFullScreen(isFullscreen);
-    if (isFullscreen) {
-      videoWin.setSize(1920, 1080);
-    } else {
-      videoWin.setSize(1280, 720);
-    }
   }
 });
 
@@ -506,6 +521,7 @@ ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoStreams.forEach((stream) => {
     if (stream.hasFrame())
+      //must use readFrame() to get rid of old frame
       videoData.push({ name: stream.name, data: stream.readFrame() });
     else videoData.push(null);
   });
@@ -602,28 +618,36 @@ if (config.debug) {
     log.warn("Could not find test.json");
   }
   if (config.video) {
+    //test to see if first video exists
     if (fs.existsSync("./video0.av1")) {
+      //create new video source from file
       let vs = new FileStreamSource("./video0.av1", {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
         createLog: config.debug,
       });
+      //store for later
       videoStreams.push(vs);
+      //start it after one second to give everything time to load
       setTimeout(() => {
         vs.startOutput();
       }, 1000);
     } else {
       log.warn("Could not find video0.av1");
     }
+    //test to see if second video exists
     if (fs.existsSync("./video1.av1")) {
+      //create new video source from file
       let vs = new FileStreamSource("./video1.av1", {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
         createLog: config.debug,
       });
+      //store for later
       videoStreams.push(vs);
+      //start it after one second to give everything time to load
       setTimeout(() => {
         vs.startOutput();
       }, 1000);

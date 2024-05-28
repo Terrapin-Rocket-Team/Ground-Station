@@ -378,11 +378,6 @@ window.onload = () => {
       const img = document.getElementById(connection.idPrefix + "-connection");
       img.setAttribute("src", "./images/serial_disconnected.svg");
       img.setAttribute("title", "Connection Error");
-
-      // const telemetryEl = document.getElementById("radio-connection");
-      // telemetryEl.setAttribute("src", "./images/no_signal.svg");
-      // telemetryEl.setAttribute("alt", "No Signal");
-      // telemetryEl.title = "No Signal";
     }
   });
 };
