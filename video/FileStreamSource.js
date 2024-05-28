@@ -3,9 +3,11 @@ const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 
+/**
+ * A class to play a local file as a video source
+ */
 class FileStreamSource extends VideoSource {
   /**
-   *
    * @param {String} file
    * @param {Object} options
    * @param {Object} options.resolution
@@ -16,6 +18,7 @@ class FileStreamSource extends VideoSource {
    * @param {Boolean} options.createLog
    */
   constructor(file, options) {
+    //call the VideoSource constructor with the name as the file name
     super(
       file.split("/").at(-1),
       fs.createReadStream(file, {
@@ -23,6 +26,7 @@ class FileStreamSource extends VideoSource {
           (options.resolution.width * options.resolution.height * 3) / 2,
       })
     );
+
     this.file = file;
     this.options = options;
     this.ffmpeg = null;
@@ -31,7 +35,10 @@ class FileStreamSource extends VideoSource {
       this.options.resolution.width * this.options.resolution.height * 2
     );
     this.dataLen = 0;
+
+    //check if rotation should be used
     if (this.options.rotation === undefined) {
+      //set up ffmpeg instance
       this.ffmpeg = spawn("ffmpeg", [
         "-re",
         "-framerate",
@@ -49,11 +56,13 @@ class FileStreamSource extends VideoSource {
         "-",
       ]);
     } else {
+      //find proper rotation for ffmpeg
       let r = 0;
       if (this.options.rotation === "ccw") r = 0;
       else if (this.options.rotation === "cw") r = 1;
       else throw new Error("Invalid rotation");
 
+      //set up ffmpeg instance
       this.ffmpeg = spawn("ffmpeg", [
         "-re",
         "-framerate",
@@ -73,23 +82,26 @@ class FileStreamSource extends VideoSource {
         "-",
       ]);
     }
-    if (this.ffmpeg !== null) {
-      if (this.options.createLog) {
-        this.logFile = fs.createWriteStream("./ffmpeg-" + this.name + ".log");
-        this.ffmpeg.stderr.pipe(this.logFile);
-      }
+
+    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
+    if (this.ffmpeg !== null && this.options.createLog) {
+      this.logFile = fs.createWriteStream("./ffmpeg-" + this.name + ".log");
+      this.ffmpeg.stderr.pipe(this.logFile);
     }
   }
 
   /**
-   *
-   * @returns {Readable}
+   * Connects the output stream to ffmpeg output and ffmpeg input to the file read stream
+   * @returns {Readable} the output stream
    */
   startOutput() {
+    //connect pipes
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.ffmpeg.stdin);
 
+    //handle data output from ffmpeg
     this.o.on("data", (chunks) => {
+      //this needs to be efficient or ffmpeg runs too slow
       chunks.copy(this.data, this.dataLen, 0, chunks.length);
       this.dataLen += chunks.length;
       if (
@@ -120,6 +132,7 @@ class FileStreamSource extends VideoSource {
       }
     });
 
+    //other event handlers
     this.o.on("close", () => {
       this.emit("close");
     });
@@ -131,6 +144,13 @@ class FileStreamSource extends VideoSource {
     return this.o;
   }
 
+  /**
+   * Decomposes a single YUV420 video frame into its component Y, U, and V parts
+   * @param {Buffer} YUVarr a buffer containing a single YUV420 video frame
+   * @param {Number} width the width of the video frame
+   * @param {Number} height the height of the video frame
+   * @returns {Object} object with separated Y, U, and V parts
+   */
   decomposeYUV(YUVarr, width, height) {
     return {
       y: YUVarr.subarray(0, width * height),
@@ -139,6 +159,10 @@ class FileStreamSource extends VideoSource {
     };
   }
 
+  /**
+   * Outputs a single frame from the source
+   * @returns {Buffer} A single frame with Y, U, V separated
+   */
   readFrame() {
     if (this.frames.length > 0)
       return this.decomposeYUV(
