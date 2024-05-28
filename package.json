@@ -9,7 +9,9 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "make-icons": "node assets/generateIcons.js"
+    "make-icons": "node assets/generateIcons.js",
+    "make-ffmpeg": "mingw64 video/buildFFmpeg.sh",
+    "make-deps": "npm run make-icons && npm run make-ffmpeg"
   },
   "author": "Joseph Hauerstein",
   "license": "ISC",

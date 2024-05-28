@@ -132,8 +132,10 @@ const createWindow = () => {
       radio.close();
     }
     mainWin.webContents.send("close"); // unused
-    if (!config.noGUI && debugWin) debugWin.close();
-    if (videoWin) videoWin.close();
+    if (!config.noGUI) {
+      if (debugWin) debugWin.close();
+      if (videoWin) videoWin.close();
+    }
   });
 
   mainWin.once("closed", () => {
@@ -189,8 +191,10 @@ const createDebug = () => {
     }
     debugWin.webContents.send("close"); // unused
     log.removeWin();
-    if (config.noGUI && mainWin) mainWin.close();
-    if (videoWin) videoWin.close();
+    if (config.noGUI) {
+      if (mainWin) mainWin.close();
+      if (videoWin) videoWin.close();
+    }
   });
 
   debugWin.once("closed", () => {
