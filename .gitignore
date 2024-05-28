@@ -10,3 +10,5 @@ config.json
 *.av1
 *.yuv
 *.xz
+video/dav1d-1.4.2
+video/ffmpeg-7.0.1

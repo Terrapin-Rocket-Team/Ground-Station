@@ -2,6 +2,9 @@ const VideoSource = require("./VideoSource");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
+const path = require("path");
+
+const ffmpegPath = path.join(__dirname, "ffmpeg-7.0.1", "ffmpeg.exe");
 
 /**
  * A class to play a local file as a video source
@@ -39,7 +42,7 @@ class FileStreamSource extends VideoSource {
     //check if rotation should be used
     if (this.options.rotation === undefined) {
       //set up ffmpeg instance
-      this.ffmpeg = spawn("ffmpeg", [
+      this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
         this.options.framerate + "/1",
@@ -63,7 +66,7 @@ class FileStreamSource extends VideoSource {
       else throw new Error("Invalid rotation");
 
       //set up ffmpeg instance
-      this.ffmpeg = spawn("ffmpeg", [
+      this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
         this.options.framerate + "/1",
