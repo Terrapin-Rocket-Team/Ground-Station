@@ -39,7 +39,8 @@ window.onload = () => {
     return { canvas: LVCanvas, ctx: LV, frame };
   };
 
-  const video0 = document.getElementById("video-0"),
+  const telemetry = document.getElementById("telemetry"),
+    video0 = document.getElementById("video-0"),
     video1 = document.getElementById("video-1");
 
   const LV0 = setupVideoCanvas("live-video-0"),
@@ -78,4 +79,19 @@ window.onload = () => {
       });
     }
   }, 20);
+
+  // gauges
+  let alt = document.getElementById("altitude");
+  let spd = document.getElementById("speed");
+
+  const sizeGauges = () => {
+    let size = telemetry.offsetWidth * 0.75;
+
+    alt.setAttribute("data-width", size);
+    alt.setAttribute("data-height", size);
+    spd.setAttribute("data-width", size);
+    spd.setAttribute("data-height", size);
+  };
+  sizeGauges();
+  window.onresize = sizeGauges;
 };
