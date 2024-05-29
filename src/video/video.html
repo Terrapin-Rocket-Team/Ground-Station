@@ -10,6 +10,7 @@
     />
     <link rel="stylesheet" href="video.css" />
     <script src="../libraries/video/yuv-canvas.js"></script>
+    <script src="../libraries/APRS.js"></script>
     <script src="../libraries/gauge.js"></script>
     <script src="video.js"></script>
     <title>Video Window</title>
@@ -104,17 +105,17 @@
             data-type="radial-gauge"
             data-width="300"
             data-height="300"
-            data-units="ft/s"
+            data-units="ft/s x 100"
             data-title="Speed"
             data-value="0"
             data-value-text="&#8212;"
             data-min-value="0"
-            data-max-value="220"
-            data-major-ticks="0,20,40,60,80,100,120,140,160,180,200,220"
-            data-minor-ticks="2"
+            data-max-value="10"
+            data-major-ticks="0,2,4,6,8,10"
+            data-minor-ticks="5"
             data-stroke-ticks="true"
             data-highlights='[
-    {"from": 160, "to": 220, "color": "#ca0000cc"}
+    {"from": 8, "to": 10, "color": "#ca0000cc"}
 ]'
             data-color-plate="var(--main-bg)"
             data-color-major-ticks="#999"

@@ -3,6 +3,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 if (require("electron-squirrel-startup")) app.quit(); //for app maker
 const fs = require("fs");
+const readline = require("readline");
 const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
@@ -585,8 +586,6 @@ radio.on("data", (data) => {
     }
     fs.appendFileSync(path.join("./data", currentCSV), data.toCSV(csvCreated));
     if (!csvCreated) csvCreated = true;
-    //write data from serial to be used in testing if debug is on
-    if (config.debug) fs.writeFileSync("./test.json", JSON.stringify(data));
   } catch (err) {
     log.err('Error writing data: "' + err.message + '"');
   }
@@ -603,23 +602,55 @@ radio.on("close", (path) => {
 
 //testing
 if (config.debug) {
-  //test to see whether the json file exists
-  if (fs.existsSync("./test.json")) {
-    setInterval(() => {
-      if (!closed && mainWin) {
-        //throw an error if the file cannot be read
-        try {
-          mainWin.webContents.send(
-            "data",
-            new APRSMessage(JSON.parse(fs.readFileSync("./test.json")))
-          );
-        } catch (err) {
-          log.err('Failed to read test.json file: "' + err.message + '"');
+  //test to see whether the test csv file exists
+  if (fs.existsSync("./test.csv")) {
+    try {
+      //set up line reader
+      const testCSV = fs.createReadStream("./test.csv");
+      const rl = readline.createInterface({
+        input: testCSV,
+        crlfDelay: Infinity,
+      });
+      const lines = [];
+      let isPaused = false;
+      let firstLine = true;
+
+      rl.on("line", (line) => {
+        if (!firstLine) lines.push(line);
+        if (firstLine) firstLine = false;
+        //stop reading lines so we don't fill up memory
+        if (lines.length > 100) {
+          rl.pause();
+          isPaused = true;
         }
-      }
-    }, 2000);
+      });
+
+      rl.on("close", () => {
+        log.debug("Finished reading test.csv");
+      });
+
+      setInterval(() => {
+        if (!closed && mainWin) {
+          //get the next message
+          let line = lines.shift();
+          //make sure we got a valid line
+          if (line) {
+            let aprsMsg = APRSMessage.fromCSV(line);
+            mainWin.webContents.send("data", aprsMsg);
+            if (videoWin) videoWin.webContents.send("data", aprsMsg);
+          }
+          //resume if we have emptied lots of lines
+          if (lines.length < 50 && isPaused) {
+            rl.resume();
+            isPaused = false;
+          }
+        }
+      }, 1000);
+    } catch (err) {
+      log.err('Failed to read test.csv: "' + err.message + '"');
+    }
   } else {
-    log.warn("Could not find test.json");
+    log.warn("Could not find test.csv");
   }
   if (config.video) {
     //test to see if first video exists

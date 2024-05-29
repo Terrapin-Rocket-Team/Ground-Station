@@ -27,6 +27,29 @@ class APRSMessage {
   }
 
   /**
+   * Creates an APRSMessage from a single line of a CSV data file
+   * @param {string} csvData a single line from a CSV file produced by APRSMessage.toCSV()
+   * @returns {APRSMessage} the APRSMessage corresponding to the input line
+   */
+  static fromCSV(csvData) {
+    let csvArr = csvData.split(",");
+    return new APRSMessage(
+      "Source:" +
+        csvArr[0] +
+        ",Destination:" +
+        csvArr[1] +
+        ",Path:" +
+        csvArr[2] +
+        ",Type:" +
+        csvArr[3] +
+        ",Data:" +
+        csvArr[4] +
+        ",RSSI:" +
+        csvArr.at(-1)
+    );
+  }
+
+  /**
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {

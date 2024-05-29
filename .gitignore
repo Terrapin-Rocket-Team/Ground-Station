@@ -3,7 +3,7 @@
 /src/libraries/map/USGS
 *.log
 /data/
-test.json
+test.csv
 config.json
 /out/
 /src/cachedtiles/

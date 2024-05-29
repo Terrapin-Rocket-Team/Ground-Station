@@ -94,4 +94,58 @@ window.onload = () => {
   };
   sizeGauges();
   window.onresize = sizeGauges;
+
+  let maxAlt = 0,
+    maxSpd = 0,
+    lastStage = 0;
+
+  const maxAltEl = document.getElementById("max-alt"),
+    maxSpdEl = document.getElementById("max-spd");
+
+  api.on("data", (data) => {
+    let msg = new APRSMessage(data);
+
+    //update gauges
+    if (msg.getAlt() || msg.getAlt() === 0) {
+      alt.setAttribute("data-value-text", msg.getAlt());
+      alt.setAttribute("data-value", msg.getAlt() / 1000);
+      document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
+    } else {
+      alt.setAttribute("data-value-text", "\u2014");
+    }
+    if (msg.getSpeed() || msg.getSpeed() === 0) {
+      spd.setAttribute("data-value-text", msg.getSpeed());
+      spd.setAttribute("data-value", msg.getSpeed() / 100);
+      document.getElementById("spd-text").textContent =
+        msg.getSpeed() + " ft/s";
+    } else {
+      spd.setAttribute("data-value-text", "\u2014");
+    }
+
+    if (msg.getAlt() > maxAlt) {
+      maxAlt = msg.getAlt();
+      maxAltEl.textContent = maxAlt + " ft";
+    }
+
+    if (msg.getSpeed() > maxSpd) {
+      maxSpd = msg.getSpeed();
+      maxSpdEl.textContent = maxSpd + " ft/s";
+    }
+
+    //update stage
+    let prog = document.getElementById("stage");
+    let sn = msg.getStageNumber();
+    let percents = [5, 15, 25, 45, 80, 90]; //add 1 to percents from css because of rounded end
+    if (sn >= 0) {
+      prog.textContent = percents[sn] + "%";
+      prog.setAttribute("value", percents[sn]);
+      document.getElementById("s" + sn).className = "stage active";
+      if (sn > 0)
+        document.getElementById("s" + (sn - 1)).className = "stage active";
+      for (let i = lastStage; i < sn; i++) {
+        document.getElementById("s" + i).className = "stage active";
+      }
+      lastStage = sn;
+    }
+  });
 };
