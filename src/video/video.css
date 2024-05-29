@@ -124,7 +124,6 @@ body {
 }
 
 #team-name-container {
-  /* margin-top: 2vh; */
   background-color: var(--dark-highlight);
   border-bottom: 5px solid var(--highlight-color);
   height: 7vh;
@@ -179,7 +178,7 @@ body {
 
 #small-text-container > span {
   color: var(--main-text);
-  font-size: 2.5vh;
+  font-size: 3vh;
   position: relative;
   top: 0;
 }
@@ -213,7 +212,7 @@ body {
 span#alt-text,
 span#spd-text {
   position: absolute;
-  font-size: 2vh;
+  font-size: 3vh;
   transform: translateX(-50%);
   color: var(--main-text);
   top: calc(max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px) * 0.6);
@@ -275,7 +274,7 @@ span#spd-text {
 .stage::before {
   content: "";
   display: inline-block;
-  background-color: #fff;
+  background-color: var(--top-text);
   border: 3px solid var(--highlight-color);
   border-radius: 50%;
   -moz-border-radius: 50%;
@@ -283,12 +282,13 @@ span#spd-text {
   height: 1vh;
   width: 1vh;
   position: relative;
-  bottom: -2vh;
-  left: 0;
+  bottom: -1.8vh;
+  left: -0.3vh;
 }
 
 .stage.active::before {
-  background-color: var(--highlight-color);
+  background-color: var(--main-text);
+  border: 3px solid var(--highlight-color);
 }
 
 #s0 {
@@ -329,6 +329,7 @@ progress::-webkit-progress-bar {
 progress::-webkit-progress-value {
   background-color: var(--highlight-color);
   border-radius: 0% 10px 10px 0%;
+  transition: width 0.5s;
 }
 
 #stage {
