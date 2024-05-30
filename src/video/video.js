@@ -134,8 +134,27 @@ window.onload = () => {
 
     //update stage
     let prog = document.getElementById("stage");
+    let ff = document.getElementById("fun-facts-container");
+    let ffTitle = document.getElementById("fun-fact-title");
+    let ffText = document.getElementById("fun-fact-text");
     let sn = msg.getStageNumber();
     let percents = [5, 15, 25, 45, 80, 90]; //add 1 to percents from css because of rounded end
+    let stageNames = [
+      "On the Pad",
+      "Powered Flight",
+      "Coast",
+      "Drogue Deploy",
+      "Main Parachute",
+      "Landed",
+    ];
+    let stageFunFacts = [
+      "The rocket is on the pad with all systems ready for flight.",
+      "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
+      "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
+      "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
+      "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
+      "The rocket has landed safely, completing its flight.",
+    ];
     if (sn >= 0) {
       prog.textContent = percents[sn] + "%";
       prog.setAttribute("value", percents[sn]);
@@ -145,7 +164,15 @@ window.onload = () => {
       for (let i = lastStage; i < sn; i++) {
         document.getElementById("s" + i).className = "stage active";
       }
-      lastStage = sn;
+      if (sn > lastStage) {
+        ff.className = "hide";
+        ffTitle.textContent = stageNames[sn];
+        ffText.textContent = stageFunFacts[sn];
+        setTimeout(() => {
+          ff.className = "";
+        }, 500);
+        lastStage = sn;
+      }
     }
   });
 };
