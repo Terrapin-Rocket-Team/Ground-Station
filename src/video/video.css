@@ -148,13 +148,70 @@ body {
   padding-left: 1vw;
 }
 
-#team-name-container span {
+#team-name {
   padding-left: 1vw;
   margin-right: 4vw;
   color: var(--top-text);
   font-size: 3.2vh;
   font-family: "Arial Narrow Bold", sans-serif;
   font-weight: 600;
+}
+
+/* #team-name::after {
+  padding-left: 2vw;
+  color: var(--top-text);
+  font-size: 2.2vh;
+  font-family: "Arial Narrow Bold", sans-serif;
+  content: "Honu";
+  font-weight: normal;
+} */
+
+#fun-facts-container {
+  background-color: var(--dark-highlight);
+  border-bottom: 5px solid var(--highlight-color);
+  height: 9vh;
+  width: 35vw;
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: right 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+  z-index: 900;
+}
+
+#fun-facts-container.hide {
+  right: -36vw;
+}
+
+#fun-facts-container::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  content: "";
+  border-top: 9vh solid var(--main-bg);
+  border-right: 70px solid transparent;
+}
+
+#fun-fact-title {
+  display: inline-block;
+  width: 35%;
+  padding-left: 4vw;
+  margin-right: 1vw;
+  font-size: 2vh;
+  font-family: "Arial Narrow Bold", sans-serif;
+  font-weight: 600;
+  color: var(--top-text);
+  text-align: center;
+}
+
+#fun-fact-text {
+  display: inline-block;
+  width: 70%;
+  margin-right: 1vw;
+  color: var(--top-text);
+  font-size: 1.5vh;
 }
 
 #telemetry {
@@ -234,6 +291,7 @@ span#spd-text {
 
 .live-video {
   position: relative;
+  z-index: 1;
 }
 
 /* .video-label::after {

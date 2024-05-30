@@ -602,92 +602,91 @@ radio.on("close", (path) => {
 
 //testing
 if (config.debug) {
-  //test to see whether the test csv file exists
-  if (fs.existsSync("./test.csv")) {
-    try {
-      //set up line reader
-      const testCSV = fs.createReadStream("./test.csv");
-      const rl = readline.createInterface({
-        input: testCSV,
-        crlfDelay: Infinity,
-      });
-      const lines = [];
-      let isPaused = false;
-      let firstLine = true;
+  // start after 1 second to give everything time to load
+  setTimeout(() => {
+    //test to see whether the test csv file exists
+    if (fs.existsSync("./test.csv")) {
+      try {
+        //set up line reader
+        const testCSV = fs.createReadStream("./test.csv");
+        const rl = readline.createInterface({
+          input: testCSV,
+          crlfDelay: Infinity,
+        });
+        const lines = [];
+        let isPaused = false;
+        let firstLine = true;
 
-      rl.on("line", (line) => {
-        if (!firstLine) lines.push(line);
-        if (firstLine) firstLine = false;
-        //stop reading lines so we don't fill up memory
-        if (lines.length > 100) {
-          rl.pause();
-          isPaused = true;
-        }
-      });
-
-      rl.on("close", () => {
-        log.debug("Finished reading test.csv");
-      });
-
-      setInterval(() => {
-        if (!closed && mainWin) {
-          //get the next message
-          let line = lines.shift();
-          //make sure we got a valid line
-          if (line) {
-            let aprsMsg = APRSMessage.fromCSV(line);
-            mainWin.webContents.send("data", aprsMsg);
-            if (videoWin) videoWin.webContents.send("data", aprsMsg);
+        rl.on("line", (line) => {
+          if (!firstLine) lines.push(line);
+          if (firstLine) firstLine = false;
+          //stop reading lines so we don't fill up memory
+          if (lines.length > 100) {
+            rl.pause();
+            isPaused = true;
           }
-          //resume if we have emptied lots of lines
-          if (lines.length < 50 && isPaused) {
-            rl.resume();
-            isPaused = false;
+        });
+
+        rl.on("close", () => {
+          log.debug("Finished reading test.csv");
+        });
+
+        setInterval(() => {
+          if (!closed && mainWin) {
+            //get the next message
+            let line = lines.shift();
+            //make sure we got a valid line
+            if (line) {
+              let aprsMsg = APRSMessage.fromCSV(line);
+              mainWin.webContents.send("data", aprsMsg);
+              if (videoWin) videoWin.webContents.send("data", aprsMsg);
+            }
+            //resume if we have emptied lots of lines
+            if (lines.length < 50 && isPaused) {
+              rl.resume();
+              isPaused = false;
+            }
           }
-        }
-      }, 1000);
-    } catch (err) {
-      log.err('Failed to read test.csv: "' + err.message + '"');
-    }
-  } else {
-    log.warn("Could not find test.csv");
-  }
-  if (config.video) {
-    //test to see if first video exists
-    if (fs.existsSync("./video0.av1")) {
-      //create new video source from file
-      let vs = new FileStreamSource("./video0.av1", {
-        resolution: { width: 640, height: 832 },
-        framerate: 30,
-        rotation: "cw",
-        createLog: config.debug,
-      });
-      //store for later
-      videoStreams.push(vs);
-      //start it after one second to give everything time to load
-      setTimeout(() => {
-        vs.startOutput();
-      }, 1000);
+        }, 1000);
+      } catch (err) {
+        log.err('Failed to read test.csv: "' + err.message + '"');
+      }
     } else {
-      log.warn("Could not find video0.av1");
+      log.warn("Could not find test.csv");
     }
-    //test to see if second video exists
-    if (fs.existsSync("./video1.av1")) {
-      //create new video source from file
-      let vs = new FileStreamSource("./video1.av1", {
-        resolution: { width: 640, height: 832 },
-        framerate: 30,
-        rotation: "cw",
-        createLog: config.debug,
-      });
-      //store for later
-      videoStreams.push(vs);
-      //start it after one second to give everything time to load
-      setTimeout(() => {
+    if (config.video) {
+      //test to see if first video exists
+      if (fs.existsSync("./video0.av1")) {
+        //create new video source from file
+        let vs = new FileStreamSource("./video0.av1", {
+          resolution: { width: 640, height: 832 },
+          framerate: 30,
+          rotation: "cw",
+          createLog: config.debug,
+        });
+        //store for later
+        videoStreams.push(vs);
+        //start the video
         vs.startOutput();
-      }, 1000);
-    } else {
-      log.warn("Could not find video1.av1");
+      } else {
+        log.warn("Could not find video0.av1");
+      }
+      //test to see if second video exists
+      if (fs.existsSync("./video1.av1")) {
+        //create new video source from file
+        let vs = new FileStreamSource("./video1.av1", {
+          resolution: { width: 640, height: 832 },
+          framerate: 30,
+          rotation: "cw",
+          createLog: config.debug,
+        });
+        //store for later
+        videoStreams.push(vs);
+        //start the video
+        vs.startOutput();
+      } else {
+        log.warn("Could not find video1.av1");
+      }
     }
-  }
+  }, 1000);
 }
