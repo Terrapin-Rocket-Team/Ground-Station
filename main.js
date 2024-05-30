@@ -578,6 +578,7 @@ radio.on("data", (data) => {
   }
   log.info(data.toString());
   if (mainWin) mainWin.webContents.send("data", data);
+  if (videoWin) videoWin.webContents.send("data", aprsMsg);
   try {
     if (!csvCreated) {
       if (!fs.existsSync("./data")) fs.mkdirSync("./data");
