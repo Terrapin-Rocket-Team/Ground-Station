@@ -1,8 +1,16 @@
 window.onload = () => {
   let frameQueue = [];
-  //app control button listeners
   let fullscreen = false;
-  const main = document.getElementById("main");
+
+  //get a bunch of DOM elements here that will be used alot
+  const main = document.getElementById("main"),
+    telemetry = document.getElementById("telemetry"),
+    videoSources = document.getElementById("video-sources");
+
+  const video0 = document.getElementById("video-0"),
+    video1 = document.getElementById("video-1");
+
+  //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
     api.reload("video");
   });
@@ -40,17 +48,17 @@ window.onload = () => {
     return { canvas: LVCanvas, ctx: LV, frame };
   };
 
-  const telemetry = document.getElementById("telemetry"),
-    videoSources = document.getElementById("video-sources");
-
-  const video0 = document.getElementById("video-0"),
-    video1 = document.getElementById("video-1");
-
+  //setup for video sources
   const LV0 = setupVideoCanvas("live-video-0"),
     LV1 = setupVideoCanvas("live-video-1"),
     charts = document.getElementById("charts");
 
-  //refresh canvases at 50hz
+  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
+    spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
+    altwr = document.getElementById("alt-wrapper"),
+    spdwr = document.getElementById("spd-wrapper");
+
+  //refresh canvases at ~50hz
   setInterval(() => {
     //get a new video frame, if available (should only be available at the video framerate)
     api.getVideo().then((f) => {
@@ -85,6 +93,7 @@ window.onload = () => {
   let alt = document.getElementById("altitude");
   let spd = document.getElementById("speed");
 
+  // set the gauges to the correct size (this needs to be done manually)
   const sizeGauges = () => {
     let size =
       telemetry.offsetWidth *
@@ -96,13 +105,12 @@ window.onload = () => {
     spd.setAttribute("data-width", size);
     spd.setAttribute("data-height", size);
   };
+
   sizeGauges();
+  //add as event handler so the gauges stay the correct size
   window.onresize = sizeGauges;
 
-  let maxAlt = 0,
-    maxSpd = 0,
-    lastStage = 0;
-
+  //updates the layout switching between two-video, one-video, and telemetry-only based on the class of main
   const updateLayout = () => {
     let layout;
     if (main.classList.contains("two-video")) layout = "two-video";
@@ -132,16 +140,13 @@ window.onload = () => {
 
   updateLayout();
 
-  // charts
-  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
-    spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
-    altwr = document.getElementById("alt-wrapper"),
-    spdwr = document.getElementById("spd-wrapper");
-
   const maxAltEl = document.getElementById("max-alt"),
     maxSpdEl = document.getElementById("max-spd");
 
-  let tPlusSet = false,
+  let maxAlt = 0,
+    maxSpd = 0,
+    lastStage = 0,
+    tPlusSet = false,
     chartState = "seconds";
 
   // load previous data if it exists
@@ -172,6 +177,7 @@ window.onload = () => {
     let msg = new APRSMessage(data);
 
     //set T+
+    //TODO: display T+?
     if (!tPlusSet && msg.getStageNumber() > 0) {
       let time = Date.now() - msg.getT0ms();
 
@@ -281,6 +287,7 @@ window.onload = () => {
       spd.setAttribute("data-value-text", "\u2014");
     }
 
+    //update max altitude and speed
     if (msg.getAlt() > maxAlt) {
       maxAlt = msg.getAlt();
       maxAltEl.textContent = maxAlt + " ft";
@@ -299,7 +306,7 @@ window.onload = () => {
     let ffTitle = document.getElementById("fun-fact-title");
     let ffText = document.getElementById("fun-fact-text");
     let sn = msg.getStageNumber();
-    let percents = [5, 15, 25, 45, 80, 90]; //add 1 to percents from css because of rounded end
+    let percents = [5, 15, 25, 45, 80, 90];
     let stageNames = [
       "On the Pad",
       "Powered Flight",
@@ -336,7 +343,9 @@ window.onload = () => {
       }
     }
   });
-  const changeClass = (c) => {
+
+  //should be called when switching between different layouts
+  const changeLayout = (c) => {
     main.className = c;
     updateLayout();
     sizeGauges();

@@ -41,6 +41,7 @@
     <!--Contains all elements besides the top bar-->
     <div id="main" class="telemetry-only">
       <div id="telemetry">
+        <!--Top banners, positioned abosolutely-->
         <div id="team-name-container">
           <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" /><span
             id="team-name"
@@ -151,12 +152,16 @@
         </div>
       </div>
 
+      <!--Video display panels-->
       <div id="video-0"></div>
       <div id="video-1"></div>
 
+      <!--Hidden element where all video sources start, they are moved to a display panel to actually be displayed-->
       <div id="video-sources">
+        <!--Live video elements-->
         <canvas id="live-video-0" class="live-video"></canvas>
         <canvas id="live-video-1"></canvas>
+        <!--charts element-->
         <div id="charts">
           Altitude
           <div id="alt-wrapper">
@@ -179,6 +184,7 @@
         <progress id="stage" value="5" max="100">5%</progress>
       </div>
     </div>
+    <!--3rd party libraries, must be loaded after rest of document-->
     <script src="../libraries/charts/dist/chart.umd.js"></script>
     <script src="../libraries/charts.js"></script>
     <script src="video.js"></script>
