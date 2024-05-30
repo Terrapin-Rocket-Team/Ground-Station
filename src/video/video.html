@@ -12,7 +12,6 @@
     <script src="../libraries/video/yuv-canvas.js"></script>
     <script src="../libraries/APRS.js"></script>
     <script src="../libraries/gauge.js"></script>
-    <script src="video.js"></script>
     <title>Video Window</title>
   </head>
   <body>
@@ -40,7 +39,7 @@
       </div>
     </div>
     <!--Contains all elements besides the top bar-->
-    <div id="main">
+    <div id="main" class="telemetry-only">
       <div id="telemetry">
         <div id="team-name-container">
           <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" /><span
@@ -151,11 +150,25 @@
           <span id="spd-text">&#8212;</span>
         </div>
       </div>
+
       <div id="video-0"></div>
       <div id="video-1"></div>
-      <canvas id="live-video-0" class="live-video"></canvas>
 
-      <canvas id="live-video-1"></canvas>
+      <div id="video-sources">
+        <canvas id="live-video-0" class="live-video"></canvas>
+        <canvas id="live-video-1"></canvas>
+        <div id="charts">
+          Altitude
+          <div id="alt-wrapper">
+            <canvas id="alt-graph" class="chart"></canvas>
+          </div>
+          Speed
+          <div id="spd-wrapper">
+            <canvas id="spd-graph" class="chart"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div id="stage-container">
         <span id="s0" class="stage active">On the Pad</span>
         <span id="s1" class="stage">Powered Flight</span>
@@ -166,5 +179,8 @@
         <progress id="stage" value="5" max="100">5%</progress>
       </div>
     </div>
+    <script src="../libraries/charts/dist/chart.umd.js"></script>
+    <script src="../libraries/charts.js"></script>
+    <script src="video.js"></script>
   </body>
 </html>
