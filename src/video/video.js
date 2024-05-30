@@ -2,6 +2,7 @@ window.onload = () => {
   let frameQueue = [];
   //app control button listeners
   let fullscreen = false;
+  const main = document.getElementById("main");
   document.getElementById("reload").addEventListener("click", () => {
     api.reload("video");
   });
@@ -40,14 +41,14 @@ window.onload = () => {
   };
 
   const telemetry = document.getElementById("telemetry"),
-    video0 = document.getElementById("video-0"),
+    videoSources = document.getElementById("video-sources");
+
+  const video0 = document.getElementById("video-0"),
     video1 = document.getElementById("video-1");
 
   const LV0 = setupVideoCanvas("live-video-0"),
-    LV1 = setupVideoCanvas("live-video-1");
-
-  video0.appendChild(LV0.canvas);
-  video1.appendChild(LV1.canvas);
+    LV1 = setupVideoCanvas("live-video-1"),
+    charts = document.getElementById("charts");
 
   //refresh canvases at 50hz
   setInterval(() => {
@@ -85,7 +86,10 @@ window.onload = () => {
   let spd = document.getElementById("speed");
 
   const sizeGauges = () => {
-    let size = telemetry.offsetWidth * 0.75;
+    let size =
+      telemetry.offsetWidth *
+      0.75 *
+      (!main.classList.contains("two-video") ? 0.5 : 1);
 
     alt.setAttribute("data-width", size);
     alt.setAttribute("data-height", size);
@@ -99,11 +103,166 @@ window.onload = () => {
     maxSpd = 0,
     lastStage = 0;
 
+  const updateLayout = () => {
+    let layout;
+    if (main.classList.contains("two-video")) layout = "two-video";
+    else if (main.classList.contains("one-video")) layout = "one-video";
+    else if (main.classList.contains("telemetry-only"))
+      layout = "telemetry-only";
+
+    if (layout === "two-video") {
+      telemetry.appendChild(document.getElementById("spd-gauge-container"));
+      video0.appendChild(LV0.canvas);
+      video1.appendChild(LV1.canvas);
+      videoSources.appendChild(charts);
+    }
+    if (layout === "one-video") {
+      telemetry.appendChild(document.getElementById("small-text-container"));
+      video0.appendChild(LV0.canvas);
+      videoSources.appendChild(LV1.canvas);
+      videoSources.appendChild(charts);
+    }
+    if (layout === "telemetry-only") {
+      telemetry.appendChild(document.getElementById("small-text-container"));
+      video0.appendChild(charts);
+      videoSources.appendChild(LV0.canvas);
+      videoSources.appendChild(LV1.canvas);
+    }
+  };
+
+  updateLayout();
+
+  // charts
+  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
+    spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
+    altwr = document.getElementById("alt-wrapper"),
+    spdwr = document.getElementById("spd-wrapper");
+
   const maxAltEl = document.getElementById("max-alt"),
     maxSpdEl = document.getElementById("max-spd");
 
+  let tPlusSet = false,
+    chartState = "seconds";
+
+  // load previous data if it exists
+  {
+    altG.data.datasets[0].data = sessionStorage.getItem("altData")
+      ? JSON.parse(sessionStorage.getItem("altData"))
+      : [];
+    spdG.data.datasets[0].data = sessionStorage.getItem("spdData")
+      ? JSON.parse(sessionStorage.getItem("spdData"))
+      : [];
+
+    if (
+      sessionStorage.getItem("max-alt") &&
+      parseInt(sessionStorage.getItem("max-alt"))
+    )
+      maxAltEl.textContent =
+        parseInt(sessionStorage.getItem("max-alt")) + " ft";
+
+    if (
+      sessionStorage.getItem("max-spd") &&
+      parseInt(sessionStorage.getItem("max-spd"))
+    )
+      maxSpdEl.textContent =
+        parseInt(sessionStorage.getItem("max-spd")) + " ft/s";
+  }
+
   api.on("data", (data) => {
     let msg = new APRSMessage(data);
+
+    //set T+
+    if (!tPlusSet && msg.getStageNumber() > 0) {
+      let time = Date.now() - msg.getT0ms();
+
+      tPlusSet = true;
+      let ts = time / 1000;
+
+      if (altG.data.datasets[0].data.length === 0)
+        altG.data.datasets[0].data = [{ x: ts, y: null }];
+      if (spdG.data.datasets[0].data.length === 0)
+        spdG.data.datasets[0].data = [{ x: ts, y: null }];
+    }
+    if (tPlusSet) {
+      //update charts
+      let time = Date.now() - msg.getT0ms();
+      let ts = time / 1000;
+
+      if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
+        let altData = altG.data.datasets[0].data;
+        let spdData = spdG.data.datasets[0].data;
+        let altLabels = altG.data.labels;
+        let spdLabels = spdG.data.labels;
+
+        altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
+        spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
+
+        altG = createChart("alt-graph", "Altitude", "min", "ft", 1 / 60, 1);
+        spdG = createChart("spd-graph", "Speed", "min", "ft/s", 1 / 60, 1);
+        altG.data.datasets[0].data = altData;
+        spdG.data.datasets[0].data = spdData;
+        altG.data.labels = altLabels;
+        spdG.data.labels = spdLabels;
+        chartState = "minutes";
+      } else if (ts > 120 * 60 && chartState != "hours") {
+        let altData = altG.data.datasets[0].data;
+        let spdData = spdG.data.datasets[0].data;
+        let altLabels = altG.data.labels;
+        let spdLabels = spdG.data.labels;
+
+        altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
+        spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
+
+        altG = createChart("alt-graph", "Altitude", "hrs", "ft", 1 / 3600, 1);
+        spdG = createChart("spd-graph", "Speed", "hrs", "ft/s", 1 / 3600, 1);
+        altG.data.datasets[0].data = altData;
+        spdG.data.datasets[0].data = spdData;
+        altG.data.labels = altLabels;
+        spdG.data.labels = spdLabels;
+        chartState = "hours";
+      }
+
+      let factor =
+        chartState == "minutes" ? 30 : chartState == "hours" ? 320 : 1;
+
+      let interval = parseInt(
+        (ts - altG.data.datasets[0].data[0].x + 5 * factor) / 4
+      );
+
+      let arrL = [];
+      for (let i = 0; i < 5; i++) {
+        arrL[i] = Math.floor(altG.data.datasets[0].data[0].x) + i * interval;
+      }
+
+      altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
+      spdG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
+      altG.options.scales.x.suggestedMax = ts + 10 * factor;
+      spdG.options.scales.x.suggestedMax = ts + 10 * factor;
+
+      altG.data.labels = JSON.parse(JSON.stringify(arrL));
+      spdG.data.labels = JSON.parse(JSON.stringify(arrL));
+
+      altG.data.datasets[0].data.push({
+        x: ts,
+        y: msg.getAlt() ? msg.getAlt() : 0,
+      });
+      spdG.data.datasets[0].data.push({
+        x: ts,
+        y: msg.getSpeed() ? msg.getSpeed() : 0,
+      });
+
+      sessionStorage.setItem(
+        "altData",
+        JSON.stringify(altG.data.datasets[0].data)
+      );
+      sessionStorage.setItem(
+        "spdData",
+        JSON.stringify(spdG.data.datasets[0].data)
+      );
+
+      altG.update();
+      spdG.update();
+    }
 
     //update gauges
     if (msg.getAlt() || msg.getAlt() === 0) {
@@ -125,11 +284,13 @@ window.onload = () => {
     if (msg.getAlt() > maxAlt) {
       maxAlt = msg.getAlt();
       maxAltEl.textContent = maxAlt + " ft";
+      sessionStorage.setItem("max-alt", maxAlt);
     }
 
     if (msg.getSpeed() > maxSpd) {
       maxSpd = msg.getSpeed();
       maxSpdEl.textContent = maxSpd + " ft/s";
+      sessionStorage.setItem("max-spd", maxSpd);
     }
 
     //update stage
@@ -175,4 +336,9 @@ window.onload = () => {
       }
     }
   });
+  const changeClass = (c) => {
+    main.className = c;
+    updateLayout();
+    sizeGauges();
+  };
 };

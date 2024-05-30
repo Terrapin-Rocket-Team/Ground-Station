@@ -36,6 +36,10 @@ body {
   align-items: center;
 }
 
+#video-sources {
+  display: none;
+}
+
 #top-bar {
   width: 100%;
   height: 5vh; /*40px*/
@@ -106,13 +110,44 @@ body {
   max-width: 1920px;
   max-height: 1080px;
   display: grid;
-  grid-template-columns:
-    max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px)
-    640px 640px;
   column-gap: 50px;
   padding-right: 2vw;
   background-color: var(--main-bg);
   position: relative;
+}
+
+#main.two-video {
+  grid-template-columns:
+    max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px)
+    640px 640px;
+}
+
+#main.one-video {
+  grid-template-columns: 50% 50%;
+}
+
+#main.telemetry-only {
+  grid-template-columns: 50% 50%;
+}
+
+#main.one-video #telemetry {
+  grid-template-columns: 45% 45%;
+  padding-top: 15vh;
+}
+
+#main.one-video #small-text-container {
+  margin-top: 10vh;
+  width: 45vw;
+}
+
+#main.telemetry-only #telemetry {
+  grid-template-columns: 45% 45%;
+  padding-top: 15vh;
+}
+
+#main.telemetry-only #small-text-container {
+  margin-top: 10vh;
+  width: 45vw;
 }
 
 #telemetry,
@@ -303,6 +338,18 @@ span#spd-text {
   border-top: 3vh solid var(--main-bg);
   border-right: 50px solid transparent;
 } */
+
+#charts {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 4%;
+  grid-template-rows: 5% 43% 5% 43%;
+  padding: 12vh 10vw 20vh 4%;
+  font-size: 2vh;
+  color: var(--main-text);
+  text-align: center;
+}
 
 #stage-container {
   width: 100vw;

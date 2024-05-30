@@ -63,8 +63,8 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
             radius: 0,
           },
           line: {
-            backgroundColor: "#000",
-            borderColor: "#000",
+            backgroundColor: "#ca0000cc",
+            borderColor: "#ca0000cc",
           },
         },
       },
