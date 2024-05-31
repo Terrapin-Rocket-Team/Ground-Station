@@ -13,6 +13,7 @@ window.onload = () => {
     api.openDebug();
   });
 
+  //video controls setup
   let config, videoControls;
   const layoutButtons = document.getElementsByClassName("layout"),
     v0Buttons = document.getElementsByClassName("v0"),
@@ -26,9 +27,14 @@ window.onload = () => {
         video0: "none-0",
         video1: "none-1",
       };
+
+      //hide the stage panel if in video mode
       document.getElementById("video-control").className = "";
       document.getElementById("stage").className = "hidden";
 
+      //button event handlers
+
+      //reload the video window, keeping settings
       document.getElementById("reload-video").addEventListener("click", () => {
         api.reload("video", true);
       });
@@ -51,6 +57,7 @@ window.onload = () => {
         });
       };
 
+      //callback for video control buttons, separated so it can be called without faking a click
       function videoControlButtonCallback(id, el) {
         let arr = id.split("_");
         let elClass = arr[0];
@@ -58,13 +65,13 @@ window.onload = () => {
         if (!el) el = document.getElementById(id);
         if (elClass === "v0") {
           if (arr[1] === videoControls.video1 && arr[1] !== "none")
-            videoControlButtonCallback("v1_none");
+            videoControlButtonCallback("v1_none-1");
           videoControls.video0 = arr[1];
           buttons = v0Buttons;
         }
         if (elClass === "v1") {
           if (arr[1] === videoControls.video0 && arr[1] !== "none")
-            videoControlButtonCallback("v0_none");
+            videoControlButtonCallback("v0_none-0");
           videoControls.video1 = arr[1];
           buttons = v1Buttons;
         }
@@ -77,7 +84,7 @@ window.onload = () => {
         }
       }
 
-      //control which video(s) are showing
+      //setup buttons to control which video(s) are showing
       const setupVideoControlButton = (id) => {
         const el = document.getElementById(id);
         el.addEventListener("click", () => {
@@ -90,6 +97,7 @@ window.onload = () => {
         });
       };
 
+      //set up all the buttons
       setupLayoutButton("layout_two-video");
       setupLayoutButton("layout_one-video");
       setupLayoutButton("layout_telemetry-only");
@@ -104,6 +112,7 @@ window.onload = () => {
       setupVideoControlButton("v1_charts");
       setupVideoControlButton("v1_none-1");
 
+      //update button sends new control config to videoWin through main
       document
         .getElementById("control-update")
         .addEventListener("click", () => {
@@ -118,9 +127,9 @@ window.onload = () => {
     }
   });
 
+  //update the video controls here if main gives us a new config
   api.on("video-controls", (controls) => {
     videoControls = controls;
-    console.log(controls);
     document.getElementById("layout_" + videoControls.layout).className =
       "layout";
     document.getElementById("v0_" + videoControls.video0).className = "v0";

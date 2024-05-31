@@ -328,7 +328,7 @@ window.onload = () => {
       "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
       "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
       "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
-      "The rocket has landed safely, completing its flight.",
+      "The rocket lands back on the ground, completing its flight.",
     ];
     if (sn >= 0) {
       prog.textContent = percents[sn] + "%";
@@ -358,6 +358,7 @@ window.onload = () => {
     sizeGauges();
   };
 
+  //reconfigure layout when we get a new set of video controls
   api.on("video-controls", (controls) => {
     changeLayout(controls.layout);
     if (video0.firstChild) videoSources.appendChild(video0.firstChild);
