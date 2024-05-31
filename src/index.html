@@ -251,15 +251,46 @@
           >
         </div>
       </div>
-      <!--Stage panel-->
-      <div id="stage">
-        <span id="s0" class="stage">On the Pad</span>
-        <span id="s1" class="stage">Powered Flight</span>
-        <span id="s2" class="stage">Coast</span>
-        <span id="s3" class="stage">Drogue Deploy</span>
-        <span id="s4" class="stage">Main Parachute</span>
-        <span id="s5" class="stage">Landed</span>
-        <progress id="stage-progress" value="0" max="100">0%</progress>
+      <!--Left panel-->
+      <div id="left-panel">
+        <div id="video-control" class="hidden">
+          <div id="video-window-control" class="video-control-section">
+            <button id="reload-video">Reload</button>
+            <button id="layout_two-video" class="layout">Full</button>
+            <button id="layout_one-video" class="layout inactive">
+              Partial
+            </button>
+            <button id="layout_telemetry-only" class="layout inactive">
+              Telemetry Only
+            </button>
+          </div>
+          <div id="video-0-control" class="video-control-section">
+            <button id="v0_live-video-0" class="v0 inactive">Input 0</button>
+            <button id="v0_live-video-1" class="v0 inactive">Input 1</button>
+            <button id="v0_charts" class="v0 inactive">Charts</button>
+            <button id="v0_none-0" class="v0">None</button>
+          </div>
+          <div id="video-1-control" class="video-control-section">
+            <button id="v1_live-video-0" class="v1 inactive">Input 0</button>
+            <button id="v1_live-video-1" class="v1 inactive">Input 1</button>
+            <button id="v1_charts" class="v1 inactive">Charts</button>
+            <button id="v1_none-1" class="v1">None</button>
+          </div>
+          <div id="radio-control" class="video-control-section">
+            <button id="reset-vi-0">Reset Input 0</button>
+            <button id="reset-vi-1">Reset Input 1</button>
+          </div>
+          <button id="control-update">Update</button>
+        </div>
+        <div id="stage">
+          <span id="s0" class="stage">On the Pad</span>
+          <span id="s1" class="stage">Powered Flight</span>
+          <span id="s2" class="stage">Coast</span>
+          <span id="s3" class="stage">Drogue Deploy</span>
+          <span id="s4" class="stage">Main Parachute</span>
+          <span id="s5" class="stage">Landed</span>
+          <progress id="stage-progress" value="0" max="100">0%</progress>
+        </div>
       </div>
     </div>
     <!--3rd party libraries, must be loaded after rest of document-->
