@@ -62,6 +62,10 @@ class API extends EventEmitter {
       this.emit("fullscreen-change", change);
     });
 
+    ipcRenderer.on("video-controls", (event, controls) => {
+      this.emit("video-controls", controls);
+    });
+
     ipcRenderer.on("frame-ready", (event, frame) => {
       this.emit("frame-ready", frame);
     });
@@ -75,7 +79,8 @@ class API extends EventEmitter {
     this.minimize = (win) => ipcRenderer.send("minimize", win);
     this.fullscreen = (win, isFullscreen) =>
       ipcRenderer.send("fullscreen", win, isFullscreen);
-    this.reload = (win) => ipcRenderer.send("reload", win);
+    this.reload = (win, keepSettings) =>
+      ipcRenderer.send("reload", win, keepSettings);
     this.devTools = () => ipcRenderer.send("dev-tools");
     this.openDebug = () => ipcRenderer.send("open-debug");
     this.openGUI = () => ipcRenderer.send("open-gui");
@@ -83,13 +88,14 @@ class API extends EventEmitter {
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
     this.closePort = () => ipcRenderer.send("close-port");
     this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
+    this.updateVideoControls = (controls) =>
+      ipcRenderer.send("video-controls", controls);
 
     //getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
     this.getVideo = () => ipcRenderer.invoke("get-video");
-    this.testVideo = () => ipcRenderer.invoke("test-video");
 
     //setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);

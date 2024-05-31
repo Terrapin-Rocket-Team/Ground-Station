@@ -204,20 +204,20 @@ body {
 #fun-facts-container {
   background-color: var(--dark-highlight);
   border-bottom: 5px solid var(--highlight-color);
-  height: 9vh;
-  width: 35vw;
+  height: 8vh;
+  width: max-content;
   position: absolute;
   top: 0;
   right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: right 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+  transition: right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
   z-index: 900;
 }
 
 #fun-facts-container.hide {
-  right: -36vw;
+  right: -50vw;
 }
 
 #fun-facts-container::before {
@@ -225,15 +225,14 @@ body {
   left: 0;
   top: 0;
   content: "";
-  border-top: 9vh solid var(--main-bg);
+  border-top: 8vh solid var(--main-bg);
   border-right: 70px solid transparent;
 }
 
 #fun-fact-title {
   display: inline-block;
-  width: 35%;
   padding-left: 4vw;
-  margin-right: 1vw;
+  margin-right: 2vw;
   font-size: 2vh;
   font-family: "Arial Narrow Bold", sans-serif;
   font-weight: 600;
@@ -243,7 +242,7 @@ body {
 
 #fun-fact-text {
   display: inline-block;
-  width: 70%;
+  width: 31vw;
   margin-right: 1vw;
   color: var(--top-text);
   font-size: 1.5vh;
@@ -329,16 +328,6 @@ span#spd-text {
   z-index: 1;
 }
 
-/* .video-label::after {
-  position: absolute;
-  right: 0;
-  top: 2px;
-  transform: rotate(180deg);
-  content: "";
-  border-top: 3vh solid var(--main-bg);
-  border-right: 50px solid transparent;
-} */
-
 #charts {
   width: 100%;
   height: 100%;
@@ -349,6 +338,37 @@ span#spd-text {
   font-size: 2vh;
   color: var(--main-text);
   text-align: center;
+}
+
+.no-signal {
+  color: var(--main-text);
+  font-size: 2vh;
+  height: 832px;
+  width: 640px;
+  border: 1px solid gray;
+  background-color: var(--dark-highlight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.no-signal span {
+  display: block;
+  width: max-content;
+  padding: 1vh 5vw 1vh 0;
+  position: relative;
+  left: -2vw;
+  border-bottom: 2px solid var(--highlight-color);
+}
+
+.no-signal::after {
+  content: "Waiting for signal...";
+  position: relative;
+  padding: 1vh 0 1vh 0;
+  left: 2vw;
+  color: var(--dull-text);
+  display: block;
 }
 
 #stage-container {

@@ -39,7 +39,7 @@
       </div>
     </div>
     <!--Contains all elements besides the top bar-->
-    <div id="main" class="telemetry-only">
+    <div id="main" class="two-video">
       <div id="telemetry">
         <!--Top banners, positioned abosolutely-->
         <div id="team-name-container">
@@ -159,7 +159,7 @@
       <!--Hidden element where all video sources start, they are moved to a display panel to actually be displayed-->
       <div id="video-sources">
         <!--Live video elements-->
-        <canvas id="live-video-0" class="live-video"></canvas>
+        <canvas id="live-video-0"></canvas>
         <canvas id="live-video-1"></canvas>
         <!--charts element-->
         <div id="charts">
@@ -172,6 +172,9 @@
             <canvas id="spd-graph" class="chart"></canvas>
           </div>
         </div>
+        <!--no signal elements-->
+        <div id="none-0" class="no-signal"><span> Video Source 0 </span></div>
+        <div id="none-1" class="no-signal"><span> Video Source 1 </span></div>
       </div>
 
       <div id="stage-container">

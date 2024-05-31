@@ -13,6 +13,135 @@ window.onload = () => {
     api.openDebug();
   });
 
+  let config, videoControls;
+  const layoutButtons = document.getElementsByClassName("layout"),
+    v0Buttons = document.getElementsByClassName("v0"),
+    v1Buttons = document.getElementsByClassName("v1");
+
+  api.getSettings().then((c) => {
+    config = c;
+    if (config.video) {
+      videoControls = {
+        layout: "two-video",
+        video0: "none-0",
+        video1: "none-1",
+      };
+      document.getElementById("video-control").className = "";
+      document.getElementById("stage").className = "hidden";
+
+      document.getElementById("reload-video").addEventListener("click", () => {
+        api.reload("video", true);
+      });
+
+      // insert code for radios here
+
+      // layout control
+      const setupLayoutButton = (id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("click", () => {
+          videoControls.layout = id.split("_")[1];
+          if (el.className != "layout") el.className = "layout selected";
+          for (let i = 0; i < layoutButtons.length; i++) {
+            if (layoutButtons[i].id != id)
+              layoutButtons[i].className = "layout inactive";
+          }
+          if (videoControls.layout === "telemetry-only") {
+            videoControlButtonCallback("v0_charts");
+          }
+        });
+      };
+
+      function videoControlButtonCallback(id, el) {
+        let arr = id.split("_");
+        let elClass = arr[0];
+        let buttons;
+        if (!el) el = document.getElementById(id);
+        if (elClass === "v0") {
+          if (arr[1] === videoControls.video1 && arr[1] !== "none")
+            videoControlButtonCallback("v1_none");
+          videoControls.video0 = arr[1];
+          buttons = v0Buttons;
+        }
+        if (elClass === "v1") {
+          if (arr[1] === videoControls.video0 && arr[1] !== "none")
+            videoControlButtonCallback("v0_none");
+          videoControls.video1 = arr[1];
+          buttons = v1Buttons;
+        }
+        if (buttons) {
+          if (el.className != elClass) el.className = elClass + " selected";
+          for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i].id != id)
+              buttons[i].className = elClass + " inactive";
+          }
+        }
+      }
+
+      //control which video(s) are showing
+      const setupVideoControlButton = (id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("click", () => {
+          let cl = id.split("_")[0];
+          if (
+            cl !== "v0" ||
+            (cl === "v0" && videoControls.layout !== "telemetry-only")
+          )
+            videoControlButtonCallback(id, el);
+        });
+      };
+
+      setupLayoutButton("layout_two-video");
+      setupLayoutButton("layout_one-video");
+      setupLayoutButton("layout_telemetry-only");
+
+      setupVideoControlButton("v0_live-video-0");
+      setupVideoControlButton("v0_live-video-1");
+      setupVideoControlButton("v0_charts");
+      setupVideoControlButton("v0_none-0");
+
+      setupVideoControlButton("v1_live-video-0");
+      setupVideoControlButton("v1_live-video-1");
+      setupVideoControlButton("v1_charts");
+      setupVideoControlButton("v1_none-1");
+
+      document
+        .getElementById("control-update")
+        .addEventListener("click", () => {
+          api.updateVideoControls(videoControls);
+          document.getElementById("layout_" + videoControls.layout).className =
+            "layout";
+          document.getElementById("v0_" + videoControls.video0).className =
+            "v0";
+          document.getElementById("v1_" + videoControls.video1).className =
+            "v1";
+        });
+    }
+  });
+
+  api.on("video-controls", (controls) => {
+    videoControls = controls;
+    console.log(controls);
+    document.getElementById("layout_" + videoControls.layout).className =
+      "layout";
+    document.getElementById("v0_" + videoControls.video0).className = "v0";
+    document.getElementById("v1_" + videoControls.video1).className = "v1";
+
+    for (let i = 0; i < layoutButtons.length; i++) {
+      if (layoutButtons[i].id != "layout_" + videoControls.layout)
+        layoutButtons[i].className = "layout inactive";
+    }
+
+    for (let i = 0; i < v0Buttons.length; i++) {
+      if (v0Buttons[i].id != "v0_" + videoControls.video0)
+        v0Buttons[i].className = "v0 inactive";
+    }
+
+    for (let i = 0; i < v1Buttons.length; i++) {
+      if (v1Buttons[i].id != "v1_" + videoControls.video1)
+        v1Buttons[i].className = "v1 inactive";
+    }
+  });
+
   let switcherState = 0;
   //listener that switches to the charts in the diagrams panel
   document.getElementById("switcher-graphs").addEventListener("click", () => {

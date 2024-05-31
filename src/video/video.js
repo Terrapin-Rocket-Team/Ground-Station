@@ -51,7 +51,9 @@ window.onload = () => {
   //setup for video sources
   const LV0 = setupVideoCanvas("live-video-0"),
     LV1 = setupVideoCanvas("live-video-1"),
-    charts = document.getElementById("charts");
+    charts = document.getElementById("charts"),
+    none0 = document.getElementById("none-0"),
+    none1 = document.getElementById("none-1");
 
   let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
     spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
@@ -120,13 +122,16 @@ window.onload = () => {
 
     if (layout === "two-video") {
       telemetry.appendChild(document.getElementById("spd-gauge-container"));
-      video0.appendChild(LV0.canvas);
-      video1.appendChild(LV1.canvas);
+      video0.appendChild(none0);
+      video1.appendChild(none1);
+      videoSources.appendChild(LV0.canvas);
+      videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
     }
     if (layout === "one-video") {
       telemetry.appendChild(document.getElementById("small-text-container"));
-      video0.appendChild(LV0.canvas);
+      video0.appendChild(none0);
+      videoSources.appendChild(LV0, canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
     }
@@ -135,6 +140,8 @@ window.onload = () => {
       video0.appendChild(charts);
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
+      videoSources.appendChild(none0);
+      videoSources.appendChild(none1);
     }
   };
 
@@ -350,4 +357,13 @@ window.onload = () => {
     updateLayout();
     sizeGauges();
   };
+
+  api.on("video-controls", (controls) => {
+    changeLayout(controls.layout);
+    if (video0.firstChild) videoSources.appendChild(video0.firstChild);
+    if (video1.firstChild) videoSources.appendChild(video1.firstChild);
+    video0.appendChild(document.getElementById(controls.video0));
+    if (controls.layout === "two-video")
+      video1.appendChild(document.getElementById(controls.video1));
+  });
 };

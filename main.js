@@ -20,7 +20,8 @@ let mainWin,
   csvCreated,
   lastHeading,
   lastSpeed,
-  currentCSV;
+  currentCSV,
+  videoControls;
 
 /*
 Config options:
@@ -225,6 +226,12 @@ const createVideo = () => {
     },
   });
 
+  videoControls = {
+    layout: "two-video",
+    video0: "none-0",
+    video1: "none-1",
+  };
+
   videoWin.loadFile(path.join(__dirname, "src/video/video.html"));
 
   if (config.debug) videoWin.webContents.openDevTools({ mode: "detach" });
@@ -318,11 +325,17 @@ ipcMain.on("fullscreen", (event, win, isFullscreen) => {
   }
 });
 
-ipcMain.on("reload", (event, win) => {
+ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
   if (win === "main" || win === "debug") {
     radio.close();
-    if (mainWin) mainWin.webContents.reloadIgnoringCache();
+    if (mainWin) {
+      mainWin.webContents.reloadIgnoringCache();
+      mainWin.webContents.once("dom-ready", () => {
+        if (videoControls)
+          mainWin.webContents.send("video-controls", videoControls);
+      });
+    }
     if (debugWin) {
       debugWin.webContents.reloadIgnoringCache();
       debugWin.webContents.once("dom-ready", () => {
@@ -340,6 +353,19 @@ ipcMain.on("reload", (event, win) => {
   }
   if (win === "video") {
     if (videoWin) videoWin.webContents.reloadIgnoringCache();
+    if (!keepSettings) {
+      videoControls = {
+        layout: "two-video",
+        video0: "live-video-0",
+        video1: "live-video-1",
+      };
+      if (videoControls)
+        mainWin.webContents.send("video-controls", videoControls);
+    } else {
+      videoWin.webContents.once("dom-ready", () => {
+        videoWin.webContents.send("video-controls", videoControls);
+      });
+    }
   }
 });
 
@@ -507,6 +533,15 @@ ipcMain.on("clear-tile-cache", (event, args) => {
   } catch (err) {
     log.err('Error clearing tile cache: "' + err.message + '"');
   }
+});
+
+ipcMain.on("video-controls", (event, controls) => {
+  log.debug("Updating video controls");
+  if (controls) videoControls = controls;
+  else log.warn("Failed setting video controls, new controls missing.");
+  if (controls && videoWin)
+    videoWin.webContents.send("video-controls", videoControls);
+  else log.warn("Failed setting video controls, video window missing.");
 });
 
 //getters
