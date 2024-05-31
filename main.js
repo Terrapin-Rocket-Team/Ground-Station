@@ -226,6 +226,7 @@ const createVideo = () => {
     },
   });
 
+  //default video window state
   videoControls = {
     layout: "two-video",
     video0: "none-0",
@@ -327,17 +328,23 @@ ipcMain.on("fullscreen", (event, win, isFullscreen) => {
 
 ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
+  //main and debug are basically the same window, so reloading one reloads both
   if (win === "main" || win === "debug") {
     radio.close();
+    //if mainWin exists reload it
     if (mainWin) {
       mainWin.webContents.reloadIgnoringCache();
-      mainWin.webContents.once("dom-ready", () => {
-        if (videoControls)
+      //if in video mode send the video controls for the control panel
+      if (config.video && videoControls) {
+        mainWin.webContents.once("dom-ready", () => {
           mainWin.webContents.send("video-controls", videoControls);
-      });
+        });
+      }
     }
+    //if debugWin exists reload it
     if (debugWin) {
       debugWin.webContents.reloadIgnoringCache();
+      //send old logs
       debugWin.webContents.once("dom-ready", () => {
         try {
           if (fs.existsSync("./debug.log"))
@@ -351,17 +358,21 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       });
     }
   }
+  //handle reloading the video window separately
   if (win === "video") {
     if (videoWin) videoWin.webContents.reloadIgnoringCache();
+    //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
     if (!keepSettings) {
       videoControls = {
         layout: "two-video",
         video0: "live-video-0",
         video1: "live-video-1",
       };
+      //send defaults to update mainWin
       if (videoControls)
         mainWin.webContents.send("video-controls", videoControls);
     } else {
+      //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
       videoWin.webContents.once("dom-ready", () => {
         videoWin.webContents.send("video-controls", videoControls);
       });
@@ -537,8 +548,10 @@ ipcMain.on("clear-tile-cache", (event, args) => {
 
 ipcMain.on("video-controls", (event, controls) => {
   log.debug("Updating video controls");
+  //make sure we actually got a controls object
   if (controls) videoControls = controls;
   else log.warn("Failed setting video controls, new controls missing.");
+  //if so, pass it on to videoWin, if it exists
   if (controls && videoWin)
     videoWin.webContents.send("video-controls", videoControls);
   else log.warn("Failed setting video controls, video window missing.");
