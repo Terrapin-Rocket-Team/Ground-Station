@@ -8,7 +8,7 @@ const path = require("path");
 const { log } = require("./debug");
 const { radio } = require("./serial/serial");
 const { APRSMessage } = require("./serial/APRS");
-const { FileStreamSource } = require("./video/video-source");
+const { RadioStreamSource } = require("./video/video-source");
 
 let mainWin,
   debugWin,
@@ -705,37 +705,29 @@ if (config.debug) {
     }
     if (config.video) {
       //test to see if first video exists
-      if (fs.existsSync("./video0.av1")) {
-        //create new video source from file
-        let vs = new FileStreamSource("./video0.av1", {
-          resolution: { width: 640, height: 832 },
-          framerate: 30,
-          rotation: "cw",
-          createLog: config.debug,
-        });
-        //store for later
-        videoStreams.push(vs);
-        //start the video
-        vs.startOutput();
-      } else {
-        log.warn("Could not find video0.av1");
-      }
+      //create new video source from file
+      let vs1 = new RadioStreamSource(radio, true, {
+        resolution: { width: 640, height: 832 },
+        framerate: 30,
+        rotation: "cw",
+        createLog: config.debug,
+      });
+      //store for later
+      videoStreams.push(vs1);
+      //start the video
+      vs1.startOutput();
       //test to see if second video exists
-      if (fs.existsSync("./video1.av1")) {
-        //create new video source from file
-        let vs = new FileStreamSource("./video1.av1", {
-          resolution: { width: 640, height: 832 },
-          framerate: 30,
-          rotation: "cw",
-          createLog: config.debug,
-        });
-        //store for later
-        videoStreams.push(vs);
-        //start the video
-        vs.startOutput();
-      } else {
-        log.warn("Could not find video1.av1");
-      }
+      //create new video source from file
+      let vs2 = new FileStreamSource(radio, false, {
+        resolution: { width: 640, height: 832 },
+        framerate: 30,
+        rotation: "cw",
+        createLog: config.debug,
+      });
+      //store for later
+      videoStreams.push(vs2);
+      //start the video
+      vs2.startOutput();
     }
   }, 1000);
 }
