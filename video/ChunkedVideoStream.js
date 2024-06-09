@@ -1,28 +1,44 @@
 const { Readable } = require('stream');
+const { Radio } = require("../serial/serial");
 
+class ChunkedVideoStream1 extends Readable {
 
-class ChunkedVideoStream extends Readable {
-    constructor(options) {
+    constructor(radio, isVideo1, options) {
         super(options);
-        this.chunks = []; // Store chunks temporarily
+        this.radio = radio;
+        this.isVideo1 = isVideo1;
     }
   
     _read(size) {
-      // This method is called when the stream wants more data
-        if (this.chunks.length > 0) {
-            // If there are chunks available, push them to the stream
-            this.push(this.chunks.shift());
-        } else {
-            // If no data is available, push null to indicate the end of the stream
-            this.push(null);
+
+        size = Math.min(size, 1125); // 1125 bytes is the size of one frame
+
+        if (this.isVideo1) {
+            // read from chunks1 until buffer is empty or size bytes are read (~1 frame)
+
+            while (this.radio.chunks1bot != this.radio.chunks1top && size > 0) {
+
+                // respect backpressure
+                if(!(this.push(this.radio.chunks1[this.radio.chunks1bot]))) {
+                    return;
+                }
+                this.radio.chunks1bot = (this.radio.chunks1bot + 1) % this.radio.maxChunkSize;
+                size--;
+            }
         }
-    }
+        else {
+            // read from chunks2 until buffer is empty or size bytes are read (~1 frame)
+            while (this.radio.chunks2bot != this.radio.chunks2top && size > 0) {
+
+                // respect backpressure
+                if(!(this.push(this.radio.chunks2[this.radio.chunks2bot]))) {
+                    return;
+                }
+                this.radio.chunks2bot = (this.radio.chunks2bot + 1) % this.radio.maxChunkSize;
+                size--;
+            }
+        }
   
-    addChunk(chunk) {
-        // This method will be called to add new chunks of data to the stream
-        this.chunks.push(chunk);
-        // Notify the stream that new data is available
-        this.emit('readable');
     }
-  }
+}
   
