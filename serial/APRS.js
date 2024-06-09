@@ -50,6 +50,34 @@ class APRSMessage {
   }
 
   /**
+   * @returns {number} the orientation of the device as degrees about the Z axis
+   */
+  getOrientationZ() {
+    return parseInt(this.body.orientationZ)
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the Y axis
+   * */
+  getOrientationY() {
+    return parseInt(this.body.orientationY)
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the X axis
+    * */
+  getOrientationX() {
+    return parseInt(this.body.orientationX)
+  }
+
+  /**
+   * @returns {string} the flags of the device
+   * */
+  getFlags() {
+    return this.body.flags
+  }
+
+  /**
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {

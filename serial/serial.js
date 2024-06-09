@@ -40,6 +40,8 @@ class Radio extends EventEmitter {
     this.packetSize = 0;
     this.packetidx = 0;
     this.packetSizeFound = false;
+    this.maxChunkSize = maxChunkSize;
+    this.maxTelemetryChunkSize = maxTelemetryChunkSize;
   }
 
   /**
