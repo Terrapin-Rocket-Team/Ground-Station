@@ -22,17 +22,18 @@ class RadioStreamSource extends VideoSource {
    * @param {String} options.rotation
    * @param {Boolean} options.createLog
    */
-  constructor(file, radio, isVideo1, options) {
+  constructor(radio, isVideo1, options) {
     //call the VideoSource constructor with the name as the file name
     super(
-      file.split("/").at(-1),
+      isVideo1 ? "Live Video 1" : "Live Video 2",
       new ChunkedVideoStream(radio, isVideo1, {
         highWaterMark:
           (options.resolution.width * options.resolution.height * 3) / 2,
       })
     );
 
-    this.file = file;
+    this.radio = radio;
+    this.isVideo1 = isVideo1;
     this.options = options;
     this.ffmpeg = null;
     this.logFile = null;

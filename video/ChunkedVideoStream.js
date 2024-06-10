@@ -1,17 +1,23 @@
 const { Readable } = require('stream');
 const { Radio } = require("../serial/serial");
 
-class ChunkedVideoStream1 extends Readable {
+class ChunkedVideoStream extends Readable {
 
     constructor(radio, isVideo1, options) {
         super(options);
         this.radio = radio;
         this.isVideo1 = isVideo1;
+        console.log("Creating ChunkedVideoStream for " + (isVideo1 ? "Video 1" : "Video 2"));
+    }
+
+    _read() {
+        this._read(1125);
     }
   
     _read(size) {
 
         size = Math.min(size, 1125); // 1125 bytes is the size of one frame
+        console.log("Asking for " + size + " bytes");
 
         if (this.isVideo1) {
             // read from chunks1 until buffer is empty or size bytes are read (~1 frame)
@@ -41,4 +47,6 @@ class ChunkedVideoStream1 extends Readable {
   
     }
 }
+
+module.exports = ChunkedVideoStream;
   
