@@ -266,6 +266,7 @@ const createVideo = () => {
 };
 
 //tells electron to ignore OS level display scaling
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
@@ -626,7 +627,7 @@ radio.on("data", (data) => {
   }
   log.info(data.toString());
   if (mainWin) mainWin.webContents.send("data", data);
-  if (videoWin) videoWin.webContents.send("data", aprsMsg);
+  if (videoWin) videoWin.webContents.send("data", data);
   try {
     if (!csvCreated) {
       if (!fs.existsSync("./data")) fs.mkdirSync("./data");
@@ -718,7 +719,7 @@ if (config.debug) {
       vs1.startOutput();
       //test to see if second video exists
       //create new video source from file
-      let vs2 = new FileStreamSource(radio, false, {
+      let vs2 = new RadioStreamSource(radio, false, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",

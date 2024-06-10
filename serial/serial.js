@@ -42,6 +42,8 @@ class Radio extends EventEmitter {
     this.packetSizeFound = false;
     this.maxChunkSize = maxChunkSize;
     this.maxTelemetryChunkSize = maxTelemetryChunkSize;
+
+    this.totalCount = 0;
   }
 
   /**
@@ -110,7 +112,7 @@ class Radio extends EventEmitter {
 
       //get data from the serial port, and once a full message has been recieved, emit the data with the data event
       this.port.on("data", (data) => {
-
+        console.log("data received: " + data.length + " bytes")
         let dataidx = 0;  // index of the next byte to read from data (so we don't need to always resize it)
 
         // repeat until we have processed all data
@@ -119,6 +121,8 @@ class Radio extends EventEmitter {
           // we need to check if the data is either video or telemetry
           if (this.source == 0) {
 
+            console.log("looking for source " + data[dataidx] + " at " + dataidx + " of " + data.length + " - " + this.totalCount)
+
             if (data[dataidx] == 0x01) 
               this.source = 1;
             else if (data[dataidx] == 0x02) 
@@ -126,15 +130,19 @@ class Radio extends EventEmitter {
             else if (data[dataidx] == 0xfe) 
               this.source = 3;
 
+            // console.log("source: " + this.source);
+
             dataidx++;
+            this.totalCount++;
             this.packetSize = 0;
           }
           
           // we need to find packetsize
-          if (this.packetSize == 0) {
+          if (this.packetSize == 0 && this.packetSizeFound == false) {
             this.packetSize = data[dataidx] * 256
             this.packetSizeFound = false;
             dataidx++;
+            this.totalCount++;
           }
           // find the second byte of the packetsize
           if (this.packetSizeFound == false) {
@@ -142,18 +150,22 @@ class Radio extends EventEmitter {
             this.packetSizeFound = true;
             this.packetidx = 0;
             dataidx++;
+            this.totalCount++;
           }
-        
 
           if (this.source == 1 && this.packetSizeFound) {
             
+            // console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks1top: ${this.chunks1top} chunks1bot: ${this.chunks1bot}`);
             // copy data to the circular buffer
-            while (dataidx < data.length && this.packetidx < this.packetSize && this.chunks1top != this.chunks1bot) {
+            while (dataidx < data.length && this.packetidx < this.packetSize) {
               this.chunks1[this.chunks1top] = data[dataidx];
               this.chunks1top = (this.chunks1top + 1) % maxChunkSize;
               this.packetidx++;
               dataidx++;
+              this.totalCount++;
+              console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks1top: ${this.chunks1top} chunks1bot: ${this.chunks1bot}`);
             }
+            // console.log(`edatidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks1top: ${this.chunks1top} chunks1bot: ${this.chunks1bot}`);
 
             // if we have a full packet, emit it
             if (this.packetidx == this.packetSize) {
@@ -161,19 +173,28 @@ class Radio extends EventEmitter {
               this.packetSize = 0;
               this.packetSizeFound = false;
               this.packetidx = 0;
-              this.emit("video1chunk", this.chunks1);
+              this.emit("video1chunk");
+              console.log("video1chunk emitted");
+              console.log(`edatidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks1top: ${this.chunks1top} chunks1bot: ${this.chunks1bot}`);
+
             }
           }
 
           else if (this.source == 2 && this.packetSizeFound) {
 
+            // console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks2top: ${this.chunks2top} chunks2bot: ${this.chunks2bot}`);
+
             // copy data to the circular buffer
-            while (dataidx < data.length && this.packetidx < this.packetSize && this.chunks2top != this.chunks2bot) {
+            while (dataidx < data.length && this.packetidx < this.packetSize) {
               this.chunks2[this.chunks2top] = data[dataidx];
               this.chunks2top = (this.chunks2top + 1) % maxChunkSize;
               this.packetidx++;
               dataidx++;
+              this.totalCount++;
+              console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks2top: ${this.chunks2top} chunks2bot: ${this.chunks2bot}`);
             }
+
+            // console.log(`edatidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks2top: ${this.chunks2top} chunks2bot: ${this.chunks2bot}`);
 
             // if we have a full packet, emit it
             if (this.packetidx == this.packetSize) {
@@ -181,42 +202,51 @@ class Radio extends EventEmitter {
               this.packetSize = 0;
               this.packetSizeFound = false;
               this.packetidx = 0;
-              this.emit("video2chunk", this.chunks2);
+              this.emit("video2chunk");
+              console.log("video2chunk emitted");
+              console.log(`edatidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks2top: ${this.chunks2top} chunks2bot: ${this.chunks2bot}`);
+
             }
           }
             
-            else if (this.source == 3 && this.packetSizeFound) {
-  
-              // copy data to the telemetry string
-              let chars = Math.min(this.packetSize - this.packetidx - 1, data.length - dataidx - 1);
-              this.chunks3 += data.toString("utf8", dataidx, dataidx + chars);
+          else if (this.source == 3 && this.packetSizeFound) {
 
-              this.packetidx += chars;
-              dataidx += chars;
+            console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks3: ${this.chunks3}`);
 
-              // if we have a full packet, emit it
-              if (this.packetidx >= this.packetSize - 1) {
-                this.source = 0;
-                this.packetSize = 0;
-                this.packetSizeFound = false;
-                this.packetidx = 0;
+            // copy data to the telemetry string
+            let chars = Math.min(this.packetSize - this.packetidx, data.length - dataidx);
+            console.log(`chars: ${chars}`);
+            this.chunks3 += data.toString("utf8", dataidx, dataidx + chars);
+            console.log(`chunks3: ${this.chunks3}`);
 
-                // lookahead APRS message filtering
-                let resp = this.chunks3.match(/Source[^S]*(?=(Source|$))/g);
-                if (resp) {
-                  try {
+            this.packetidx += chars;
+            dataidx += chars;
+            this.totalCount += chars;
 
-                    this.emit("data", new APRSMessage(resp[0]));
-                    
-                    // remove the processed data
-                    this.chunks3 = this.chunks3.substring(resp[0].length);
-                  }
-                  catch (err) {
-                    this.emit("error", err.message);
-                  }
+            // if we have a full packet, emit it
+            if (this.packetidx >= this.packetSize - 1) {
+              this.source = 0;
+              this.packetSize = 0;
+              this.packetSizeFound = false;
+              this.packetidx = 0;
+
+              // lookahead APRS message filtering
+              let resp = this.chunks3.match(/Source:.*?(?=(Source:|$))/g);
+              console.log(`resp: ${resp}`);
+              if (resp) {
+                try {
+
+                  console.log("Telemetry emitted")
+                  // remove the processed data
+                  this.chunks3 = this.chunks3.substring(resp[0].length);
+                  this.emit("data", new APRSMessage(resp[0]));
+                }
+                catch (err) {
+                  this.emit("error", err.message);
                 }
               }
             }
+          }
         }
       });
 
