@@ -3,7 +3,6 @@ const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
-const ChunkedVideoStream = require("./ChunkedVideoStream");
 
 
 const ffmpegPath = path.join(__dirname, "ffmpeg-7.0.1", "ffmpeg.exe");
@@ -22,15 +21,14 @@ class FileStreamSource extends VideoSource {
    * @param {String} options.rotation
    * @param {Boolean} options.createLog
    */
-  constructor(file, radio, options) {
+  constructor(file, isVideo1, options) {
     //call the VideoSource constructor with the name as the file name
     super(
-      file.split("/").at(-1),
-      fs.createReadStream(file, {
-        highWaterMark:
-          (options.resolution.width * options.resolution.height * 3) / 2,
-      })
+      isVideo1 ? "LiveVideo1" : "LiveVideo1",
+      fs.createReadStream(file)
     );
+
+    console.log("File stream source created" + isVideo1 + " " + file);
 
     this.file = file;
     this.options = options;
