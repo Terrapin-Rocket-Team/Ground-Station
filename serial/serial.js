@@ -20,9 +20,9 @@ class Radio extends EventEmitter {
     this.connected = false;
 
     /** video1 circular buffer (8x default packetsize)*/
-    this.chunks1 = new Uint8Array(maxChunkSize);  
+    this.chunks1 = new Uint8Array(maxChunkSize);
     /** video2 circular buffer (8x default packetsize)*/
-    this.chunks2 = new Uint8Array(maxChunkSize);  
+    this.chunks2 = new Uint8Array(maxChunkSize);
     /** telemetry string */
     this.chunks3 = "";
 
@@ -42,6 +42,8 @@ class Radio extends EventEmitter {
     this.packetSizeFound = false;
     this.maxChunkSize = maxChunkSize;
     this.maxTelemetryChunkSize = maxTelemetryChunkSize;
+
+    // this.writeStream = fs.createWriteStream("humana2.av1", { flags: "a" });
 
     this.totalCount = 0;
   }
@@ -123,11 +125,11 @@ class Radio extends EventEmitter {
 
             console.log("looking for source " + data[dataidx] + " at " + dataidx + " of " + data.length + " - " + this.totalCount)
 
-            if (data[dataidx] == 0x01) 
+            if (data[dataidx] == 0x01)
               this.source = 1;
-            else if (data[dataidx] == 0x02) 
+            else if (data[dataidx] == 0x02)
               this.source = 2;
-            else if (data[dataidx] == 0xfe) 
+            else if (data[dataidx] == 0xfe)
               this.source = 3;
 
             // console.log("source: " + this.source);
@@ -136,7 +138,7 @@ class Radio extends EventEmitter {
             this.totalCount++;
             this.packetSize = 0;
           }
-          
+
           // we need to find packetsize
           if (this.packetSize == 0 && this.packetSizeFound == false) {
             this.packetSize = data[dataidx] * 256
@@ -154,7 +156,7 @@ class Radio extends EventEmitter {
           }
 
           if (this.source == 1 && this.packetSizeFound) {
-            
+
             // console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks1top: ${this.chunks1top} chunks1bot: ${this.chunks1bot}`);
             // copy data to the circular buffer
             while (dataidx < data.length && this.packetidx < this.packetSize) {
@@ -208,7 +210,7 @@ class Radio extends EventEmitter {
 
             }
           }
-            
+
           else if (this.source == 3 && this.packetSizeFound) {
 
             console.log(`datidx: ${dataidx} source: ${this.source} tot: ${this.totalCount}  packetidx: ${this.packetidx} packetSize: ${this.packetSize} chunks3: ${this.chunks3}`);
@@ -254,6 +256,8 @@ class Radio extends EventEmitter {
       this.port.on("close", () => {
         let path = this.port.path;
         this.port = null;
+        // this.writeStream.end();
+        console.log("received close event " + this.totalCount + " bytes")
         this.emit("close", path);
       });
     });

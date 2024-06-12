@@ -641,6 +641,14 @@ radio.on("data", (data) => {
   }
 });
 
+radio.on("video1chunk", () => {
+  if (videoStreams[0]) videoStreams[0].i._read(1250);
+});
+
+radio.on("video2chunk", () => {
+  if (videoStreams[1]) videoStreams[1].i._read(1250)
+});
+
 radio.on("error", (message) => {
   log.err("Error parsing APRS message: " + message);
 });

@@ -25,12 +25,14 @@ class RadioStreamSource extends VideoSource {
   constructor(radio, isVideo1, options) {
     //call the VideoSource constructor with the name as the file name
     super(
-      isVideo1 ? "Live Video 1" : "Live Video 2",
+      isVideo1 ? "LiveVideo1" : "LiveVideo2",
       new ChunkedVideoStream(radio, isVideo1, {
         highWaterMark:
           (options.resolution.width * options.resolution.height * 3) / 2,
       })
     );
+
+    console.log("Creating RadioStreamSource for " + (isVideo1 ? "Video 1" : "Video 2"));
 
     this.radio = radio;
     this.isVideo1 = isVideo1;
