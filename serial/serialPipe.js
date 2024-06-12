@@ -63,7 +63,8 @@ class Radio extends EventEmitter {
             if (resp) {
               try {
 
-                console.log("Telemetry emitted")
+                console.log("Telemetry received: " + resp[0]);
+
                 // remove the processed data
                 this.chunks3 = this.chunks3.substring(resp[0].length);
                 this.emit("data", new APRSMessage(resp[0]));
