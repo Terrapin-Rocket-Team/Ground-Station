@@ -8,42 +8,72 @@ class ChunkedVideoStream extends Readable {
         this.radio = radio;
         this.isVideo1 = isVideo1;
         console.log("Creating ChunkedVideoStream for " + (isVideo1 ? "Video 1" : "Video 2"));
+        this.buffer = Buffer.alloc(1250);
     }
 
     _read() {
-        this._read(1125);
+        this._read(1250);
     }
   
     _read(size) {
 
-        size = Math.min(size, 1125); // 1125 bytes is the size of one frame
+        size = Math.min(size, 1250); // 1116 bytes is the size of one frame
         console.log("Asking for " + size + " bytes");
 
         if (this.isVideo1) {
+
+            console.log("Vid 1:" + this.radio.chunks1bot + " " + this.radio.chunks1top);
+            
+            // create a buffer to hold the data
+            let offset = 0;
+
             // read from chunks1 until buffer is empty or size bytes are read (~1 frame)
+            while (this.radio.chunks1bot != this.radio.chunks1top && offset < size) {
 
-            while (this.radio.chunks1bot != this.radio.chunks1top && size > 0) {
+                // fill up buffer
+                this.buffer.writeUInt8(this.radio.chunks1[this.radio.chunks1bot], offset);
 
+                this.radio.chunks1bot = (this.radio.chunks1bot + 1) % this.radio.maxChunkSize;
+                offset++;
+            }
+
+            console.log("eVid 1:" + this.radio.chunks1bot + " " + this.radio.chunks1top);
+
+            if (offset > 0) {
                 // respect backpressure
-                if(!(this.push(this.radio.chunks1[this.radio.chunks1bot]))) {
+                if(!(this.push(this.buffer))) {
                     return;
                 }
-                this.radio.chunks1bot = (this.radio.chunks1bot + 1) % this.radio.maxChunkSize;
-                size--;
             }
         }
         else {
-            // read from chunks2 until buffer is empty or size bytes are read (~1 frame)
-            while (this.radio.chunks2bot != this.radio.chunks2top && size > 0) {
+            console.log("Vid 2:" + this.radio.chunks2bot + " " + this.radio.chunks2top);
+            
+            // create a buffer to hold the data
+            let offset = 0;
 
+            // read from chunks2 until buffer is empty or size bytes are read (~1 frame)
+            while (this.radio.chunks2bot != this.radio.chunks2top && offset < size) {
+
+                // fill up buffer
+                this.buffer.writeUInt8(this.radio.chunks2[this.radio.chunks2bot], offset);
+
+                this.radio.chunks2bot = (this.radio.chunks2bot + 1) % this.radio.maxChunkSize;
+                offset++;
+            }
+
+            console.log("eVid 2:" + this.radio.chunks2bot + " " + this.radio.chunks2top);
+
+            if (offset > 0) {
+                // this.radio.writeStream.write(this.buffer);
                 // respect backpressure
-                if(!(this.push(this.radio.chunks2[this.radio.chunks2bot]))) {
+                if(!(this.push(this.buffer))) {
                     return;
                 }
-                this.radio.chunks2bot = (this.radio.chunks2bot + 1) % this.radio.maxChunkSize;
-                size--;
             }
         }
+
+        return;
   
     }
 }

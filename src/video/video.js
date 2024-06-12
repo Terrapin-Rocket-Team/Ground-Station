@@ -73,18 +73,18 @@ window.onload = () => {
       thisFrame.forEach((video) => {
         if (video) {
           //temporary name
-          if (video.name === "video0.av1") {
-            LV0.frame.y.bytes = video.data.y;
-            LV0.frame.u.bytes = video.data.u;
-            LV0.frame.v.bytes = video.data.v;
-            LV0.ctx.drawFrame(LV0.frame);
-          }
-          //temporary name
-          if (video.name === "video1.av1") {
+          if (video.name.charAt(video.name.length - 1) == '2') {
             LV1.frame.y.bytes = video.data.y;
             LV1.frame.u.bytes = video.data.u;
             LV1.frame.v.bytes = video.data.v;
             LV1.ctx.drawFrame(LV1.frame);
+          }
+          //temporary name
+          else {
+            LV0.frame.y.bytes = video.data.y;
+            LV0.frame.u.bytes = video.data.u;
+            LV0.frame.v.bytes = video.data.v;
+            LV0.ctx.drawFrame(LV0.frame);
           }
         }
       });
