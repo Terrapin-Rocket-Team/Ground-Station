@@ -24,7 +24,7 @@ public:
     explicit SerialPort(const char *portName);
     ~SerialPort();
 
-    int readSerialPort(const char *buffer, unsigned int buf_size);
+    int readSerialPort(const byte *buffer, unsigned int buf_size);
     bool writeSerialPort(void *buffer, unsigned int buf_size);
     bool writeSerialPort(int data, unsigned int buf_size);
     bool isConnected();

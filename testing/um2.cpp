@@ -34,13 +34,14 @@ int main(int argc, char **argv) {
 
     std::cout << "Named pipe created successfully.\n";
 
+    size_t x;
 
 	while (teensy.isConnected()) {
 
-		teensy.readSerialPort(output, MAX_DATA_LENGTH);
+		x = teensy.readSerialPort(output, MAX_DATA_LENGTH);
         // Sleep(500);
-        std::cout << output;
-        !WriteFile(hPipe, output, MAX_DATA_LENGTH, &dwWritten, NULL);
+        std::cout << x << std::endl;
+        WriteFile(hPipe, output, MAX_DATA_LENGTH, &dwWritten, NULL);
 	}
     CloseHandle(hPipe);
 	return 0;
