@@ -24,7 +24,7 @@ class FileStreamSource extends VideoSource {
   constructor(file, isVideo1, options) {
     //call the VideoSource constructor with the name as the file name
     super(
-      isVideo1 ? "LiveVideo1" : "LiveVideo1",
+      isVideo1 ? "LiveVideo1" : "LiveVideo2",
       fs.createReadStream(file)
     );
 
@@ -90,6 +90,8 @@ class FileStreamSource extends VideoSource {
     if (this.ffmpeg !== null && this.options.createLog) {
       this.logFile = fs.createWriteStream("./ffmpeg-" + this.name + ".log");
       this.ffmpeg.stderr.pipe(this.logFile);
+
+      console.log("Log file created" + this.name + " " + this.logFile);
     }
   }
 

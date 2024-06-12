@@ -737,6 +737,7 @@ if (config.debug) {
       videoStreams.push(vs2);
       //start the video
       vs2.startOutput();
+      
     }
   }, 1000);
 }
