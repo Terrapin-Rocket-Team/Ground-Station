@@ -32,11 +32,14 @@ SerialPort::SerialPort(const char *portName)
         }
         else
         {
-            dcbSerialParameters.BaudRate = CBR_9600;
+            dcbSerialParameters.BaudRate = 600000;  // Adjust to match desired bitrate
             dcbSerialParameters.ByteSize = 8;
             dcbSerialParameters.StopBits = ONESTOPBIT;
             dcbSerialParameters.Parity = NOPARITY;
             dcbSerialParameters.fDtrControl = DTR_CONTROL_ENABLE;
+            dcbSerialParameters.fRtsControl = RTS_CONTROL_HANDSHAKE;  // Enable RTS/CTS flow control
+            dcbSerialParameters.fOutxCtsFlow = TRUE;
+            dcbSerialParameters.fOutxDsrFlow = TRUE;
 
             if (!SetCommState(handler, &dcbSerialParameters))
             {

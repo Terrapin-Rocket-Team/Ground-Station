@@ -48,7 +48,7 @@ class Radio extends EventEmitter {
      */
     connect(port, baudRate) {
 
-        //logic for starting the cpp program
+        //logic for starting the cpp program 
 
 
         // handle telemetry data
@@ -73,6 +73,12 @@ class Radio extends EventEmitter {
                 this.emit("error", err.message);
               }
             }
+        });
+
+        // return promise that just returns 1
+        return new Promise((res, rej) => {
+            this.connected = true;
+            res(1);
         });
     }
 
