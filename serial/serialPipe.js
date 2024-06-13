@@ -1,12 +1,7 @@
-const {
-    SerialPort
-} = require("serialport");
-const {
-    APRSMessage
-} = require("./APRS");
-const {
-    EventEmitter
-} = require("node:events");
+const { SerialPort } = require("serialport");
+const { APRSMessage } = require("./APRS");
+const { EventEmitter } = require("node:events");
+const { spawn } = require('child_process');
 const fs = require("fs");
 
 
@@ -23,6 +18,13 @@ class Radio extends EventEmitter {
         this.connected = false;
 
         this.chunks3 = "";
+
+        //logic for starting the cpp program 
+        this.cppApp = spawn('./serial/main.exe');
+
+        this.cppApp.stdout.on('data', (data) => {
+            console.log(`demux stdout: ${data}`);
+        });
 
     }
 
@@ -48,8 +50,13 @@ class Radio extends EventEmitter {
      */
     connect(port, baudRate) {
 
-        //logic for starting the cpp program 
+        const pipePath = '\\\\.\\pipe\\terpFcCommands';
+        this.commandStream = fs.createWriteStream(pipePath, { encoding: 'utf-8' });
 
+        this.commandStream.on('error', (err) => {
+            console.error("error writing command to named pipe", err.message);
+        });
+        this.commandStream.write(port);
 
         // handle telemetry data
         const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
@@ -61,18 +68,22 @@ class Radio extends EventEmitter {
             let resp = this.chunks3.match(/Source:.*?(?=(Source:|$))/g);
             console.log(`resp: ${resp}`);
             if (resp) {
-              try {
+                try {
 
-                console.log("Telemetry received: " + resp[0]);
+                    console.log("Telemetry received: " + resp[0]);
 
-                // remove the processed data
-                this.chunks3 = this.chunks3.substring(resp[0].length);
-                this.emit("data", new APRSMessage(resp[0]));
-              }
-              catch (err) {
-                this.emit("error", err.message);
-              }
+                    // remove the processed data
+                    this.chunks3 = this.chunks3.substring(resp[0].length);
+                    this.emit("data", new APRSMessage(resp[0]));
+                }
+                catch (err) {
+                    this.emit("error", err.message);
+                }
             }
+        });
+
+        pipeStream.on('error', (err) => {
+            console.error("error writing to named pipe", err.message);
         });
 
         // return promise that just returns 1

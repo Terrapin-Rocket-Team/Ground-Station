@@ -1,6 +1,7 @@
 #include "SerialPort.hpp"
+#include <string>
 
-char port[] = "\\\\.\\COM8";
+char portPrefix[] = "\\\\.\\";
 
 //g++ um2.cpp SerialPort.cpp -lgdi32 -o main.exe
 
@@ -8,17 +9,20 @@ byte data[MAX_DATA_LENGTH];
 HANDLE hPipe1;
 HANDLE hPipe2;
 HANDLE hPipe3;
+HANDLE hPipeIn;
 DWORD dwWritten;
+DWORD dwRead;
 
 int main(int argc, char **argv) {
 
-	SerialPort teensy(port);
-	if(teensy.isConnected()){
-		std::cout<<"Connection made"<<std::endl<<std::endl;
-	}
-	else{
-		std::cout<<"Error in port name"<<std::endl<<std::endl;
-	}
+    hPipeIn = CreateNamedPipe(TEXT("\\\\.\\pipe\\terpFcCommands"),
+                            PIPE_ACCESS_INBOUND,
+                            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                            1,
+                            1024 * 16,
+                            1024 * 16,
+                            NMPWAIT_USE_DEFAULT_WAIT,
+                            NULL);
 
     hPipe1 = CreateNamedPipe(TEXT("\\\\.\\pipe\\ffmpegVideoOne"),
                             PIPE_ACCESS_OUTBOUND,
@@ -47,7 +51,7 @@ int main(int argc, char **argv) {
                             NMPWAIT_USE_DEFAULT_WAIT,
                             NULL);
 
-    if (hPipe1 == INVALID_HANDLE_VALUE || hPipe2 == INVALID_HANDLE_VALUE || hPipe3 == INVALID_HANDLE_VALUE) {
+    if (hPipe1 == INVALID_HANDLE_VALUE || hPipe2 == INVALID_HANDLE_VALUE || hPipe3 == INVALID_HANDLE_VALUE || hPipeIn == INVALID_HANDLE_VALUE) {
         std::cerr << "Error creating named pipes.\n";
         return 1;
     }
@@ -72,6 +76,27 @@ int main(int argc, char **argv) {
     size_t chunks1bot = 0;
     size_t chunks2bot = 0;
     size_t chunks3bot = 0;
+
+    bool receivedPort = false;
+
+
+    char portBuf[1024];
+
+    while (!receivedPort) {
+        if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
+            portBuf[dwWritten] = '\0';
+            std::cout << "Received port: " << portBuf << std::endl;
+            receivedPort = true;
+        }
+    }
+
+    SerialPort teensy(strcat(portPrefix, portBuf));
+	if(teensy.isConnected()){
+		std::cout<<"Connection made"<<std::endl<<std::endl;
+	}
+	else{
+		std::cout<<"Error in port name"<<std::endl<<std::endl;
+	}
 
 	while (teensy.isConnected()) {
 
@@ -248,5 +273,6 @@ int main(int argc, char **argv) {
     CloseHandle(hPipe1);
     CloseHandle(hPipe2);
     CloseHandle(hPipe3);
+    CloseHandle(hPipeIn);
 	return 0;
 }
