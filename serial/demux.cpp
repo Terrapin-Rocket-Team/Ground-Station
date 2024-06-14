@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
             }
 
             // we need to find packetsize
-            if (packetSize == 0 && packetSizeFound == false && dataidx < x)
+            if (packetSize == 0 && packetSizeFound == false && dataidx < x && source != 0)
             {
                 packetSize = data[dataidx] * 256; 
                 packetSizeFound = false;
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
                 totalCount++;
             }
             // find the second byte of the packetsize
-            if (packetSizeFound == false && dataidx < x)
+            if (packetSizeFound == false && dataidx < x && source != 0)
             {
                 packetSize += data[dataidx];
                 packetSizeFound = true;
