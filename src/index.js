@@ -12,12 +12,6 @@ window.onload = () => {
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();
   });
-  document.getElementById("radio-command-open").addEventListener("click", () => {
-    api.openCommand();
-  });
-  document.getElementById("send-command").addEventListener("click", () => {
-    api.sendCommand(document.getElementById("Cinput1"), document.getElementById("Cinput2"), document.getElementById("Cinput3"), document.getElementById("Cinput4"));
-  });
 
   //video controls setup
   let config, videoControls;
@@ -130,7 +124,6 @@ window.onload = () => {
           document.getElementById("v1_" + videoControls.video1).className =
             "v1";
         });
-
     }
   });
 
