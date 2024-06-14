@@ -455,6 +455,14 @@ ipcMain.on("radio-command", (event, args) => {
   if (!commandWin) createCommand();
 });
 
+ipcMain.on("radio-command-sent", (event, command) => {
+  for (let i = 0; i < command.length; i++) {
+    if (command[i] === "") command[i] = -1;
+  }
+  radio.writeCommand(command);
+  if (commandWin) commandWin.close();
+});
+
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
   try {
     tilePath = [tilePathNums[0], tilePathNums[1], tilePathNums[2]];
