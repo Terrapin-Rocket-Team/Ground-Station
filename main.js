@@ -13,6 +13,7 @@ const { FileStreamSource } = require("./video/video-source");
 let mainWin,
   debugWin,
   videoWin,
+  commandWin,
   videoStreams = [],
   config,
   cacheMeta,
@@ -124,6 +125,19 @@ const createWindow = () => {
 
   mainWin.loadFile(path.join(__dirname, "src/index.html"));
 
+  ipcMain.on('open-popup', () => {
+    const popupWindow = new BrowserWindow({
+      width: 400,
+      height: 300,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+  
+    popupWindow.loadFile('popup.html');
+  });
+
   if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
   log.debug("Main window created");
 
@@ -137,6 +151,7 @@ const createWindow = () => {
     if (!config.noGUI) {
       if (debugWin) debugWin.close();
       if (videoWin) videoWin.close();
+      if (commandWin) commandWin.close();
     }
   });
 
@@ -204,6 +219,40 @@ const createDebug = () => {
   });
   log.debug("Debug window created");
 };
+
+//creates the command electron window
+const createCommand = () => {
+  const width = 600,
+    height = 400;
+  const iconSuffix =
+    process.platform === "win32"
+      ? ".ico"
+      : process.platform === "darwin"
+      ? ".icns"
+      : ".png";
+
+  commandWin = new BrowserWindow({
+    width: width,
+    height: height,
+    resizable: false,
+    autoHideMenuBar: true,
+    icon: "assets/logo" + iconSuffix,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+  });
+
+  commandWin.loadFile('serial/popup.html');
+
+  log.debug("Command window created");
+
+  commandWin.on('closed', () => {
+    commandWin = null;
+  });
+};
+
 
 //creates the debug electron window
 const createVideo = () => {
@@ -358,6 +407,9 @@ ipcMain.on("reload", (event, win, keepSettings) => {
         }
       });
     }
+
+    //if commandWin exists close it
+    if (commandWin) commandWin.close();
   }
   //handle reloading the video window separately
   if (win === "video") {
@@ -396,6 +448,11 @@ ipcMain.on("open-gui", (event, args) => {
 ipcMain.on("open-debug", (event, args) => {
   log.debug("Debug window opened from main");
   if (!debugWin) createDebug();
+});
+
+ipcMain.on("radio-command", (event, args) => {
+  log.debug("Sending radio command");
+  if (!commandWin) createCommand();
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {

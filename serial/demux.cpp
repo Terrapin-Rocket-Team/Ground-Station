@@ -145,6 +145,7 @@ int main(int argc, char **argv) {
                 packetidx = 0;
                 dataidx++;
                 totalCount++;
+                // std::cout << "packetSize: " << packetSize << std::endl;
             }
 
             if (source == 1 && packetSizeFound)

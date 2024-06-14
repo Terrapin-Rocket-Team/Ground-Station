@@ -83,6 +83,8 @@ class API extends EventEmitter {
       ipcRenderer.send("reload", win, keepSettings);
     this.devTools = () => ipcRenderer.send("dev-tools");
     this.openDebug = () => ipcRenderer.send("open-debug");
+    this.openCommand = () => ipcRenderer.send("radio-command");
+    this.sendCommand = (input1, input2, input3, input4) => 
     this.openGUI = () => ipcRenderer.send("open-gui");
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
