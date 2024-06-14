@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 
-const char *fileName = "mux.bin"; // Replace with your actual file name
+const char *fileName = "out2.bin"; // Replace with your actual file name
 
 byte data[2048];
 HANDLE hPipe1;
@@ -103,11 +103,6 @@ int main(int argc, char **argv) {
             if (packetSizeFound == false && dataidx < x && source != 0) {
                 std::cout << totalCount << ":" << (int)data[dataidx] << " | ";
 
-                // if (int(data[dataidx]) != 226) {
-                //     std::cout << "AAAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
-                //     std::cout << dataidx << " data len " << x << " tot " << totalCount << std::endl;
-                //     std::cout << "packetSize " << packetSize << " found? " << packetSizeFound << std::endl;
-                // } 
                 packetSize += data[dataidx];
                 packetSizeFound = true;
                 packetidx = 0;
