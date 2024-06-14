@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     byte chunks1[maxChunkSize];
     byte chunks2[maxChunkSize];
     byte chunks3[maxChunkSize];
+    byte chunkIn[7];
 
     size_t chunks1top = 0;
     size_t chunks2top = 0;
@@ -267,6 +268,11 @@ int main(int argc, char **argv) {
                     packetidx = 0;
                 }
             }
+        }
+
+        // check to see if we received a command from the GUI
+        if (ReadFile(hPipeIn, chunkIn, 7, &dwWritten, NULL)) {
+            teensy.writeSerialPort(chunkIn, 7);
         }
     }
     std::cout << totalCount << std::endl;

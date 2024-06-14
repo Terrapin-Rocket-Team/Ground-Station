@@ -93,6 +93,18 @@ class Radio extends EventEmitter {
         });
     }
 
+    writeCommand(command) {
+        for (let i = 0; i < command.length - 1; i++) {
+            // turn it into a 16 bit signed integer using INT16BE
+            let buf = Buffer.alloc(2);
+            buf.writeInt16BE(command[i]);
+            this.commandStream.write(buf);
+        }
+        // write the last byte (boolean)
+        this.commandStream.write(command[command.length - 1]);
+        log.debug("Radio command sent: " + command);
+    }
+
     isConnected() {
         return {
             connected: this.connected,
