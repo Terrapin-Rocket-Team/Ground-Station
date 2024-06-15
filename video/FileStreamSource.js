@@ -100,6 +100,12 @@ class FileStreamSource extends VideoSource {
    * @returns {Readable} the output stream
    */
   startOutput() {
+    this.on('data', (data) => {
+      // emit a custom event for the UI to update
+      this.emit(this.name + "Received", 7);
+    });
+
+
     //connect pipes
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.ffmpeg.stdin);

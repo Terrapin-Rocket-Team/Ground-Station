@@ -304,6 +304,22 @@ window.onload = () => {
         parseInt(sessionStorage.getItem("apogee")) + " ft";
   }
 
+  api.on("LiveVideo1Received", (data) => {
+    let recvStatus = document.getElementById("recv-statusVid1");
+
+    recvStatus.setAttribute("src", "./images/recv_onB.svg");
+    recvStatus.setAttribute("title", "Receiving Video 1");
+    recvStatus.setAttribute("alt", "On");
+  });
+
+  api.on("LiveVideo2Received", (data) => {
+    let recvStatus = document.getElementById("recv-statusVid2");
+
+    recvStatus.setAttribute("src", "./images/recv_onB.svg");
+    recvStatus.setAttribute("title", "Receiving Video 2");
+    recvStatus.setAttribute("alt", "On");
+  });
+
   api.on("data", (data) => {
     let msg = new APRSMessage(data);
 
