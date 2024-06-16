@@ -2,47 +2,55 @@
 #include <iostream>
 #include <fstream>
 
-const char *fileName = "mux.bin"; // Replace with your actual file name
+const char *fileName = "out4.bin"; // Replace with your actual file name
 
 byte data[2048];
 HANDLE hPipe1;
 HANDLE hPipe2;
 HANDLE hPipe3;
+HANDLE hPipeIn;
+DWORD dwWritten;
+DWORD dwRead;
+
 DWORD dwWritten;
 
 int main(int argc, char **argv) {
-    std::ifstream file(fileName, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Error opening file.\n";
-        return 1;
-    }
+
+    hPipeIn = CreateNamedPipe(TEXT("\\\\.\\pipe\\terpFcCommands"),
+                            PIPE_ACCESS_INBOUND,
+                            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                            1,
+                            1024 * 16,
+                            1024 * 16,
+                            NMPWAIT_USE_DEFAULT_WAIT,
+                            NULL);
 
     hPipe1 = CreateNamedPipe(TEXT("\\\\.\\pipe\\ffmpegVideoOne"),
-                             PIPE_ACCESS_OUTBOUND,
-                             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-                             PIPE_UNLIMITED_INSTANCES,
-                             1024 * 16,
-                             1024 * 16,
-                             NMPWAIT_USE_DEFAULT_WAIT,
-                             NULL);
+                            PIPE_ACCESS_OUTBOUND,
+                            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                            PIPE_UNLIMITED_INSTANCES,              // Max instances
+                            1024 * 16,           // Out buffer size
+                            1024 * 16,           // In buffer size
+                            NMPWAIT_USE_DEFAULT_WAIT,
+                            NULL);
 
     hPipe2 = CreateNamedPipe(TEXT("\\\\.\\pipe\\ffmpegVideoTwo"),
-                             PIPE_ACCESS_OUTBOUND,
-                             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-                             PIPE_UNLIMITED_INSTANCES,
-                             1024 * 16,
-                             1024 * 16,
-                             NMPWAIT_USE_DEFAULT_WAIT,
-                             NULL);
+                            PIPE_ACCESS_OUTBOUND,
+                            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                            PIPE_UNLIMITED_INSTANCES,              // Max instances
+                            1024 * 16,           // Out buffer size
+                            1024 * 16,           // In buffer size
+                            NMPWAIT_USE_DEFAULT_WAIT,
+                            NULL);
 
     hPipe3 = CreateNamedPipe(TEXT("\\\\.\\pipe\\terpTelemetry"),
-                             PIPE_ACCESS_OUTBOUND,
-                             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-                             PIPE_UNLIMITED_INSTANCES,
-                             1024 * 8,
-                             1024 * 8,
-                             NMPWAIT_USE_DEFAULT_WAIT,
-                             NULL);
+                            PIPE_ACCESS_OUTBOUND,
+                            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                            PIPE_UNLIMITED_INSTANCES,              // Max instances
+                            1024 * 8,           // Out buffer size
+                            1024 * 8,           // In buffer size
+                            NMPWAIT_USE_DEFAULT_WAIT,
+                            NULL);
 
     if (hPipe1 == INVALID_HANDLE_VALUE || hPipe2 == INVALID_HANDLE_VALUE || hPipe3 == INVALID_HANDLE_VALUE) {
         std::cerr << "Error creating named pipes.\n";
@@ -70,6 +78,12 @@ int main(int argc, char **argv) {
     size_t chunks2bot = 0;
     size_t chunks3bot = 0;
 
+    std::ifstream file(fileName, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error opening file.\n";
+        return 1;
+    }
+
     while (file.read(reinterpret_cast<char *>(data), 2048) || file.gcount() > 0) {
         x = file.gcount();
         // implement demuxer on data
@@ -82,7 +96,7 @@ int main(int argc, char **argv) {
             if (source == 0) {
                 std::cout << "source == 0 at" << std::endl;
                 std::cout << totalCount << ":" << (int)data[dataidx] << " | ";
-                if (data[dataidx] == 0x01) source = 1;
+                if (data[dataidx] == 0xa7) source = 1;
                 else if (data[dataidx] == 0x02) source = 2;
                 else if (data[dataidx] == 0xfe) source = 3;
 
