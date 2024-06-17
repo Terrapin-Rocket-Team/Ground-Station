@@ -117,8 +117,8 @@ int main(int argc, char **argv) {
             if (source == 0)
             {
 
-                // std::cout << "source == 0 at " << totalCount << std::endl;
-
+                std::cout << "source == 0 at " << totalCount << std::endl;
+                // std::cout << totalCount << ":"  << std::dec << (int)data[dataidx] << " | ";
                 if (data[dataidx] == 0x01) source = 1;
                 else if (data[dataidx] == 0x02) source = 2;
                 else if (data[dataidx] == 0xfe) source = 3;
@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
             // we need to find packetsize
             if (packetSize == 0 && packetSizeFound == false && dataidx < x && source != 0)
             {
+                // std::cout << totalCount << ":"  << (int)data[dataidx] << " | ";
                 packetSize = data[dataidx] * 256; 
                 packetSizeFound = false;
                 dataidx++;
@@ -140,6 +141,7 @@ int main(int argc, char **argv) {
             // find the second byte of the packetsize
             if (packetSizeFound == false && dataidx < x && source != 0)
             {
+                // std::cout << totalCount << ":"  << (int)data[dataidx] << " | ";
                 packetSize += data[dataidx];
                 packetSizeFound = true;
                 packetidx = 0;
@@ -153,6 +155,7 @@ int main(int argc, char **argv) {
                 // copy data to the circular buffer
                 while (dataidx < x && packetidx < packetSize)
                 {
+                    // std::cout << totalCount << ":"  << (int)data[dataidx] << " | ";
                     chunks1[chunks1top] = data[dataidx];
                     chunks1top = (chunks1top + 1) % maxChunkSize;
                     packetidx++;
@@ -164,7 +167,7 @@ int main(int argc, char **argv) {
                 if (packetidx == packetSize)
                 {
 
-                    // std::cout << "packetidx1 == packetSize1" << std::endl;
+                    std::cout << "packetidx1 == packetSize1" << std::endl;
 
                     // write from bottom to end of buffer or bottom to top of buffer
                     if (chunks1top > chunks1bot)
@@ -194,6 +197,7 @@ int main(int argc, char **argv) {
                 // copy data to the circular buffer
                 while (dataidx < x && packetidx < packetSize)
                 {
+                    // std::cout << totalCount << ":"  << (int)data[dataidx] << " | ";
                     chunks2[chunks2top] = data[dataidx];
                     chunks2top = (chunks2top + 1) % maxChunkSize;
                     packetidx++;
@@ -236,6 +240,7 @@ int main(int argc, char **argv) {
                 // copy data to the start of the telemetry buffer
                 while (dataidx < x && packetidx < packetSize)
                 {
+                    // std::cout << totalCount << ":"  << data[dataidx] << " | ";
                     chunks3[chunks3top] = data[dataidx];
                     chunks3top = (chunks3top + 1) % maxChunkSize;
                     packetidx++;
