@@ -181,6 +181,10 @@ int main(int argc, char **argv) {
                     {
                         WriteFile(hPipe1, chunks1 + chunks1bot, maxChunkSize - chunks1bot, &dwWritten, NULL);
                         chunks1bot = 0;
+                        WriteFile(hPipe1, chunks1 + chunks1bot, chunks1top - chunks1bot, &dwWritten, NULL);
+
+                        // update bottom index
+                        chunks1bot = chunks1top;
                     }
 
                     source = 0;
@@ -223,6 +227,10 @@ int main(int argc, char **argv) {
                     {
                         WriteFile(hPipe2, chunks2 + chunks2bot, maxChunkSize - chunks2bot, &dwWritten, NULL);
                         chunks2bot = 0;
+                        WriteFile(hPipe2, chunks2 + chunks2bot, chunks2top - chunks2bot, &dwWritten, NULL);
+
+                        // update bottom index
+                        chunks2bot = chunks2top;
                     }
 
                     source = 0;
@@ -264,6 +272,10 @@ int main(int argc, char **argv) {
                     {
                         WriteFile(hPipe3, chunks3 + chunks3bot, maxChunkSize - chunks3bot, &dwWritten, NULL);
                         chunks3bot = 0;
+                        WriteFile(hPipe3, chunks3 + chunks3bot, chunks3top - chunks3bot, &dwWritten, NULL);
+
+                        // update bottom index
+                        chunks3bot = chunks3top;
                     }
 
                     source = 0;
