@@ -215,6 +215,9 @@ class APRSBody {
       this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)
         ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
         : "";
+      this.speed += 1;
+      //   console.log("SPEEEE");
+      // console.log(this.speed);
       this.alt = body.match(/(?<=A=)-?[0-9]+/g)
         ? body.match(/(?<=A=)-?[0-9]+/g)[0]
         : "";

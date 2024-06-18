@@ -124,12 +124,16 @@ int main(int argc, char **argv) {
 
             // read the single byte
             if (source != 0 && dataidx < x) {
-                if (source == 1)
+                if (source == 1) {
                     WriteFile(hPipe1, data + dataidx, 1, &dwWritten, NULL);
+                    std::cout << data[dataidx];
+                }
                 else if (source == 2)
                     WriteFile(hPipe2, data + dataidx, 1, &dwWritten, NULL);
-                else if (source == 3)
+                else if (source == 3) {
                     WriteFile(hPipe3, data + dataidx, 1, &dwWritten, NULL);
+                    // std::cout << data[dataidx] << " ";
+                }
 
                 dataidx++;
                 source = 0;
