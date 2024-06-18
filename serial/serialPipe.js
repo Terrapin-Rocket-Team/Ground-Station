@@ -62,11 +62,10 @@ class Radio extends EventEmitter {
         const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
 
         pipeStream.on('data', (data) => {
-            this.chunks3 += data;
             console.log(data);
 
             // lookahead APRS message filtering
-            let resp = this.chunks3.match(/Source:.*?(?=(Source:|$))/g);
+            let resp = data.match(/Source:.*\0/g);
             console.log(`resp: ${resp}`);
             if (resp) {
                 try {
@@ -74,11 +73,11 @@ class Radio extends EventEmitter {
                     console.log("Telemetry received: " + resp[0]);
 
                     // remove the processed data
-                    this.chunks3 = this.chunks3.substring(resp[0].length);
+                    // this.chunks3 = this.chunks3.substring(resp[0].length);
                     this.emit("data", new APRSMessage(resp[0]));
                 }
                 catch (err) {
-                    this.emit("error", this.chunks3);
+                    this.emit("error", data);
                 }
             }
         });
