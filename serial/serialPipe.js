@@ -63,6 +63,7 @@ class Radio extends EventEmitter {
 
         pipeStream.on('data', (data) => {
             this.chunks3 += data;
+            console.log(data);
 
             // lookahead APRS message filtering
             let resp = this.chunks3.match(/Source:.*?(?=(Source:|$))/g);
@@ -77,7 +78,7 @@ class Radio extends EventEmitter {
                     this.emit("data", new APRSMessage(resp[0]));
                 }
                 catch (err) {
-                    this.emit("error", err.message);
+                    this.emit("error", this.chunks3);
                 }
             }
         });
