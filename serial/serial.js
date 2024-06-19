@@ -127,7 +127,9 @@ class Radio extends EventEmitter {
   }
 
   writeCommand(command) {
-
+    if (this.port != null && this.port.isOpen) {
+      this.port.write(command + "\n");
+    }
   }
 }
 
