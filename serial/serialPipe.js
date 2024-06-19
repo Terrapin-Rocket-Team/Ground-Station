@@ -103,7 +103,7 @@ class Radio extends EventEmitter {
         }
         // write the last byte (boolean)
         this.commandStream.write(command[command.length - 1]);
-        log.debug("Radio command sent: " + command);
+        console.log("Radio command sent: " + command);
     }
 
     isConnected() {
