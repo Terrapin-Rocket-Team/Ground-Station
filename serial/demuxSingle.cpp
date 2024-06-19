@@ -1,5 +1,7 @@
 #include "SerialPort.hpp"
 #include <string>
+#include <iostream>
+#include <fstream>
 
 char portPrefix[] = "\\\\.\\";
 
@@ -14,6 +16,9 @@ DWORD dwWritten;
 DWORD dwRead;
 
 int main(int argc, char **argv) {
+
+    // create a file in binary mode for debug writing
+    std::ofstream debugFile("debug.log", std::ios::binary);
 
     hPipeIn = CreateNamedPipe(TEXT("\\\\.\\pipe\\terpFcCommands"),
                             PIPE_ACCESS_INBOUND,
@@ -82,15 +87,15 @@ int main(int argc, char **argv) {
 
     char portBuf[1024];
 
-    while (!receivedPort) {
-        if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
-            portBuf[dwWritten] = '\0';
-            std::cout << "Received port: " << portBuf << std::endl;
-            receivedPort = true;
-        }
-    }
+    // while (!receivedPort) {
+    //     if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
+    //         portBuf[dwWritten] = '\0';
+    //         std::cout << "Received port: " << portBuf << std::endl;
+    //         receivedPort = true;
+    //     }
+    // }
 
-    SerialPort teensy(strcat(portPrefix, portBuf));
+    SerialPort teensy("\\\\.\\COM15");
 	if(teensy.isConnected()){
 		std::cout<<"Connection made"<<std::endl<<std::endl;
 	}
@@ -104,6 +109,7 @@ int main(int argc, char **argv) {
         // Sleep(500);
         // std::cout << data;
         // !WriteFile(hPipe1, data, MAX_DATA_LENGTH, &dwWritten, NULL);
+        debugFile.write((char *)data, x);
 
 
         // implement demuxer on data
@@ -115,18 +121,23 @@ int main(int argc, char **argv) {
 
             // get destination
             if (source == 0) {
+
                 if (data[dataidx] == 0x01) source = 1;
                 else if (data[dataidx] == 0x02) source = 2;
                 else if (data[dataidx] == 0xfe) source = 3;
+                else {
+                    std::cout << "Invalid source: " << data[dataidx] << std::endl;
+                }
 
                 dataidx++;
             }
 
             // read the single byte
             if (source != 0 && dataidx < x) {
+
+
                 if (source == 1) {
                     WriteFile(hPipe1, data + dataidx, 1, &dwWritten, NULL);
-                    std::cout << data[dataidx];
                 }
                 else if (source == 2)
                     WriteFile(hPipe2, data + dataidx, 1, &dwWritten, NULL);

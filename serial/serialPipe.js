@@ -51,7 +51,7 @@ class Radio extends EventEmitter {
     connect(port, baudRate) {
 
         const pipePath = '\\\\.\\pipe\\terpFcCommands';
-        this.commandStream = fs.createWriteStream(pipePath, { encoding: 'utf-8' });
+        this.commandStream = fs.createWriteStream(pipePath, { encoding: 'binary' });
 
         this.commandStream.on('error', (err) => {
             console.error("error writing command to named pipe", err.message);
@@ -62,10 +62,11 @@ class Radio extends EventEmitter {
         const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
 
         pipeStream.on('data', (data) => {
+            this.chunks3 += data;
             console.log(data);
 
             // lookahead APRS message filtering
-            let resp = data.match(/Source:.*\0/g);
+            let resp = this.chunks3.match(/Source:.*\0/g);
             console.log(`resp: ${resp}`);
             if (resp) {
                 try {
@@ -73,7 +74,7 @@ class Radio extends EventEmitter {
                     console.log("Telemetry received: " + resp[0]);
 
                     // remove the processed data
-                    // this.chunks3 = this.chunks3.substring(resp[0].length);
+                    this.chunks3 = "";
                     this.emit("data", new APRSMessage(resp[0]));
                 }
                 catch (err) {
