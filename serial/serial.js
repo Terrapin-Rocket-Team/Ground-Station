@@ -58,37 +58,37 @@ class Radio extends EventEmitter {
       //if the port is successfully opened resolve the promise
       this.port.on("open", () => {
         this.connected = true;
-        ffplay = spawn("ffplay", [
-          "-vf",
-          "transpose=1",
-          "-framerate",
-          "30/1",
-          "-",
-        ]);
-        ffplay.stdout.pipe(ffplayLog);
-        ffplay.stderr.pipe(ffplayLog);
+        // ffplay = spawn("ffplay", [
+        //   "-vf",
+        //   "transpose=1",
+        //   "-framerate",
+        //   "30/1",
+        //   "-",
+        // ]);
+        // ffplay.stdout.pipe(ffplayLog);
+        // ffplay.stderr.pipe(ffplayLog);
         res(1);
       });
 
-      let bytes = 0;
-      let lastBytes = new Date();
-      setInterval(() => {
-        let thisBytes = new Date();
-        process.stderr.write(
-          "Bitrate: " + (bytes * 8) / (thisBytes - lastBytes) + "\n"
-        );
-        lastBytes = thisBytes;
-        bytes = 0;
-      }, 1000);
+      // let bytes = 0;
+      // let lastBytes = new Date();
+      // setInterval(() => {
+      //   let thisBytes = new Date();
+      //   process.stderr.write(
+      //     "Bitrate: " + (bytes * 8) / (thisBytes - lastBytes) + "\n"
+      //   );
+      //   lastBytes = thisBytes;
+      //   bytes = 0;
+      // }, 1000);
 
       //get data from the serial port, and once a full message has been recieved, emit the data with the data event
       this.port.on("data", (data) => {
-        bytes += data.length;
-        process.stdout.write(data);
-        ffplay.stdin.write(data);
-        // this.chunks += data.toString();
-        // console.log(this.chunks);
-        if (this.chunks.match(/^s\r\nSource:.+\r\ne\r\n/g)) {
+        // bytes += data.length;
+        // process.stdout.write(data);
+        // ffplay.stdin.write(data);
+        this.chunks += data.toString();
+        if (this.chunks.match(/Source:.+\!e/g)) {
+          console.log(this.chunks);
           try {
             let msg = new APRSMessage(this.chunks.split("\r\n")[1]);
             this.emit("data", msg);
