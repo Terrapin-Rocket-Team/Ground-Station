@@ -12,6 +12,9 @@ window.onload = () => {
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();
   });
+  document.getElementById("radio-command-open").addEventListener("click", () => {
+    api.openCommand();
+  });
 
   //video controls setup
   let config, videoControls;

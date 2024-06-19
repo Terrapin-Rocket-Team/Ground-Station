@@ -15,6 +15,7 @@ let mainWin,
   videoWin,
   videoStreams = [],
   config,
+  commandWin,
   cacheMeta,
   closed,
   csvCreated,
@@ -196,6 +197,7 @@ const createDebug = () => {
     if (config.noGUI) {
       if (mainWin) mainWin.close();
       if (videoWin) videoWin.close();
+      if (commandWin) commandWin.close();
     }
   });
 
@@ -203,6 +205,39 @@ const createDebug = () => {
     debugWin = null;
   });
   log.debug("Debug window created");
+};
+
+//creates the command electron window
+const createCommand = () => {
+  const width = 600,
+    height = 400;
+  const iconSuffix =
+    process.platform === "win32"
+      ? ".ico"
+      : process.platform === "darwin"
+      ? ".icns"
+      : ".png";
+
+  commandWin = new BrowserWindow({
+    width: width,
+    height: height,
+    resizable: false,
+    autoHideMenuBar: true,
+    icon: "assets/logo" + iconSuffix,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+  });
+
+  commandWin.loadFile('serial/popup.html');
+
+  log.debug("Command window created");
+
+  commandWin.on('closed', () => {
+    commandWin = null;
+  });
 };
 
 //creates the debug electron window
@@ -266,6 +301,7 @@ const createVideo = () => {
 };
 
 //tells electron to ignore OS level display scaling
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
@@ -317,6 +353,19 @@ ipcMain.on("minimize", (event, win) => {
   }
 });
 
+ipcMain.on('open-popup', () => {
+  const popupWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  popupWindow.loadFile('popup.html');
+});
+
 ipcMain.on("fullscreen", (event, win, isFullscreen) => {
   if (win === "main") {
     mainWin.setFullScreen(isFullscreen);
@@ -358,6 +407,10 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       });
     }
   }
+
+  //if commandWin exists close it
+  if (commandWin) commandWin.close();
+
   //handle reloading the video window separately
   if (win === "video") {
     if (videoWin) videoWin.webContents.reloadIgnoringCache();
@@ -395,6 +448,19 @@ ipcMain.on("open-gui", (event, args) => {
 ipcMain.on("open-debug", (event, args) => {
   log.debug("Debug window opened from main");
   if (!debugWin) createDebug();
+});
+
+ipcMain.on("radio-command", (event, args) => {
+  log.debug("Sending radio command");
+  if (!commandWin) createCommand();
+});
+
+ipcMain.on("radio-command-sent", (event, command) => {
+  for (let i = 0; i < command.length; i++) {
+    if (command[i] === "") command[i] = -1;
+  }
+  radio.writeCommand(command);
+  if (commandWin) commandWin.close();
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
@@ -626,7 +692,7 @@ radio.on("data", (data) => {
   }
   log.info(data.toString());
   if (mainWin) mainWin.webContents.send("data", data);
-  if (videoWin) videoWin.webContents.send("data", aprsMsg);
+  if (videoWin) videoWin.webContents.send("data", data);
   try {
     if (!csvCreated) {
       if (!fs.existsSync("./data")) fs.mkdirSync("./data");
@@ -638,6 +704,14 @@ radio.on("data", (data) => {
   } catch (err) {
     log.err('Error writing data: "' + err.message + '"');
   }
+});
+
+radio.on("video1chunk", () => {
+  if (videoStreams[0]) videoStreams[0].i._read(1250);
+});
+
+radio.on("video2chunk", () => {
+  if (videoStreams[1]) videoStreams[1].i._read(1250)
 });
 
 radio.on("error", (message) => {
@@ -705,7 +779,6 @@ if (config.debug) {
     }
     if (config.video) {
       //test to see if first video exists
-      if (fs.existsSync("./video0.av1")) {
         //create new video source from file
         let vs = new FileStreamSource("./video0.av1", {
           resolution: { width: 640, height: 832 },
@@ -716,13 +789,12 @@ if (config.debug) {
         //store for later
         videoStreams.push(vs);
         //start the video
-        vs.startOutput();
+        // vs.startOutput();
       } else {
         log.warn("Could not find video0.av1");
       }
       //test to see if second video exists
-      if (fs.existsSync("./video1.av1")) {
-        //create new video source from file
+      //create new video source from file
         let vs = new FileStreamSource("./video1.av1", {
           resolution: { width: 640, height: 832 },
           framerate: 30,
@@ -732,10 +804,7 @@ if (config.debug) {
         //store for later
         videoStreams.push(vs);
         //start the video
-        vs.startOutput();
-      } else {
-        log.warn("Could not find video1.av1");
-      }
-    }
-  }, 1000);
+        // vs.startOutput();
+
+    }, 1000);
 }

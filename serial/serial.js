@@ -125,6 +125,10 @@ class Radio extends EventEmitter {
       this.port.close();
     }
   }
+
+  writeCommand(command) {
+
+  }
 }
 
 const radio = new Radio();

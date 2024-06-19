@@ -423,7 +423,7 @@ span#apogee-cont {
   display: grid;
   width: 100%;
   height: 100%;
-  grid-template-rows: 24% 26% 26% 19% 5%;
+  grid-template-rows: 24% 24% 24% 24% 4%;
   padding: 2vh 1vw;
 }
 
