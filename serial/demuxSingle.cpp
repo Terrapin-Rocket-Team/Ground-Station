@@ -87,15 +87,15 @@ int main(int argc, char **argv) {
 
     char portBuf[1024];
 
-    // while (!receivedPort) {
-    //     if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
-    //         portBuf[dwWritten] = '\0';
-    //         std::cout << "Received port: " << portBuf << std::endl;
-    //         receivedPort = true;
-    //     }
-    // }
+    while (!receivedPort) {
+        if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
+            portBuf[dwWritten] = '\0';
+            std::cout << "Received port: " << portBuf << std::endl;
+            receivedPort = true;
+        }
+    }
 
-    SerialPort teensy("\\\\.\\COM15");
+    SerialPort teensy(strcat(portPrefix, portBuf));
 	if(teensy.isConnected()){
 		std::cout<<"Connection made"<<std::endl<<std::endl;
 	}
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
         // Sleep(500);
         // std::cout << data;
         // !WriteFile(hPipe1, data, MAX_DATA_LENGTH, &dwWritten, NULL);
-        debugFile.write((char *)data, x);
+        // debugFile.write((char *)data, x);
 
 
         // implement demuxer on data
