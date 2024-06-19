@@ -358,6 +358,7 @@ ipcMain.on("reload", (event, win, keepSettings) => {
         }
       });
     }
+    radio.reload();
   }
   //handle reloading the video window separately
   if (win === "video") {

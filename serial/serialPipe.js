@@ -105,6 +105,16 @@ class Radio extends EventEmitter {
         if (this.port != null && this.port.isOpen) {
             this.port.close();
         }
+        this.cppApp.kill('SIGINT');
+    }
+
+    reload() {
+        //logic for starting the cpp program 
+        this.cppApp = spawn('./serial/main.exe');
+
+        this.cppApp.stdout.on('data', (data) => {
+            console.log(`demux stdout: ${data}`);
+        });
     }
 }
 
