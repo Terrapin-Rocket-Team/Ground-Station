@@ -5,7 +5,7 @@
 
 char portPrefix[] = "\\\\.\\";
 
-//g++ um2.cpp SerialPort.cpp -lgdi32 -o main.exe
+//g++ demuxSingle.cpp SerialPort.cpp -lgdi32 -o main.exe
 
 byte data[MAX_DATA_LENGTH];
 HANDLE hPipe1;

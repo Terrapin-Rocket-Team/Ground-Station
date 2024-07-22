@@ -2,6 +2,9 @@
 #include <iostream>
 #include <fstream>
 
+//g++ demuxFile.cpp -lgdi32 -o main.exe
+
+
 const char *fileName = "mux.bin"; // Replace with your actual file name
 
 byte data[2048];

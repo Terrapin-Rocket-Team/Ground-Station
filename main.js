@@ -458,7 +458,7 @@ ipcMain.on("radio-command", (event, args) => {
 
 ipcMain.on("radio-command-sent", (event, command) => {
   for (let i = 0; i < command.length; i++) {
-    if (command[i] === "") command[i] = -1;
+    if (command[i] === "") command[i] = 255;
   }
   radio.writeCommand(command);
   if (commandWin) commandWin.close();
