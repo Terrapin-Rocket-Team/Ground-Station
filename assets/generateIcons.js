@@ -1,5 +1,5 @@
 const { Icns, IcnsImage } = require("@fiahfy/icns");
-const { convert } = require("convert-svg-to-png");
+const render = require("svg-render");
 const pngico = require("png-to-ico");
 const fs = require("fs");
 const path = require("path");
@@ -38,7 +38,8 @@ const path = require("path");
         "logo" + size + "x" + size + ".png"
       );
 
-      let currentPNG = await convert(logoSVG, {
+      let currentPNG = await render({
+        buffer: logoSVG,
         height: size,
         width: size,
       });
