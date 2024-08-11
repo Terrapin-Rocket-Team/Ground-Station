@@ -50,6 +50,34 @@ class APRSMessage {
   }
 
   /**
+   * @returns {number} the orientation of the device as degrees about the Z axis
+   */
+  getOrientationZ() {
+    return parseInt(this.body.orientationZ);
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the Y axis
+   * */
+  getOrientationY() {
+    return parseInt(this.body.orientationY);
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the X axis
+   * */
+  getOrientationX() {
+    return parseInt(this.body.orientationX);
+  }
+
+  /**
+   * @returns {string} the flags of the device
+   * */
+  getFlags() {
+    return this.body.flags;
+  }
+
+  /**
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {
@@ -167,6 +195,10 @@ class APRSBody {
       this.speed = body.speed;
       this.alt = body.alt;
       this.stage = body.stage;
+      this.orientationZ = body.orientationZ;
+      this.orientationY = body.orientationY;
+      this.orientationX = body.orientationX;
+      this.flags = body.flags;
       this.t0 = body.t0;
       this.t0Date = this.dateFromT0(this.t0);
     }
@@ -183,6 +215,9 @@ class APRSBody {
       this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)
         ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
         : "";
+      this.speed += 1;
+      //   console.log("SPEEEE");
+      // console.log(this.speed);
       this.alt = body.match(/(?<=A=)-?[0-9]+/g)
         ? body.match(/(?<=A=)-?[0-9]+/g)[0]
         : "";
@@ -192,9 +227,23 @@ class APRSBody {
       this.t0 = body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)
         ? body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0]
         : "";
+      this.orientationZ = body.match(/(?<=\/)[0-9]{3}(?=\/)/g)
+        ? body.match(/(?<=\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.orientationY = body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.orientationX = body.match(
+        /(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g
+      )
+        ? body.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.flags = body.match(/(?<=\/)[A-Z0-9]+$/g)
+        ? body.match(/(?<=\/)[A-Z0-9]+$/g)[0]
+        : "";
 
       // only want to have to do this once
-      this.t0Date = this.dateFromT0(this.t0);
+      this.t0Date = new Date();
     }
   }
   /**
@@ -224,6 +273,18 @@ class APRSBody {
         : "",
       stage: rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)
         ? rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)[0]
+        : "",
+      orientationZ: rawBody.match(/(?<=\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      orientationY: rawBody.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      orientationX: rawBody.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      flags: rawBody.match(/(?<=\/)[A-Z0-9]+$/g)
+        ? rawBody.match(/(?<=\/)[A-Z0-9]+$/g)[0]
         : "",
       t0: time0,
       t0Date: this.dateFromT0(time0),
@@ -380,3 +441,5 @@ class APRSBody {
       .toString();
   }
 }
+
+module.exports = { APRSMessage, APRSBody };
