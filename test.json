@@ -1,1 +1,0 @@
-{"src":"KC3UTM","dest":"APRS","path":"WIDE1-1","type":"Position Without Timestamp","rssi":"-49","rawBody":"!0000.00N/0000.00E[360/000/A=000000/S0/00:00:00 !w!!!","body":{"lat":"0000.00N","long":"0000.00E","heading":"360","speed":"000","alt":"000000","stage":"S0","t0":"00:00:00"}}
