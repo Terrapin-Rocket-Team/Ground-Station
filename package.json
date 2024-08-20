@@ -18,18 +18,14 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
     "serialport": "^12.0.0",
-    "svg-render": "^2.0.0",
     "yuv-canvas": "^1.2.11"
   },
   "config": {
     "forge": {
       "packagerConfig": {
-        "icon": "assets/logo"
+        "icon": "build/icons/logo"
       },
       "makers": [
-        {
-          "name": "@electron-forge/maker-zip"
-        }
       ]
     }
   },
@@ -41,6 +37,7 @@
     "@electron-forge/maker-zip": "^6.4.2",
     "@fiahfy/icns": "^0.0.7",
     "electron": "^26.3.0",
+    "svg-render": "^2.0.0",
     "png-to-ico": "^2.1.8"
   }
 }

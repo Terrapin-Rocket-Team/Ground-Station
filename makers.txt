@@ -21,3 +21,8 @@
     "name": "Terp Rockets Ground Station"
   }
 }
+
+// zip
+{
+  "name": "@electron-forge/maker-zip"
+}

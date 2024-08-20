@@ -10,6 +10,8 @@ const { radio } = require("./serial/serialPipe");
 const { APRSMessage } = require("./serial/APRS");
 const { FileStreamSource } = require("./video/video-source");
 
+const iconPath = "build/icons";
+
 let mainWin,
   debugWin,
   videoWin,
@@ -117,7 +119,7 @@ const createWindow = () => {
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
-    icon: "assets/logo" + iconSuffix,
+    icon: path.join(iconPath, "logo" + iconSuffix),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -161,7 +163,7 @@ const createDebug = () => {
     height: height * config.debugScale,
     resizable: false,
     autoHideMenuBar: true,
-    icon: "assets/logo" + iconSuffix,
+    icon: path.join(iconPath, "logo" + iconSuffix),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -223,19 +225,19 @@ const createCommand = () => {
     height: height,
     resizable: false,
     autoHideMenuBar: true,
-    icon: "assets/logo" + iconSuffix,
+    icon: path.join(iconPath, "logo" + iconSuffix),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
     },
   });
 
-  commandWin.loadFile('serial/popup.html');
+  commandWin.loadFile("serial/popup.html");
 
   log.debug("Command window created");
 
-  commandWin.on('closed', () => {
+  commandWin.on("closed", () => {
     commandWin = null;
   });
 };
@@ -255,7 +257,7 @@ const createVideo = () => {
     height: height * config.debugScale,
     frame: false,
     autoHideMenuBar: true,
-    icon: "assets/logo" + iconSuffix,
+    icon: path.join(iconPath, "logo" + iconSuffix),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -301,7 +303,7 @@ const createVideo = () => {
 };
 
 //tells electron to ignore OS level display scaling
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
@@ -353,17 +355,17 @@ ipcMain.on("minimize", (event, win) => {
   }
 });
 
-ipcMain.on('open-popup', () => {
+ipcMain.on("open-popup", () => {
   const popupWindow = new BrowserWindow({
     width: 400,
     height: 300,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
-  popupWindow.loadFile('popup.html');
+  popupWindow.loadFile("popup.html");
 });
 
 ipcMain.on("fullscreen", (event, win, isFullscreen) => {
@@ -712,7 +714,7 @@ radio.on("video1chunk", () => {
 });
 
 radio.on("video2chunk", () => {
-  if (videoStreams[1]) videoStreams[1].i._read(1250)
+  if (videoStreams[1]) videoStreams[1].i._read(1250);
 });
 
 radio.on("error", (message) => {
@@ -803,7 +805,6 @@ if (config.debug) {
       videoStreams.push(vs2);
       //start the video
       vs2.startOutput();
-      
     }
   }, 1000);
 }
