@@ -40,7 +40,7 @@ body {
 
 #top-left {
   float: left;
-  width: 50%;
+  width: 30%;
   height: 100%;
   display: flex;
   justify-content: flex-start;
@@ -55,19 +55,21 @@ body {
 
 #top-right {
   float: right;
-  width: 50%;
+  width: 70%;
   height: 100%;
   display: flex;
   justify-content: flex-end;
   align-items: center;
 }
 
-#serial-drop {
+#serial-drop,
+#serial1-drop,
+#serial2-drop {
   margin-right: 1vw;
 }
 
 .dropdown {
-  padding: 0 1vw;
+  padding: 0 0.5vw;
   background-color: var(--top-bg);
   display: flex;
   align-items: center;
@@ -92,15 +94,23 @@ body {
   float: left;
   margin: 0;
   padding: 0;
-  padding-right: 2vw;
+  padding-right: 1vw;
 }
 
 .dropdown img {
-  position: absolute;
+  /* position: absolute;
   right: 0.7vw;
   margin: 0;
-  padding: 0;
+  padding: 0; */
   height: 2.5vh;
+}
+
+.dropdown .serial-connection {
+  float: left;
+  height: 2.5vh;
+  -webkit-user-drag: none;
+  margin-right: 1vw;
+  -webkit-app-region: no-drag;
 }
 
 .options {
@@ -136,7 +146,6 @@ body {
   cursor: pointer;
 }
 
-#serial-connection,
 #radio-connection,
 #recv-status {
   height: 2.5vh;
@@ -403,16 +412,166 @@ span#apogee-cont {
   margin-left: -4vw;
 }
 
-#stage {
+#left-panel {
   float: left;
   width: 18%;
   height: 100%;
   background-color: var(--main-bg);
+}
+
+#video-control {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: 24% 24% 24% 24% 4%;
+  padding: 2vh 1vw;
+}
+
+#video-control.hidden {
+  display: none;
+}
+
+.video-control-section {
+  font-size: 2vh;
+}
+
+.video-control-section button {
+  font-size: 1.5vh;
+  padding: 1vh 1vw;
+  margin: 0.5vh 1vw;
+  border: 5px solid #00cc00;
+  color: #00cc00;
+  font-weight: bold;
+  border-radius: 5px;
+  background-color: inherit;
+}
+
+.video-control-section button.inactive {
+  border: 5px solid #ff0000;
+  color: #ff0000;
+}
+
+.video-control-section button.selected {
+  border: 5px solid #ffbb00;
+  color: #ffbb00;
+}
+
+.video-control-section button:hover {
+  background-color: inherit;
+  cursor: unset;
+}
+
+.video-control-section button.inactive:hover {
+  background-color: #ff000033;
+  cursor: pointer;
+}
+
+.video-control-section button.selected:hover {
+  background-color: #ffbb0088;
+  cursor: pointer;
+}
+
+#video-window-control::before {
+  content: "Video Window Control";
+  display: block;
+  padding-bottom: 1vh;
+}
+
+#video-window-control button {
+  display: inline-block;
+}
+
+#reload-video {
+  width: calc(100% - 2vw);
+  border: 5px solid black;
+  color: black;
+}
+
+#reload-video:hover {
+  background-color: #00000033;
+  cursor: pointer;
+}
+
+#layout_two-video {
+  width: calc(45% - 2vw);
+}
+
+#layout_one-video {
+  width: calc(52% - 2vw);
+}
+
+#layout_telemetry-only {
+  width: calc(100% - 2vw);
+}
+
+#video-0-control::before {
+  content: "Video 0 Control";
+  display: block;
+  grid-column: 1 / 3;
+}
+
+#video-1-control::before {
+  content: "Video 1 Control";
+  display: block;
+  grid-column: 1 / 3;
+}
+
+#video-0-control,
+#video-1-control {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 20% 40% 40%;
+}
+
+#video-0-control button,
+#video-1-control button {
+  margin: 0 0.5vw 3vh 0.5vw;
+}
+
+#radio-control::before {
+  content: "Radio Control";
+  display: block;
+  padding-bottom: 1vh;
+}
+
+#radio-control button {
+  display: block;
+  width: calc(100% - 2vw);
+  margin-bottom: 1vh;
+  border: 5px solid black;
+  color: black;
+}
+
+#radio-control button:hover {
+  background-color: #00000033;
+  cursor: pointer;
+}
+
+#control-update {
+  border: 5px solid black;
+  border-radius: 5px;
+  background-color: inherit;
+  font-weight: bold;
+  font-size: 1.7vh;
+}
+
+#control-update:hover {
+  background-color: #00000033;
+  cursor: pointer;
+}
+
+#stage {
+  height: 100%;
+  width: 100%;
   display: flex;
   justify-content: space-evenly;
   align-items: center;
   flex-direction: column;
   position: relative;
+}
+
+#stage.hidden {
+  display: none;
 }
 
 .stage {
@@ -449,6 +608,7 @@ progress::-webkit-progress-bar {
 
 progress::-webkit-progress-value {
   background-color: #ca0000;
+  transition: width 0.5s;
   /*
   border-radius: 0 5px 5px 0;
   background: linear-gradient(

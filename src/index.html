@@ -35,24 +35,25 @@
           id="recv-status"
           title="No Message"
         />
-        <!--Custom dropdown-->
-        <div class="dropdown inactive" id="serial-drop">
-          <span id="serial-selected">Select Port</span>
-          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
-          <div class="options" id="serial-options"></div>
-        </div>
-        <img
-          src="./images/serial_disconnected.svg"
-          alt="No Connection"
-          id="serial-connection"
-          title="Serial Disconnected"
-        />
         <img
           src="./images/no_signal.svg"
           alt="No Connection"
           id="radio-connection"
           title="No Signal"
         />
+        <!--Custom dropdowns-->
+        <div class="dropdown inactive" id="serial-drop">
+          <img
+            src="./images/serial_disconnected.svg"
+            alt="No Connection"
+            id="serial-connection"
+            class="serial-connection"
+            title="Serial Disconnected"
+          />
+          <span id="serial-selected">Select Port</span>
+          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
+          <div class="options" id="serial-options"></div>
+        </div>
         <button id="debug" class="top-button" title="Debug Window">
           <img src="./images/debug.svg" alt="Debug" />
         </button>
@@ -60,7 +61,7 @@
           href="./settings/settings.html"
           id="settings"
           class="top-button"
-          title="Work in Progress"
+          title="Settings"
           ><img src="./images/settings.svg" alt="Settings"
         /></a>
         <button id="reload" class="top-button" title="Reload">
@@ -165,14 +166,14 @@
             data-value="0"
             data-value-text="&#8212;"
             data-min-value="0"
-            data-max-value="5"
-            data-major-ticks="0,1,2,3,4,5"
+            data-max-value="10"
+            data-major-ticks="0,2,4,6,8,10"
             data-minor-ticks="5"
             data-stroke-ticks="false"
             data-highlights='[
-              { "from": 0, "to": 3, "color": "rgba(0,255,0,.15)" },
-              { "from": 3, "to": 4, "color": "rgba(255,255,0,.15)" },
-              { "from": 4, "to": 5, "color": "rgba(255,0,0,.15)" }
+              { "from": 6, "to": 7, "color": "rgba(0,255,0,.15)" },
+              { "from": 7, "to": 8, "color": "rgba(255,255,0,.15)" },
+              { "from": 9, "to": 10, "color": "rgba(255,0,0,.15)" }
           ]'
             data-color-plate="#fff"
             data-color-major-ticks="#222"
@@ -250,15 +251,47 @@
           >
         </div>
       </div>
-      <!--Stage panel-->
-      <div id="stage">
-        <span id="s0" class="stage">On the Pad</span>
-        <span id="s1" class="stage">Powered Flight</span>
-        <span id="s2" class="stage">Coast</span>
-        <span id="s3" class="stage">Drogue Deploy</span>
-        <span id="s4" class="stage">Main Parachute</span>
-        <span id="s5" class="stage">Landed</span>
-        <progress id="stage-progress" value="0" max="100">0%</progress>
+      <!--Left panel-->
+      <div id="left-panel">
+        <div id="video-control" class="hidden">
+          <div id="video-window-control" class="video-control-section">
+            <button id="reload-video">Reload</button>
+            <button id="layout_two-video" class="layout">Full</button>
+            <button id="layout_one-video" class="layout inactive">
+              Partial
+            </button>
+            <button id="layout_telemetry-only" class="layout inactive">
+              Telemetry Only
+            </button>
+          </div>
+          <div id="video-0-control" class="video-control-section">
+            <button id="v0_live-video-0" class="v0 inactive">Input 0</button>
+            <button id="v0_live-video-1" class="v0 inactive">Input 1</button>
+            <button id="v0_charts" class="v0 inactive">Charts</button>
+            <button id="v0_none-0" class="v0">None</button>
+          </div>
+          <div id="video-1-control" class="video-control-section">
+            <button id="v1_live-video-0" class="v1 inactive">Input 0</button>
+            <button id="v1_live-video-1" class="v1 inactive">Input 1</button>
+            <button id="v1_charts" class="v1 inactive">Charts</button>
+            <button id="v1_none-1" class="v1">None</button>
+          </div>
+          <div id="radio-control" class="video-control-section">
+            <button id="reset-vi-0">Reset Input 0</button>
+            <button id="reset-vi-1">Reset Input 1</button>
+            <button id="radio-command-open">Send Command</button>
+          </div>
+          <button id="control-update">Update</button>
+        </div>
+        <div id="stage">
+          <span id="s0" class="stage">On the Pad</span>
+          <span id="s1" class="stage">Powered Flight</span>
+          <span id="s2" class="stage">Coast</span>
+          <span id="s3" class="stage">Drogue Deploy</span>
+          <span id="s4" class="stage">Main Parachute</span>
+          <span id="s5" class="stage">Landed</span>
+          <progress id="stage-progress" value="0" max="100">0%</progress>
+        </div>
       </div>
     </div>
     <!--3rd party libraries, must be loaded after rest of document-->
