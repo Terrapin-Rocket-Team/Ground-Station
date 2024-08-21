@@ -1,3 +1,3 @@
 let { radio } = require("./serial.js");
 
-radio.connect("COM4");
+radio.connect("COM12", 460800);

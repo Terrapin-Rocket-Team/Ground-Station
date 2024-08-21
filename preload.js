@@ -54,8 +54,20 @@ class API extends EventEmitter {
       this.emit("data", data);
     });
 
-    ipcRenderer.on("radio-close", (event, data) => {
-      this.emit("radio-close");
+    ipcRenderer.on("radio-close", (event, portPath) => {
+      this.emit("radio-close", portPath);
+    });
+
+    ipcRenderer.on("fullscreen-change", (event, change) => {
+      this.emit("fullscreen-change", change);
+    });
+
+    ipcRenderer.on("video-controls", (event, controls) => {
+      this.emit("video-controls", controls);
+    });
+
+    ipcRenderer.on("frame-ready", (event, frame) => {
+      this.emit("frame-ready", frame);
     });
 
     ipcRenderer.on("close", (event, data) => {
@@ -63,24 +75,32 @@ class API extends EventEmitter {
     }); // unused
 
     //app control
-    this.close = () => ipcRenderer.send("close");
-    this.minimize = () => ipcRenderer.send("minimize");
-    this.reload = () => ipcRenderer.send("reload");
+    this.close = (win) => ipcRenderer.send("close", win);
+    this.minimize = (win) => ipcRenderer.send("minimize", win);
+    this.fullscreen = (win, isFullscreen) =>
+      ipcRenderer.send("fullscreen", win, isFullscreen);
+    this.reload = (win, keepSettings) =>
+      ipcRenderer.send("reload", win, keepSettings);
     this.devTools = () => ipcRenderer.send("dev-tools");
     this.openDebug = () => ipcRenderer.send("open-debug");
     this.openGUI = () => ipcRenderer.send("open-gui");
+    this.openCommand = () => ipcRenderer.send("radio-command");
+    this.sendCommand = (command) => ipcRenderer.send("radio-command-sent", command);
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
     this.closePort = () => ipcRenderer.send("close-port");
     this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
+    this.updateVideoControls = (controls) =>
+      ipcRenderer.send("video-controls", controls);
 
     //getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
+    this.getVideo = () => ipcRenderer.invoke("get-video");
 
     //setters
-    this.setPort = (port) => ipcRenderer.invoke("set-port", port);
+    this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
   }
 }

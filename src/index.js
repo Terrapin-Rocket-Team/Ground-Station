@@ -1,16 +1,157 @@
 window.onload = () => {
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
-    api.reload();
+    api.reload("main");
   });
   document.getElementById("minimize").addEventListener("click", () => {
-    api.minimize();
+    api.minimize("main");
   });
   document.getElementById("close").addEventListener("click", () => {
-    api.close();
+    api.close("main");
   });
   document.getElementById("debug").addEventListener("click", () => {
     api.openDebug();
+  });
+  document.getElementById("radio-command-open").addEventListener("click", () => {
+    api.openCommand();
+  });
+
+  //video controls setup
+  let config, videoControls;
+  const layoutButtons = document.getElementsByClassName("layout"),
+    v0Buttons = document.getElementsByClassName("v0"),
+    v1Buttons = document.getElementsByClassName("v1");
+
+  api.getSettings().then((c) => {
+    config = c;
+    if (config.video) {
+      videoControls = {
+        layout: "two-video",
+        video0: "none-0",
+        video1: "none-1",
+      };
+
+      //hide the stage panel if in video mode
+      document.getElementById("video-control").className = "";
+      document.getElementById("stage").className = "hidden";
+
+      //button event handlers
+
+      //reload the video window, keeping settings
+      document.getElementById("reload-video").addEventListener("click", () => {
+        api.reload("video", true);
+      });
+
+      // insert code for radios here
+
+      // layout control
+      const setupLayoutButton = (id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("click", () => {
+          videoControls.layout = id.split("_")[1];
+          if (el.className != "layout") el.className = "layout selected";
+          for (let i = 0; i < layoutButtons.length; i++) {
+            if (layoutButtons[i].id != id)
+              layoutButtons[i].className = "layout inactive";
+          }
+          if (videoControls.layout === "telemetry-only") {
+            videoControlButtonCallback("v0_charts");
+          }
+        });
+      };
+
+      //callback for video control buttons, separated so it can be called without faking a click
+      function videoControlButtonCallback(id, el) {
+        let arr = id.split("_");
+        let elClass = arr[0];
+        let buttons;
+        if (!el) el = document.getElementById(id);
+        if (elClass === "v0") {
+          if (arr[1] === videoControls.video1 && arr[1] !== "none")
+            videoControlButtonCallback("v1_none-1");
+          videoControls.video0 = arr[1];
+          buttons = v0Buttons;
+        }
+        if (elClass === "v1") {
+          if (arr[1] === videoControls.video0 && arr[1] !== "none")
+            videoControlButtonCallback("v0_none-0");
+          videoControls.video1 = arr[1];
+          buttons = v1Buttons;
+        }
+        if (buttons) {
+          if (el.className != elClass) el.className = elClass + " selected";
+          for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i].id != id)
+              buttons[i].className = elClass + " inactive";
+          }
+        }
+      }
+
+      //setup buttons to control which video(s) are showing
+      const setupVideoControlButton = (id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("click", () => {
+          let cl = id.split("_")[0];
+          if (
+            cl !== "v0" ||
+            (cl === "v0" && videoControls.layout !== "telemetry-only")
+          )
+            videoControlButtonCallback(id, el);
+        });
+      };
+
+      //set up all the buttons
+      setupLayoutButton("layout_two-video");
+      setupLayoutButton("layout_one-video");
+      setupLayoutButton("layout_telemetry-only");
+
+      setupVideoControlButton("v0_live-video-0");
+      setupVideoControlButton("v0_live-video-1");
+      setupVideoControlButton("v0_charts");
+      setupVideoControlButton("v0_none-0");
+
+      setupVideoControlButton("v1_live-video-0");
+      setupVideoControlButton("v1_live-video-1");
+      setupVideoControlButton("v1_charts");
+      setupVideoControlButton("v1_none-1");
+
+      //update button sends new control config to videoWin through main
+      document
+        .getElementById("control-update")
+        .addEventListener("click", () => {
+          api.updateVideoControls(videoControls);
+          document.getElementById("layout_" + videoControls.layout).className =
+            "layout";
+          document.getElementById("v0_" + videoControls.video0).className =
+            "v0";
+          document.getElementById("v1_" + videoControls.video1).className =
+            "v1";
+        });
+    }
+  });
+
+  //update the video controls here if main gives us a new config
+  api.on("video-controls", (controls) => {
+    videoControls = controls;
+    document.getElementById("layout_" + videoControls.layout).className =
+      "layout";
+    document.getElementById("v0_" + videoControls.video0).className = "v0";
+    document.getElementById("v1_" + videoControls.video1).className = "v1";
+
+    for (let i = 0; i < layoutButtons.length; i++) {
+      if (layoutButtons[i].id != "layout_" + videoControls.layout)
+        layoutButtons[i].className = "layout inactive";
+    }
+
+    for (let i = 0; i < v0Buttons.length; i++) {
+      if (v0Buttons[i].id != "v0_" + videoControls.video0)
+        v0Buttons[i].className = "v0 inactive";
+    }
+
+    for (let i = 0; i < v1Buttons.length; i++) {
+      if (v1Buttons[i].id != "v1_" + videoControls.video1)
+        v1Buttons[i].className = "v1 inactive";
+    }
   });
 
   let switcherState = 0;
@@ -48,35 +189,40 @@ window.onload = () => {
   let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
   let spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
 
-  //custom dropdown listener
-  document.getElementById("serial-drop").addEventListener("click", () => {
-    const drop = document.getElementById("serial-drop");
-    const options = document.getElementById("serial-options");
-    if (drop.classList.contains("active")) {
-      options.style.display = "none";
-      document
-        .getElementById("serial-arrow")
-        .setAttribute("src", "./images/arrow_right.svg");
-    } else {
-      options.style.display = "block";
-      getAvailPorts();
-      document
-        .getElementById("serial-arrow")
-        .setAttribute("src", "./images/arrow_down.svg");
-    }
-    drop.classList.toggle("active");
-    drop.classList.toggle("inactive");
-    options.classList.toggle("active");
-  });
+  let portsInUse = [];
+  //custom dropdown setup
+  const setupDropdown = (idPrefix) => {
+    document
+      .getElementById(idPrefix + "-drop")
+      .addEventListener("click", () => {
+        const drop = document.getElementById(idPrefix + "-drop");
+        const options = document.getElementById(idPrefix + "-options");
+        if (drop.classList.contains("active")) {
+          options.style.display = "none";
+          document
+            .getElementById(idPrefix + "-arrow")
+            .setAttribute("src", "./images/arrow_right.svg");
+        } else {
+          options.style.display = "block";
+          getAvailPorts(idPrefix);
+          document
+            .getElementById(idPrefix + "-arrow")
+            .setAttribute("src", "./images/arrow_down.svg");
+        }
+        drop.classList.toggle("active");
+        drop.classList.toggle("inactive");
+        options.classList.toggle("active");
+      });
+  };
 
   //adds available ports to the custom dropdown
-  const getAvailPorts = () => {
+  const getAvailPorts = (idPrefix) => {
     api.getPorts().then((ports) => {
-      const options = document.getElementById("serial-options");
+      const options = document.getElementById(idPrefix + "-options");
       while (options.childElementCount > 0) {
         options.removeChild(options.firstChild);
       }
-      const selected = document.getElementById("serial-selected");
+      const selected = document.getElementById(idPrefix + "-selected");
       if (ports.length === 0) {
         const span = document.createElement("SPAN");
         span.className = "serial";
@@ -87,29 +233,32 @@ window.onload = () => {
         options.appendChild(span);
       } else {
         ports.forEach((port) => {
-          const span = document.createElement("SPAN");
-          span.className = "serial";
-          span.textContent = port.path;
-          span.addEventListener("click", () => {
-            api.setPort(port.path).then((success) => {
-              const img = document.getElementById("serial-connection");
-              if (success) {
-                selected.textContent = port.path;
-                img.setAttribute("src", "./images/serial_connected.svg");
-                img.setAttribute("title", "Serial Connected");
-              } else {
-                img.setAttribute("src", "./images/serial_disconnected.svg");
-                img.setAttribute("title", "Connection Error");
-              }
+          if (!portsInUse.some((el) => el.path === port.path)) {
+            const span = document.createElement("SPAN");
+            span.className = "serial";
+            span.textContent = port.path;
+            span.addEventListener("click", () => {
+              api.setPort({ idPrefix, path: port.path }).then((success) => {
+                const img = document.getElementById(idPrefix + "-connection");
+                if (success) {
+                  portsInUse.push({ idPrefix, path: port.path });
+                  selected.textContent = port.path;
+                  img.setAttribute("src", "./images/serial_connected.svg");
+                  img.setAttribute("title", "Serial Connected");
+                } else {
+                  img.setAttribute("src", "./images/serial_disconnected.svg");
+                  img.setAttribute("title", "Connection Error");
+                }
+              });
             });
-          });
-          options.appendChild(span);
+            options.appendChild(span);
+          }
         });
       }
     });
   };
 
-  getAvailPorts();
+  setupDropdown("serial");
 
   //set gauge.js gauge sizing
   let alt = document.getElementById("altitude");
@@ -166,26 +315,26 @@ window.onload = () => {
 
     //update signal strength
     let ss = msg.getSignalStrength();
-    const serialEl = document.getElementById("radio-connection");
+    const connectionEl = document.getElementById("radio-connection");
     if (ss === "High") {
-      serialEl.setAttribute("src", "./images/signal_strong.svg");
-      serialEl.setAttribute("alt", "Signal Strong");
-      serialEl.title = "Signal Strong";
+      connectionEl.setAttribute("src", "./images/signal_strong.svg");
+      connectionEl.setAttribute("alt", "Signal Strong");
+      connectionEl.title = "Signal Strong";
     }
     if (ss === "Med") {
-      serialEl.setAttribute("src", "./images/signal_mid.svg");
-      serialEl.setAttribute("alt", "Signal Medium");
-      serialEl.title = "Signal Medium";
+      connectionEl.setAttribute("src", "./images/signal_mid.svg");
+      connectionEl.setAttribute("alt", "Signal Medium");
+      connectionEl.title = "Signal Medium";
     }
     if (ss === "Low") {
-      serialEl.setAttribute("src", "./images/signal_weak.svg");
-      serialEl.setAttribute("alt", "Signal Weak");
-      serialEl.title = "Signal Weak";
+      connectionEl.setAttribute("src", "./images/signal_weak.svg");
+      connectionEl.setAttribute("alt", "Signal Weak");
+      connectionEl.title = "Signal Weak";
     }
     if (ss === "None") {
-      serialEl.setAttribute("src", "./images/no_signal.svg");
-      serialEl.setAttribute("alt", "No Signal");
-      serialEl.title = "No Signal";
+      connectionEl.setAttribute("src", "./images/no_signal.svg");
+      connectionEl.setAttribute("alt", "No Signal");
+      connectionEl.title = "No Signal";
     }
 
     //set T+
@@ -364,15 +513,13 @@ window.onload = () => {
   });
 
   //update UI if serial connection is lost
-  api.on("radio-close", () => {
-    const img = document.getElementById("serial-connection");
-    img.setAttribute("src", "./images/serial_disconnected.svg");
-    img.setAttribute("title", "Connection Error");
-
-    const serialEl = document.getElementById("radio-connection");
-    serialEl.setAttribute("src", "./images/no_signal.svg");
-    serialEl.setAttribute("alt", "No Signal");
-    serialEl.title = "No Signal";
+  api.on("radio-close", (portPath) => {
+    let connection = portsInUse.find((el) => el.path === portPath);
+    if (connection) {
+      const img = document.getElementById(connection.idPrefix + "-connection");
+      img.setAttribute("src", "./images/serial_disconnected.svg");
+      img.setAttribute("title", "Connection Error");
+    }
   });
 };
 

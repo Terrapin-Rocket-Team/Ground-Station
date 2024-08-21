@@ -27,6 +27,57 @@ class APRSMessage {
   }
 
   /**
+   * Creates an APRSMessage from a single line of a CSV data file
+   * @param {string} csvData a single line from a CSV file produced by APRSMessage.toCSV()
+   * @returns {APRSMessage} the APRSMessage corresponding to the input line
+   */
+  static fromCSV(csvData) {
+    let csvArr = csvData.split(",");
+    return new APRSMessage(
+      "Source:" +
+        csvArr[0] +
+        ",Destination:" +
+        csvArr[1] +
+        ",Path:" +
+        csvArr[2] +
+        ",Type:" +
+        csvArr[3] +
+        ",Data:" +
+        csvArr[4] +
+        ",RSSI:" +
+        csvArr.at(-1)
+    );
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the Z axis
+   */
+  getOrientationZ() {
+    return parseInt(this.body.orientationZ);
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the Y axis
+   * */
+  getOrientationY() {
+    return parseInt(this.body.orientationY);
+  }
+
+  /**
+   * @returns {number} the orientation of the device as degrees about the X axis
+   * */
+  getOrientationX() {
+    return parseInt(this.body.orientationX);
+  }
+
+  /**
+   * @returns {string} the flags of the device
+   * */
+  getFlags() {
+    return this.body.flags;
+  }
+
+  /**
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {
@@ -121,7 +172,6 @@ class APRSMessage {
       csv =
         "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0,Signal Strength\r\n";
     }
-    // console.log(this.rawBody);
     csv += `${this.src},${this.dest},${this.path},${this.type},${
       this.rawBody
     },${this.body.toCSV()},${this.rssi}\r\n`;
@@ -144,6 +194,10 @@ class APRSBody {
       this.speed = body.speed;
       this.alt = body.alt;
       this.stage = body.stage;
+      this.orientationZ = body.orientationZ;
+      this.orientationY = body.orientationY;
+      this.orientationX = body.orientationX;
+      this.flags = body.flags;
       this.t0 = body.t0;
       this.t0Date = this.dateFromT0(this.t0);
     }
@@ -160,6 +214,7 @@ class APRSBody {
       this.speed = body.match(/(?<=\/)[^\/\[]+(?=\/)/g)
         ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
         : "";
+      this.speed += 1;
       this.alt = body.match(/(?<=A=)-?[0-9]+/g)
         ? body.match(/(?<=A=)-?[0-9]+/g)[0]
         : "";
@@ -169,9 +224,23 @@ class APRSBody {
       this.t0 = body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)
         ? body.match(/(?<=\/)[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/g)[0]
         : "";
+      this.orientationZ = body.match(/(?<=\/)[0-9]{3}(?=\/)/g)
+        ? body.match(/(?<=\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.orientationY = body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.orientationX = body.match(
+        /(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g
+      )
+        ? body.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "";
+      this.flags = body.match(/(?<=\/)[A-Z0-9]+$/g)
+        ? body.match(/(?<=\/)[A-Z0-9]+$/g)[0]
+        : "";
 
       // only want to have to do this once
-      this.t0Date = this.dateFromT0(this.t0);
+      this.t0Date = new Date();
     }
   }
   /**
@@ -201,6 +270,18 @@ class APRSBody {
         : "",
       stage: rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)
         ? rawBody.match(/(?<=\/)S[0-9]+(?=\/)/g)[0]
+        : "",
+      orientationZ: rawBody.match(/(?<=\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      orientationY: rawBody.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      orientationX: rawBody.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+        ? rawBody.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
+        : "",
+      flags: rawBody.match(/(?<=\/)[A-Z0-9]+$/g)
+        ? rawBody.match(/(?<=\/)[A-Z0-9]+$/g)[0]
         : "",
       t0: time0,
       t0Date: this.dateFromT0(time0),
