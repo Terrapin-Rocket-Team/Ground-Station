@@ -53,28 +53,28 @@ class APRSMessage {
    * @returns {number} the orientation of the device as degrees about the Z axis
    */
   getOrientationZ() {
-    return parseInt(this.body.orientationZ)
+    return parseInt(this.body.orientationZ);
   }
 
   /**
    * @returns {number} the orientation of the device as degrees about the Y axis
    * */
   getOrientationY() {
-    return parseInt(this.body.orientationY)
+    return parseInt(this.body.orientationY);
   }
 
   /**
    * @returns {number} the orientation of the device as degrees about the X axis
-    * */
+   * */
   getOrientationX() {
-    return parseInt(this.body.orientationX)
+    return parseInt(this.body.orientationX);
   }
 
   /**
    * @returns {string} the flags of the device
    * */
   getFlags() {
-    return this.body.flags
+    return this.body.flags;
   }
 
   /**
@@ -172,7 +172,6 @@ class APRSMessage {
       csv =
         "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0,Signal Strength\r\n";
     }
-    // console.log(this.rawBody);
     csv += `${this.src},${this.dest},${this.path},${this.type},${
       this.rawBody
     },${this.body.toCSV()},${this.rssi}\r\n`;
@@ -195,10 +194,10 @@ class APRSBody {
       this.speed = body.speed;
       this.alt = body.alt;
       this.stage = body.stage;
-      this.orientationZ = body.orientationZ
-      this.orientationY = body.orientationY
-      this.orientationX = body.orientationX
-      this.flags = body.flags
+      this.orientationZ = body.orientationZ;
+      this.orientationY = body.orientationY;
+      this.orientationX = body.orientationX;
+      this.flags = body.flags;
       this.t0 = body.t0;
       this.t0Date = this.dateFromT0(this.t0);
     }
@@ -216,8 +215,6 @@ class APRSBody {
         ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
         : "";
       this.speed += 1;
-      //   console.log("SPEEEE");
-      // console.log(this.speed);
       this.alt = body.match(/(?<=A=)-?[0-9]+/g)
         ? body.match(/(?<=A=)-?[0-9]+/g)[0]
         : "";
@@ -233,7 +230,9 @@ class APRSBody {
       this.orientationY = body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
         ? body.match(/(?<=\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
         : "";
-      this.orientationX = body.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)
+      this.orientationX = body.match(
+        /(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g
+      )
         ? body.match(/(?<=\/[0-9]{3}\/[0-9]{3}\/)[0-9]{3}(?=\/)/g)[0]
         : "";
       this.flags = body.match(/(?<=\/)[A-Z0-9]+$/g)
