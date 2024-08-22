@@ -172,7 +172,6 @@ class APRSMessage {
       csv =
         "Source,Destination,Path,Type,Raw Body,Latitude,Longitude,Heading,Speed,Altitude,Stage,T0,Signal Strength\r\n";
     }
-    // console.log(this.rawBody);
     csv += `${this.src},${this.dest},${this.path},${this.type},${
       this.rawBody
     },${this.body.toCSV()},${this.rssi}\r\n`;
@@ -216,8 +215,6 @@ class APRSBody {
         ? body.match(/(?<=\/)[^\/\[]+(?=\/)/g)[0]
         : "";
       this.speed += 1;
-      //   console.log("SPEEEE");
-      // console.log(this.speed);
       this.alt = body.match(/(?<=A=)-?[0-9]+/g)
         ? body.match(/(?<=A=)-?[0-9]+/g)[0]
         : "";
