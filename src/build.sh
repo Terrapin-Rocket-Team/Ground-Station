@@ -14,4 +14,4 @@ rm -rf src/cachedtiles
 rm -f ./*.av1
 rm -rf build/src
 cd ../../../ # now in build
-rm -rf ../out
+# rm -rf ../out
