@@ -32,9 +32,9 @@ public:
   explicit SerialPort(const char *portName);
   ~SerialPort();
 
-  int readSerialPort(const void *buffer, unsigned int buf_size);
-  bool writeSerialPort(void *buffer, unsigned int buf_size);
-  bool writeSerialPort(int data, unsigned int buf_size);
-  bool isConnected();
-  void closeSerial();
+  virtual int readSerialPort(const void *buffer, unsigned int buf_size) = 0;
+  virtual bool writeSerialPort(void *buffer, unsigned int buf_size) = 0;
+  virtual bool writeSerialPort(int data, unsigned int buf_size) = 0;
+  virtual bool isConnected() = 0;
+  virtual void closeSerial() = 0;
 };
