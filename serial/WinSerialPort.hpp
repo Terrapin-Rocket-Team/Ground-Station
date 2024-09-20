@@ -1,19 +1,17 @@
-/*
- * Author: Manash Kumar Mandal
- * Modified Library introduced in Arduino Playground which does not work
- * This works perfectly
- * LICENSE: MIT
- */
-
 #pragma once
+#include "SerialPort.hpp"
+#include <windows.h>
 
-#define ARDUINO_WAIT_TIME 2000
-#define MAX_DATA_LENGTH 2048
+class WinSerialPort : public SerialPort {
+private:
+  HANDLE handler;
+  bool connected;
+  COMSTAT status;
+  DWORD errors;
 
-class SerialPort {
 public:
-  explicit SerialPort(const char *portName);
-  ~SerialPort();
+  WinSerialPort(const char *portName);
+  ~WinSerialPort();
 
   virtual int readSerialPort(void *buffer, unsigned int buf_size) = 0;
   virtual bool writeSerialPort(void *buffer, unsigned int buf_size) = 0;
