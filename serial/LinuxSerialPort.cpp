@@ -80,7 +80,6 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
     connected = false;
   }
 
-  std::cout << "HERE!\n";
   connected = true;
 }
 
