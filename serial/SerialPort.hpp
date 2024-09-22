@@ -12,8 +12,8 @@
 
 class SerialPort {
 public:
-  explicit SerialPort(const char *portName);
-  ~SerialPort();
+  SerialPort(const char *portName){};
+  ~SerialPort(){};
 
   virtual int readSerialPort(void *buffer, unsigned int buf_size) = 0;
   virtual bool writeSerialPort(void *buffer, unsigned int buf_size) = 0;
