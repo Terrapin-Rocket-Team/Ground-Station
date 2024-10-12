@@ -84,22 +84,21 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
 }
 
 bool LinuxSerialPort::writeSerialPort(void *buffer, unsigned int buf_size) {
+  memset(buffer, 0, buf_size);
   return write(portHandle, buffer, buf_size) == buf_size;
 }
 bool LinuxSerialPort::writeSerialPort(int data, unsigned int buf_size) {
-  return write(portHandle, (void *)(&data), buf_size) == buf_size;
+  return writeSerialPort((void *)(&data), buf_size) == buf_size;
 }
 
 int LinuxSerialPort::readSerialPort(void *buffer, unsigned int buf_size) {
-  if (read(portHandle, buffer, buf_size) == -1) {
-    printf("READ ERR: %s", strerror(errno));
-    return false;
-  }
-  return true;
+  return read(portHandle, buffer, buf_size);
 }
 
 void LinuxSerialPort::closeSerial() {
   if (connected) {
+    // apparently tcsetattr settings persist after the process ends,
+    // so it's a good idea to restore to the backup to clean up
     if (tcsetattr(portHandle, TCSANOW, &backup) != 0) {
       std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
                 << "\n";
