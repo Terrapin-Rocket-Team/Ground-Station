@@ -14,10 +14,9 @@ public:
   NamedPipe(const char* path) {
     this->path = path;
   }
-  ~NamedPipe()
 
-  virtual int read(char* buffer, int bufferSize) = 0;
-  virtual int write(const char* buffer, int bufferSize) = 0;
+  virtual int read(void *buffer, int bufferSize) = 0;
+  virtual int write(const void *buffer, int bufferSize) = 0;
 };
 
 
