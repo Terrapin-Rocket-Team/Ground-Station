@@ -9,13 +9,13 @@
 
 class LinuxNamedPipe : public NamedPipe {
 private:
-
+    int handle;
 public:
-    ~LinuxNamedPipe() {
+    LinuxNamedPipe(const char *name, bool create);
+    ~LinuxNamedPipe();
 
-    }
-    int read(char *buffer, int bufferSize) override;
-    int write(const char *buffer, int bufferSize) override;
+    int read(void *buffer, int bufferSize) override;
+    int write(const void *buffer, int bufferSize) override;
 };
 
 
