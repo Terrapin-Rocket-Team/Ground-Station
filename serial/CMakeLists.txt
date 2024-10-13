@@ -17,3 +17,11 @@ target_sources(NamedPipeLinuxTest PUBLIC "${CMAKE_CURRENT_LIST_DIR}/linuxPipeTes
 target_include_directories(Demux PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(SerialLinuxTest PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(NamedPipeLinuxTest PUBLIC "${PROJECT_INCLUDE}")
+
+if(WIN32)
+    target_compile_definitions(Demux PUBLIC WINDOWS=1)
+endif ()
+
+if(UNIX AND NOT APPLE)
+    target_compile_definitions(Demux PUBLIC LINUX=1)
+endif()

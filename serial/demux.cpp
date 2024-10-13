@@ -1,3 +1,5 @@
+#include <cstring>
+#include <windows.h>
 #include "WinSerialPort.hpp"
 #include <string>
 
@@ -77,6 +79,7 @@ int main(int argc, char **argv) {
   char portBuf[1024];
 
   while (!receivedPort) {
+    memset(portBuf, '\0', sizeof(portBuf));
     if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
       portBuf[dwWritten] = '\0';
       std::cout << "Received port: " << portBuf << std::endl;
