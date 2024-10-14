@@ -124,7 +124,7 @@ class Radio extends EventEmitter {
 
   reload() {
     //logic for starting the cpp program
-    this.cppApp = spawn("./serial/main.exe");
+    this.cppApp = spawn(serialDriverPath);
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
