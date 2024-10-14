@@ -7,19 +7,20 @@
 #include <ostream>
 
 int main() {
-    LinuxNamedPipe outLinPipe = LinuxNamedPipe("testing_pipe", true);
-    LinuxNamedPipe inLinPipe = LinuxNamedPipe("testing_pipe", false);
+    std::string pipePath = "testing_pipe";
+    LinuxNamedPipe outLinPipe = LinuxNamedPipe(pipePath.c_str(), true);
+    LinuxNamedPipe inLinPipe = LinuxNamedPipe(pipePath.c_str(), false);
 
     NamedPipe* outPipe = &outLinPipe;
     NamedPipe* inPipe = &inLinPipe;
 
     const char outMessage[128] = "Hello World!";
     outPipe->write(outMessage, sizeof(outMessage));
-    std::cout << "Wrote message: " << outMessage << std::endl;
+    std::cout << "Wrote message to named pipe at " << pipePath << ": " << outMessage << std::endl;
 
     char inMessage[128];
     inPipe->read(inMessage, sizeof(outMessage));
 
-    std::cout << "Received: " << inMessage << std::endl;
+    std::cout << "Received from named pipe at " << pipePath << ": " << inMessage << std::endl;
     return 0;
 }
