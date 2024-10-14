@@ -54,7 +54,7 @@ try {
     debug: false,
     noGUI: false,
     video: false,
-    //tileCache: true, //added tile toggling here - work in progress
+    //tileCache: true, //added tile cache toggling here - work in progress
     cacheMaxSize: 100000000,
     baudRate: 115200,
   };
@@ -103,7 +103,7 @@ try {
 }
 
 //creates the main electron window
-const createWindow = () => {
+const createMain = () => {
   const width = 1200,
     height = 800;
 
@@ -125,10 +125,26 @@ const createWindow = () => {
     },
   });
 
-  mainWin.loadFile(path.join(__dirname, "src/index.html"));
+  mainWin.loadFile(path.join(__dirname, "src/index_new.html"));
 
   if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
   log.debug("Main window created");
+
+  mainWin.on("enter-full-screen", () => {
+    log.debug("Enter main fullscreen");
+    mainWin.webContents.send("fullscreen-change", {
+      win: "main",
+      isFullscreen: true,
+    });
+  });
+
+  mainWin.on("leave-full-screen", () => {
+    log.debug("Leave main fullscreen");
+    mainWin.webContents.send("fullscreen-change", {
+      win: "main",
+      isFullscreen: false,
+    });
+  });
 
   //make sure messages are not sent to a destroyed window
   mainWin.once("close", () => {
@@ -310,7 +326,7 @@ app.commandLine.appendSwitch("force-device-scale-factor", 1);
 //when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
   if (!config.noGUI) {
-    createWindow();
+    createMain();
   } else {
     createDebug();
   }
@@ -320,7 +336,7 @@ app.whenReady().then(() => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       if (!config.noGUI) {
-        createWindow();
+        createMain();
       } else {
         createDebug();
       }
@@ -444,7 +460,7 @@ ipcMain.on("dev-tools", (event, args) => {
 
 ipcMain.on("open-gui", (event, args) => {
   log.debug("Main window opened from debug");
-  if (!mainWin) createWindow();
+  if (!mainWin) createMain();
   if (config.video && !videoWin) createVideo();
 });
 
