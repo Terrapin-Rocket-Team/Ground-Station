@@ -509,6 +509,18 @@ span.predicted-apogee {
   padding-left: 0.3vw;
 }
 
+#command-args.empty {
+  border: 1px solid black;
+}
+
+#command-args.valid {
+  border: 1px solid green;
+}
+
+#command-args.invalid {
+  border: 1px solid red;
+}
+
 #previous-commands {
   display: block;
   background-color: lightgray;
