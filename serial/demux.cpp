@@ -16,7 +16,6 @@ DWORD dwWritten;
 DWORD dwRead;
 
 int main(int argc, char **argv) {
-
   hPipeIn =
       CreateNamedPipe(TEXT("\\\\.\\pipe\\terpFcCommands"), PIPE_ACCESS_INBOUND,
                       PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,
