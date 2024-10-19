@@ -1,13 +1,11 @@
-#include "LinuxSerialPort.hpp"
+#include "LinuxSerialPort.h"
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h> // Contains file controls like O_RDWR
 #include <iostream>
-#include <stdlib.h>
 #include <termios.h> // Contains POSIX terminal control definitions
 #include <unistd.h>
-#include <unistd.h> // write(), read(), close()
 
 LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   portHandle = open(portName, O_RDWR);

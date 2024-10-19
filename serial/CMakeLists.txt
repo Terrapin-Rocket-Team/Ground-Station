@@ -3,7 +3,8 @@ set(CMAKE_CXX_COMPILER g++)
 
 project(SerialInterface)
 
-add_executable(Demux demux.cpp)
+add_executable(Demux demux.cpp
+        crossPlatformDemux.cpp)
 add_executable(SerialLinuxTest linuxSerialTest.cpp)
 add_executable(NamedPipeLinuxTest linuxPipeTest.cpp)
 
