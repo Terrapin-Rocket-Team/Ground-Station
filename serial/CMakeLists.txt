@@ -3,26 +3,29 @@ set(CMAKE_CXX_COMPILER g++)
 
 project(SerialInterface)
 
-add_executable(Demux demux.cpp
-        crossPlatformDemux.cpp)
+add_executable(DemuxLinux crossPlatformDemux.cpp)
+add_executable(DemuxWindows crossPlatformDemux.cpp)
 add_executable(SerialLinuxTest linuxSerialTest.cpp)
 add_executable(NamedPipeLinuxTest linuxPipeTest.cpp)
 
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.cpp") # Define PROJECT_SOURCES as a list of all source files
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be the path to the include directory of the project
 
-target_sources(Demux PUBLIC "${PROJECT_SOURCES}")
+target_sources(DemuxLinux PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}/crossPlatformDemux.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxNamedPipe.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxSerialPort.cpp")
+target_sources(DemuxWindows PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}/crossPlatformDemux.cpp;${CMAKE_CURRENT_LIST_DIR}/WinSerialPort.cpp;${CMAKE_CURRENT_LIST_DIR}/WinNamedPipe.cpp")
 target_sources(SerialLinuxTest PUBLIC "${CMAKE_CURRENT_LIST_DIR}/linuxSerialTest.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxSerialPort.cpp")
 target_sources(NamedPipeLinuxTest PUBLIC "${CMAKE_CURRENT_LIST_DIR}/linuxPipeTest.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxNamedPipe.cpp")
 
-target_include_directories(Demux PUBLIC "${PROJECT_INCLUDE}")
+target_include_directories(DemuxWindows PUBLIC "${PROJECT_INCLUDE}")
+target_include_directories(DemuxLinux PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(SerialLinuxTest PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(NamedPipeLinuxTest PUBLIC "${PROJECT_INCLUDE}")
 
 if(WIN32)
-    target_compile_definitions(Demux PUBLIC WINDOWS=1)
+    target_compile_definitions(DemuxWindows PUBLIC WINDOWS=1)
 endif ()
 
 if(UNIX AND NOT APPLE)
-    target_compile_definitions(Demux PUBLIC LINUX=1)
+    target_compile_definitions(DemuxLinux PUBLIC LINUX=1)
 endif()
