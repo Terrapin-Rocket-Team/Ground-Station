@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
     char portBuf[1024];
 
     while (!receivedPort) {
+        std::cout << "Awaiting port...\n";
         memset(portBuf, '\0', sizeof(portBuf));
         if (hPipeIn->read(portBuf, sizeof(portBuf))) {
             portBuf[sizeof(portBuf) - 1] = '\0';
