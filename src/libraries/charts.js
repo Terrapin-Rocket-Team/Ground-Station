@@ -56,6 +56,7 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
             beginAtZero: true,
             ticks: {
               callback: (value) => `${value * yConvert} ${yUnits}`,
+              count: 5,
             },
           },
         },

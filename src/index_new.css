@@ -529,6 +529,7 @@ span.predicted-apogee {
   overflow-y: scroll;
   border-radius: 5px;
   padding: 1vh;
+  font-size: calc(1.2vh + 3px);
 }
 
 .previous-command {
