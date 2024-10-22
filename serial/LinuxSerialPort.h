@@ -1,8 +1,9 @@
 #pragma once
 
-#include "SerialPort.hpp"
+#include "SerialPort.h"
 #include <termios.h>
-class LinuxSerialPort : public SerialPort {
+class LinuxSerialPort : public SerialPort
+{
 private:
   int portHandle;
   bool connected;

@@ -1,8 +1,9 @@
 #pragma once
-#include "SerialPort.hpp"
+#include "SerialPort.h"
 #include <windows.h>
 
-class WinSerialPort : public SerialPort {
+class WinSerialPort : public SerialPort
+{
 private:
   HANDLE handler;
   bool connected;

@@ -1,6 +1,6 @@
 #include <cstring>
 #include <windows.h>
-#include "WinSerialPort.hpp"
+#include "WinSerialPort.h"
 #include <string>
 
 char portPrefix[] = "\\\\.\\";
@@ -15,7 +15,8 @@ HANDLE hPipeIn;
 DWORD dwWritten;
 DWORD dwRead;
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   hPipeIn =
       CreateNamedPipe(TEXT("\\\\.\\pipe\\terpFcCommands"), PIPE_ACCESS_INBOUND,
                       PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,
@@ -46,7 +47,8 @@ int main(int argc, char **argv) {
                       NMPWAIT_USE_DEFAULT_WAIT, NULL);
 
   if (hPipe1 == INVALID_HANDLE_VALUE || hPipe2 == INVALID_HANDLE_VALUE ||
-      hPipe3 == INVALID_HANDLE_VALUE || hPipeIn == INVALID_HANDLE_VALUE) {
+      hPipe3 == INVALID_HANDLE_VALUE || hPipeIn == INVALID_HANDLE_VALUE)
+  {
     std::cerr << "Error creating named pipes.\n";
     return 1;
   }
@@ -77,9 +79,11 @@ int main(int argc, char **argv) {
 
   char portBuf[1024];
 
-  while (!receivedPort) {
+  while (!receivedPort)
+  {
     memset(portBuf, '\0', sizeof(portBuf));
-    if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL)) {
+    if (ReadFile(hPipeIn, portBuf, 1024, &dwWritten, NULL))
+    {
       portBuf[dwWritten] = '\0';
       std::cout << "Received port: " << portBuf << std::endl;
       receivedPort = true;
@@ -87,13 +91,19 @@ int main(int argc, char **argv) {
   }
 
   WinSerialPort teensy(strcat(portPrefix, portBuf));
-  if (teensy.isConnected()) {
-    std::cout << "Connection made" << std::endl << std::endl;
-  } else {
-    std::cout << "Error in port name" << std::endl << std::endl;
+  if (teensy.isConnected())
+  {
+    std::cout << "Connection made" << std::endl
+              << std::endl;
+  }
+  else
+  {
+    std::cout << "Error in port name" << std::endl
+              << std::endl;
   }
 
-  while (teensy.isConnected()) {
+  while (teensy.isConnected())
+  {
 
     x = teensy.readSerialPort(data, MAX_DATA_LENGTH);
     // Sleep(500);
@@ -105,10 +115,12 @@ int main(int argc, char **argv) {
                  // to always resize it)
 
     // repeat until we have processed all data
-    while (dataidx < x) {
+    while (dataidx < x)
+    {
 
       // we need to check if the data is either video or telemetry
-      if (source == 0) {
+      if (source == 0)
+      {
 
         std::cout << "source == 0 at " << totalCount << std::endl;
         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
@@ -127,7 +139,8 @@ int main(int argc, char **argv) {
 
       // we need to find packetsize
       if (packetSize == 0 && packetSizeFound == false && dataidx < x &&
-          source != 0) {
+          source != 0)
+      {
         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
                   << " | ";
         packetSize = data[dataidx] * 256;
@@ -136,7 +149,8 @@ int main(int argc, char **argv) {
         totalCount++;
       }
       // find the second byte of the packetsize
-      if (packetSizeFound == false && dataidx < x && source != 0) {
+      if (packetSizeFound == false && dataidx < x && source != 0)
+      {
         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
                   << " | ";
         packetSize += data[dataidx];
@@ -146,10 +160,12 @@ int main(int argc, char **argv) {
         totalCount++;
       }
 
-      if (source == 1 && packetSizeFound) {
+      if (source == 1 && packetSizeFound)
+      {
 
         // copy data to the circular buffer
-        while (dataidx < x && packetidx < packetSize) {
+        while (dataidx < x && packetidx < packetSize)
+        {
           std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
                     << " | ";
           chunks1[chunks1top] = data[dataidx];
@@ -160,18 +176,22 @@ int main(int argc, char **argv) {
         }
 
         // if we have a full packet, emit it
-        if (packetidx == packetSize) {
+        if (packetidx == packetSize)
+        {
 
           std::cout << "packetidx1 == packetSize1" << std::endl;
 
           // write from bottom to end of buffer or bottom to top of buffer
-          if (chunks1top > chunks1bot) {
+          if (chunks1top > chunks1bot)
+          {
             WriteFile(hPipe1, chunks1 + chunks1bot, chunks1top - chunks1bot,
                       &dwWritten, NULL);
 
             // update bottom index
             chunks1bot = chunks1top;
-          } else {
+          }
+          else
+          {
             WriteFile(hPipe1, chunks1 + chunks1bot, maxChunkSize - chunks1bot,
                       &dwWritten, NULL);
             chunks1bot = 0;
@@ -189,10 +209,12 @@ int main(int argc, char **argv) {
         }
       }
 
-      else if (source == 2 && packetSizeFound) {
+      else if (source == 2 && packetSizeFound)
+      {
 
         // copy data to the circular buffer
-        while (dataidx < x && packetidx < packetSize) {
+        while (dataidx < x && packetidx < packetSize)
+        {
           std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
                     << " | ";
           chunks2[chunks2top] = data[dataidx];
@@ -203,17 +225,21 @@ int main(int argc, char **argv) {
         }
 
         // if we have a full packet, emit it
-        if (packetidx == packetSize) {
+        if (packetidx == packetSize)
+        {
           // std::cout << "packetidx2 == packetSize2" << std::endl;
 
           // write from bottom to end of buffer or bottom to top of buffer
-          if (chunks2top > chunks2bot) {
+          if (chunks2top > chunks2bot)
+          {
             WriteFile(hPipe2, chunks2 + chunks2bot, chunks2top - chunks2bot,
                       &dwWritten, NULL);
 
             // update bottom index
             chunks2bot = chunks2top;
-          } else {
+          }
+          else
+          {
             WriteFile(hPipe2, chunks2 + chunks2bot, maxChunkSize - chunks2bot,
                       &dwWritten, NULL);
             chunks2bot = 0;
@@ -231,12 +257,14 @@ int main(int argc, char **argv) {
         }
       }
 
-      else if (source == 3 && packetSizeFound) {
+      else if (source == 3 && packetSizeFound)
+      {
 
         // std::cout << "packetidx3 == packetSize3" << std::endl;
 
         // copy data to the start of the telemetry buffer
-        while (dataidx < x && packetidx < packetSize) {
+        while (dataidx < x && packetidx < packetSize)
+        {
           std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
                     << " | ";
           chunks3[chunks3top] = data[dataidx];
@@ -247,16 +275,20 @@ int main(int argc, char **argv) {
         }
 
         // if we have a full packet, emit it
-        if (packetidx == packetSize) {
+        if (packetidx == packetSize)
+        {
 
           // write from bottom to end of buffer or bottom to top of buffer
-          if (chunks3top > chunks3bot) {
+          if (chunks3top > chunks3bot)
+          {
             WriteFile(hPipe3, chunks3 + chunks3bot, chunks3top - chunks3bot,
                       &dwWritten, NULL);
 
             // update bottom index
             chunks3bot = chunks3top;
-          } else {
+          }
+          else
+          {
             WriteFile(hPipe3, chunks3 + chunks3bot, maxChunkSize - chunks3bot,
                       &dwWritten, NULL);
             chunks3bot = 0;
@@ -276,7 +308,8 @@ int main(int argc, char **argv) {
     }
 
     // check to see if we received a command from the GUI
-    if (ReadFile(hPipeIn, chunkIn, 7, &dwWritten, NULL)) {
+    if (ReadFile(hPipeIn, chunkIn, 7, &dwWritten, NULL))
+    {
       teensy.writeSerialPort(chunkIn, 7);
     }
   }
