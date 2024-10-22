@@ -22,7 +22,8 @@ target_include_directories(DemuxLinux PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(SerialLinuxTest PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(NamedPipeLinuxTest PUBLIC "${PROJECT_INCLUDE}")
 
-if(WIN32)
+
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "MSYS")
     target_compile_definitions(DemuxWindows PUBLIC WINDOWS=1)
 endif ()
 
