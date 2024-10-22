@@ -3,6 +3,8 @@ const { APRSMessage } = require("./APRS");
 const { EventEmitter } = require("node:events");
 const { spawn } = require('child_process');
 const fs = require("fs");
+const path = require("path")
+const os = require("os")
 
 
 /**
@@ -19,8 +21,13 @@ class Radio extends EventEmitter {
 
         this.chunks3 = "";
 
-        //logic for starting the cpp program 
-        this.cppApp = spawn('./serial/main.exe');
+        if(os.platform() === "win32") {
+            this.cppApp = spawn('./serial/DemuxWindows.exe');
+        } else if(os.platform() === "linux") {
+            this.cppApp = spawn('./serial/DemuxLinux');
+        } else {
+            console.log("Unsupported Platform!");
+        }
 
         this.cppApp.stdout.on('data', (data) => {
             console.log(`demux stdout: ${data}`);
@@ -50,7 +57,7 @@ class Radio extends EventEmitter {
      */
     connect(port, baudRate) {
 
-        const pipePath = '\\\\.\\pipe\\terpFcCommands';
+        const pipePath = path.join(".", "pipe", "terpFcCommands");
         this.commandStream = fs.createWriteStream(pipePath, { encoding: 'binary' });
 
         this.commandStream.on('error', (err) => {
@@ -59,7 +66,8 @@ class Radio extends EventEmitter {
         this.commandStream.write(port);
 
         // handle telemetry data
-        const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
+        const telemetyPipePath = path.join(".", "pipe", "terpTelemetry")
+        const pipeStream = fs.createReadStream(telemetyPipePath);
 
         pipeStream.on('data', (data) => {
             this.chunks3 += data;
@@ -120,7 +128,13 @@ class Radio extends EventEmitter {
 
     reload() {
         //logic for starting the cpp program 
-        this.cppApp = spawn('./serial/main.exe');
+        if(os.platform() === "win32") {
+            this.cppApp = spawn('./serial/DemuxWindows.exe');
+        } else if(os.platform() === "linux") {
+            this.cppApp = spawn('./serial/DemuxLinux');
+        } else {
+            console.log("Unsupported Platform!");
+        }
 
         this.cppApp.stdout.on('data', (data) => {
             console.log(`demux stdout: ${data}`);

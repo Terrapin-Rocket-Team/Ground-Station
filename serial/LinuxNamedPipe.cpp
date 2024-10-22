@@ -15,6 +15,7 @@ LinuxNamedPipe::LinuxNamedPipe(const char* name, bool create) : NamedPipe(name) 
     if(create) {
         if(mkfifo(name, 0666)) {
             std::cerr << "Error creating named pipe: " << name << std::endl;
+            std::cerr << "This is most likely because the pipe already exists. If so, ignore this error." << std::endl;
         }
     }
 
