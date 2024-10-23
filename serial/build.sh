@@ -1,7 +1,11 @@
 #!/bin/bash
 
+CORES=1
+
 mkdir -p serial
+cd serial
+rm CMakeCache.txt
+cmake ../../serial
+make -j $CORES
 cd ../serial
-g++ demux.cpp SerialPort.cpp -lgdi32 -o serial.exe
-mv serial.exe ../build/serial
-cd ../build
+cd ..
