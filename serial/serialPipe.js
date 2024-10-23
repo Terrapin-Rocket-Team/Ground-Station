@@ -6,12 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const serialDriverPath = path.join(
-  __dirname,
-  "..",
-  "build",
-  "serial"
-);
+const serialDriverPath = path.join(__dirname, "..", "build", "serial");
 
 /**
  * A class to communicate with the radio module using serialport
@@ -28,13 +23,13 @@ class Radio extends EventEmitter {
     this.chunks3 = "";
 
     //logic for starting the cpp program
-        if(os.platform() === "win32") {
-            this.cppApp = spawn(path.join(serialDriverPath, 'DemuxWindows.exe'));
-        } else if(os.platform() === "linux") {
-            this.cppApp = spawn(path.join(serialDriverPath, 'DemuxLinux'));
-        } else {
-            console.log("Unsupported Platform!");
-        }
+    if (os.platform() === "win32") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
@@ -62,6 +57,7 @@ class Radio extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
+    const pipePath = path.join(".", "pipe", "terpFcCommands");
     this.commandStream = fs.createWriteStream(pipePath, { encoding: "binary" });
 
     this.commandStream.on("error", (err) => {
@@ -70,62 +66,28 @@ class Radio extends EventEmitter {
     this.commandStream.write(port);
 
     // handle telemetry data
-    const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
+    const telemetyPipePath = path.join(".", "pipe", "terpTelemetry");
+    const pipeStream = fs.createReadStream(telemetyPipePath);
 
-    const pipePath = path.join(".", "pipe", "terpFcCommands");
-    this.commandStream = fs.createWriteStream(pipePath, { encoding: 'binary' });
+    pipeStream.on("data", (data) => {
+      this.chunks3 += data;
+      console.log(data);
 
-    // lookahead APRS message filtering
-    let resp = this.chunks3.match(/Source:.*\0/g);
+      // lookahead APRS message filtering
+      let resp = this.chunks3.match(/Source:.*\0/g);
       console.log(`resp: ${resp}`);
       if (resp) {
         try {
           console.log("Telemetry received: " + resp[0]);
 
-        // handle telemetry data
-        const telemetyPipePath = path.join(".", "pipe", "terpTelemetry")
-        const pipeStream = fs.createReadStream(telemetyPipePath);
-
-        pipeStream.on('data', (data) => {
-            this.chunks3 += data;
-            console.log(data);
-
-            // lookahead APRS message filtering
-            let resp = this.chunks3.match(/Source:.*\0/g);
-            console.log(`resp: ${resp}`);
-            if (resp) {
-                try {
-
-                    console.log("Telemetry received: " + resp[0]);
-
-                    // remove the processed data
-                    this.chunks3 = "";
-                    this.emit("data", new APRSMessage(resp[0]));
-                }
-                catch (err) {
-                    this.emit("error", data);
-                }
-            }
-        });
-
-        pipeStream.on('error', (err) => {
-            console.error("error writing to named pipe", err.message);
-        });
-
-        // return promise that just returns 1
-        return new Promise((res, rej) => {
-            this.connected = true;
-            res(1);
-        });
-    }}
-
-    // writeCommand(command) {
-    //     for (let i = 0; i < command.length; i++) {
-    //         // turn it into a 16 bit signed integer using INT16BE
-    //         this.commandStream.write(command[i]);
-    //     }
-    //   }
-    // });
+          // remove the processed data
+          this.chunks3 = "";
+          this.emit("data", new APRSMessage(resp[0]));
+        } catch (err) {
+          this.emit("error", data);
+        }
+      }
+    });
 
     pipeStream.on("error", (err) => {
       console.error("error writing to named pipe", err.message);
@@ -138,19 +100,10 @@ class Radio extends EventEmitter {
     });
   }
 
-    reload() {
-        //logic for starting the cpp program 
-        if(os.platform() === "win32") {
-            this.cppApp = spawn('./serial/DemuxWindows.exe');
-        } else if(os.platform() === "linux") {
-            this.cppApp = spawn('./serial/DemuxLinux');
-        } else {
-            console.log("Unsupported Platform!");
-        }
-
-        this.cppApp.stdout.on('data', (data) => {
-            console.log(`demux stdout: ${data}`);
-        });
+  writeCommand(command) {
+    for (let i = 0; i < command.length; i++) {
+      // turn it into a 16 bit signed integer using INT16BE
+      this.commandStream.write(command[i]);
     }
     // write the last byte (boolean)
     // this.commandStream.write(command[command.length - 1]);
@@ -173,7 +126,13 @@ class Radio extends EventEmitter {
 
   reload() {
     //logic for starting the cpp program
-    this.cppApp = spawn("./serial/main.exe");
+    if (os.platform() === "win32") {
+      this.cppApp = spawn("./serial/DemuxWindows.exe");
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn("./serial/DemuxLinux");
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
