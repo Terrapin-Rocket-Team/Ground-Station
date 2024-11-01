@@ -1,12 +1,18 @@
 const fs = require("fs");
+const path = require("path");
+const os = require("os");
 const { log } = require("../debug.js");
 
-const pipePathBase = path.join(".", "pipe");
+let pipePathBase;
+
+if (os.platform() === "win32") {
+  pipePathBase = "\\\\.\\pipe";
+} else if (os.platform() === "linux") {
+  pipePathBase = path.join(".", "build", "serial", "pipe");
+}
 
 class PipeStream {
   constructor(name, encoding, type) {
-    super();
-
     this.stream = null;
     this.name = name;
     this.path = path.join(pipePathBase, name);
@@ -17,18 +23,19 @@ class PipeStream {
     let action = "";
 
     if (type === "r") {
-      this.stream = fs.createReadStream(path, { encoding });
+      // this.stream = fs.createReadStream(this.path, { encoding });
+      this.stream = fs.createReadStream(this.path);
       action = "reading from";
     } else if (type === "w") {
-      this.stream = fs.createWriteStream(path, { encoding });
+      this.stream = fs.createWriteStream(this.path, { encoding });
       action = "writing to";
     } else {
-      log.err("Invalid type for PipeStream " + path);
+      log.err("Invalid type for PipeStream " + this.path);
       return;
     }
 
     this.stream.on("error", (err) => {
-      log.err("Failed " + action + " pipe: " + path + "\n" + err.message);
+      log.err("Failed " + action + " pipe: " + this.path + "\n" + err.message);
     });
   }
 
