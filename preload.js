@@ -50,8 +50,8 @@ class API extends EventEmitter {
       this.emit("previous-logs", data);
     });
 
-    ipcRenderer.on("data", (event, data) => {
-      this.emit("data", data);
+    ipcRenderer.on("data", (event, data, name) => {
+      this.emit("data", data, name);
     });
 
     ipcRenderer.on("radio-close", (event, portPath) => {
@@ -85,7 +85,8 @@ class API extends EventEmitter {
     this.openDebug = () => ipcRenderer.send("open-debug");
     this.openGUI = () => ipcRenderer.send("open-gui");
     this.openCommand = () => ipcRenderer.send("radio-command");
-    this.sendCommand = (command) => ipcRenderer.send("radio-command-sent", command);
+    this.sendCommand = (command) =>
+      ipcRenderer.send("radio-command-sent", command);
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
     this.closePort = () => ipcRenderer.send("close-port");

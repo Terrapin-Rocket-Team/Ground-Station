@@ -6,7 +6,7 @@ const fs = require("fs");
 const readline = require("readline");
 const path = require("path");
 const { log } = require("./debug");
-const { radio } = require("./serial/serialPipe");
+const { serial } = require("./serial/SerialDevice");
 const { APRSMessage } = require("./serial/APRS");
 const { FileStreamSource } = require("./video/video-source");
 
@@ -150,7 +150,7 @@ const createMain = () => {
   mainWin.once("close", () => {
     if (!config.noGUI) {
       closed = true;
-      radio.close();
+      serial.close();
     }
     mainWin.webContents.send("close"); // unused
     if (!config.noGUI) {
@@ -208,7 +208,7 @@ const createDebug = () => {
   debugWin.once("close", () => {
     if (config.noGUI) {
       closed = true;
-      radio.close();
+      serial.close();
     }
     debugWin.webContents.send("close"); // unused
     log.removeWin();
@@ -397,7 +397,7 @@ ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
   //main and debug are basically the same window, so reloading one reloads both
   if (win === "main" || win === "debug") {
-    radio.close();
+    serial.close();
     //if mainWin exists reload it
     if (mainWin) {
       mainWin.webContents.reloadIgnoringCache();
@@ -424,7 +424,7 @@ ipcMain.on("reload", (event, win, keepSettings) => {
         }
       });
     }
-    radio.reload();
+    serial.reload();
   }
 
   //if commandWin exists close it
@@ -478,7 +478,7 @@ ipcMain.on("radio-command-sent", (event, command) => {
   for (let i = 0; i < command.length; i++) {
     if (command[i] === "") command[i] = 255;
   }
-  radio.writeCommand(command);
+  serial.writeCommand(command);
   if (commandWin) commandWin.close();
 });
 
@@ -609,7 +609,7 @@ ipcMain.handle("get-tiles", () => {
 });
 
 ipcMain.on("close-port", (event, args) => {
-  radio.close();
+  serial.close();
 });
 
 ipcMain.on("clear-tile-cache", (event, args) => {
@@ -644,11 +644,11 @@ ipcMain.on("video-controls", (event, controls) => {
 
 //getters
 ipcMain.handle("get-ports", (event, args) => {
-  return radio.getAvailablePorts();
+  return serial.getAvailablePorts();
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
-  return radio.isConnected();
+  return serial.isConnected();
 });
 
 ipcMain.handle("get-settings", (event, args) => {
@@ -669,7 +669,7 @@ ipcMain.handle("get-video", (event, args) => {
 //setters
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
-    radio
+    serial
       .connect(portConfig.path, config.baudRate)
       .then((result) => {
         log.info("Successfully connected to port " + portConfig.path);
@@ -701,7 +701,7 @@ ipcMain.on("update-settings", (event, settings) => {
 });
 
 //serial communication
-radio.on("data", (data) => {
+serial.on("data", (data) => {
   if (!data.getHeading() && !data.getSpeed()) {
     data.body.heading = lastHeading;
     data.body.speed = lastSpeed;
@@ -725,19 +725,19 @@ radio.on("data", (data) => {
   }
 });
 
-radio.on("video1chunk", () => {
+serial.on("video1chunk", () => {
   if (videoStreams[0]) videoStreams[0].i._read(1250);
 });
 
-radio.on("video2chunk", () => {
+serial.on("video2chunk", () => {
   if (videoStreams[1]) videoStreams[1].i._read(1250);
 });
 
-radio.on("error", (message) => {
+serial.on("error", (message) => {
   log.err("Error parsing APRS message: " + message);
 });
 
-radio.on("close", (path) => {
+serial.on("close", (path) => {
   log.info("Serial disconnected");
   if (!closed && mainWin) mainWin.webContents.send("radio-close", path);
 });
