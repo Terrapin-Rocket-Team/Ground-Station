@@ -4,14 +4,9 @@ const { EventEmitter } = require("node:events");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
-const serialDriverPath = path.join(
-  __dirname,
-  "..",
-  "build",
-  "serial",
-  "serial.exe"
-);
+const serialDriverPath = path.join(__dirname, "..", "build", "serial");
 
 /**
  * A class to communicate with the radio module using serialport
@@ -28,7 +23,13 @@ class Radio extends EventEmitter {
     this.chunks3 = "";
 
     //logic for starting the cpp program
-    this.cppApp = spawn(serialDriverPath);
+    if (os.platform() === "win32") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
@@ -56,7 +57,7 @@ class Radio extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
-    const pipePath = "\\\\.\\pipe\\terpFcCommands";
+    const pipePath = path.join(".", "pipe", "terpFcCommands");
     this.commandStream = fs.createWriteStream(pipePath, { encoding: "binary" });
 
     this.commandStream.on("error", (err) => {
@@ -65,7 +66,8 @@ class Radio extends EventEmitter {
     this.commandStream.write(port);
 
     // handle telemetry data
-    const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
+    const telemetyPipePath = path.join(".", "pipe", "terpTelemetry");
+    const pipeStream = fs.createReadStream(telemetyPipePath);
 
     pipeStream.on("data", (data) => {
       this.chunks3 += data;
@@ -124,7 +126,13 @@ class Radio extends EventEmitter {
 
   reload() {
     //logic for starting the cpp program
-    this.cppApp = spawn(serialDriverPath);
+    if (os.platform() === "win32") {
+      this.cppApp = spawn("./serial/DemuxWindows.exe");
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn("./serial/DemuxLinux");
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
