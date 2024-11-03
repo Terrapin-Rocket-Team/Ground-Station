@@ -3,7 +3,6 @@ const { SerialPort } = require("serialport");
 const { PipeStream } = require("./PipeStream");
 const { EventEmitter } = require("node:events");
 const { spawn } = require("child_process");
-// const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { log } = require("../debug.js");
@@ -15,23 +14,52 @@ const serialDriverPath = path.join(__dirname, "..", "build", "serial");
  */
 class SerialDevice extends EventEmitter {
   /**
-   * @param {SerialPort} [port] the serial port to listen to
    */
-  constructor(port) {
+  constructor() {
     super();
-    this.port = port ? port : null;
+    this.ready = false;
     this.connected = false;
     this.deviceInput = [];
     this.deviceOutput = [];
 
+    this.driver = {};
+    this.control = {};
+    this.status = {};
+    this.command = {};
+
     this.chunks3 = "";
 
-    //logic for starting the cpp program
+    this.setupDriver();
+  }
+
+  /**
+   * Waits for all streams to be ready, then fires a callback
+   * @param {PipeStream[]} streams the streams to wait for
+   * @param {Function} callback the callback once all streams are ready
+   */
+  waitReady(streams, callback) {
+    // total number of streams
+    let len = streams.length;
+    // number connected so far
+    let connections = 0;
+
+    streams.forEach((stream) => {
+      stream.stream.on("connect", () => {
+        connections++;
+        if (connections == len) {
+          callback();
+        }
+      });
+    });
+  }
+
+  setupDriver() {
+    //logic for starting the driver program
     if (os.platform() === "win32") {
       // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
+      this.driver = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
     } else if (os.platform() === "linux") {
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
+      this.driver = spawn(path.join(serialDriverPath, "DemuxLinux"));
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +
@@ -39,14 +67,37 @@ class SerialDevice extends EventEmitter {
       );
     }
 
-    this.cppApp.on("error", (err) => {
+    this.driver.on("error", (err) => {
+      // attempt to restart?
       log.err(err.message);
     });
-    this.cppApp.on("exit", (code) => {
-      log.info("exited with code: " + code);
+    this.driver.once("exit", (code) => {
+      log.info("Driver exited with code: " + code);
     });
 
-    this.cppApp.stdout.on("data", (data) => {
+    this.driver.stdout.once("data", (data) => {
+      let dataStr = data.toString().replace("\r", "").split("\n");
+
+      dataStr.forEach((str) => {
+        if (str === "driver ready") {
+          let streamsReady = 0;
+
+          // create a stream to control the serial driver
+          this.control = new PipeStream("control");
+
+          // create a stream to receive status from the driver
+          this.status = new PipeStream("status");
+
+          this.waitReady([this.control, this.status], () => {
+            log.info("Serial driver ready");
+            this.emit("ready");
+            this.ready = true;
+          });
+        }
+      });
+    });
+
+    this.driver.stdout.on("data", (data) => {
       log.debug(`demux stdout: ${data}`);
     });
   }
@@ -73,54 +124,102 @@ class SerialDevice extends EventEmitter {
    */
   connect(port, baudRate) {
     return new Promise((res, rej) => {
-      // create a stream to control the serial driver
-      this.deviceInput.push(new PipeStream("control", "ascii", "w"));
+      if (this.ready) {
+        let stream;
+        while ((stream = this.deviceInput.pop())) {
+          stream.close();
+        }
+        while ((stream = this.deviceOutput.pop())) {
+          stream.close();
+        }
 
-      this.control = this.deviceInput.find((o) => o.name === "control");
+        // setup the driver
+        this.control.stream.write("reset\n");
+        this.control.stream.write(port + "\n");
+        this.control.stream.write(baudRate.toString() + "\n");
 
-      // setup the driver
-      this.control.stream.write(port + "\n");
-      this.control.stream.write(baudRate.toString() + "\n");
+        this.control.stream.write("connected\n");
 
-      // create a stream to receive status from the driver
-      this.deviceOutput.push(new PipeStream("status", "ascii", "r"));
+        // check for successful connection
+        this.status.stream.once("data", (data) => {
+          if (data.toString() === "connected") {
+            // setup data streams
+            let telemetryStreams = [
+              "telemetry-avionics",
+              "telemetry-airbrake",
+              "telemetry-payload",
+            ];
+            let commandStreams = ["command"];
 
-      this.status = this.deviceOutput.find((o) => o.name === "status");
+            // get driver ready to accept pipe names
+            this.control.stream.write("data pipes\n");
 
-      // handle sending commands
-      this.command = new PipeStream("command", "binary", "w");
-      this.deviceInput.push(this.command);
-      // handle telemetry data
-      let telemetryStreams = [
-        "telemetry-avionics",
-        "telemetry-airbrake",
-        "telemetry-payload",
-      ];
+            // write the number of pipes
+            this.control.stream.write(
+              telemetryStreams.length + commandStreams.length + "\n"
+            );
 
-      telemetryStreams.forEach((name) => {
-        let newStream = new PipeStream(name, "binary", "r");
+            // write the names of all the command pipes
+            for (let i = 0; i < commandStreams.length; i++) {
+              this.control.stream.write(commandStreams[i] + " " + i + "\n");
+            }
 
-        newStream.on("data", (data) => {
-          try {
-            this.emit("data", name, JSON.parse(data));
-          } catch (err) {
-            log.err("Error receiving " + name + ": " + err.message);
-            this.emit("error", name, data);
+            // write the names of all the telemetry pipes
+            for (let i = 0; i < telemetryStreams.length; i++) {
+              this.control.stream.write(
+                telemetryStreams[i] + " " + (i + commandStreams.length) + "\n"
+              );
+            }
+
+            // wait for all the pipes to successfully be created
+            this.status.stream.once("data", (data) => {
+              let success = data.toString() === "pipe creation successful";
+
+              if (success) {
+                // handle sending commands
+                commandStreams.forEach((name) => {
+                  let newStream = new PipeStream(name);
+                  this.deviceInput.push(newStream);
+                });
+
+                this.command = this.deviceInput.find(
+                  (o) => o.name === "command"
+                );
+
+                // handle telemetry data
+                telemetryStreams.forEach((name) => {
+                  let newStream = new PipeStream(name);
+                  newStream.on("data", (data) => {
+                    try {
+                      this.emit("data", name, JSON.parse(data));
+                    } catch (err) {
+                      log.err("Error receiving " + name + ": " + err.message);
+                      this.emit("error", name, data);
+                    }
+                  });
+                  this.deviceOutput.push(newStream);
+                });
+
+                this.waitReady(
+                  this.deviceInput.concat(this.deviceOutput),
+                  () => {
+                    // resolve the promise
+                    this.emit("connected");
+                    this.connected = true;
+                    res(1);
+                  }
+                );
+              } else {
+                rej({ message: "Requested pipes could not be created" });
+              }
+            });
+          } else {
+            rej({ message: data.toString() });
           }
         });
-        this.deviceOutput.push(newStream);
-      });
-
-      // check for successful connection
-      this.control.stream.write("connected\n");
-      this.status.stream.once("data", (data) => {
-        if (data === "connected") {
-          this.connected = true;
-          res(1);
-        } else {
-          rej({ message: data });
-        }
-      });
+      } else {
+        rej({ message: "serial driver has not started" });
+      }
     });
   }
 
@@ -129,40 +228,26 @@ class SerialDevice extends EventEmitter {
       // turn it into a 16 bit signed integer using INT16BE
       this.command.stream.write(command[i]);
     }
-    log.debug("Radio command sent: " + command);
+    log.info("Radio command sent: " + command);
   }
 
   isConnected() {
     return {
       connected: this.connected,
-      port: this.port ? this.port.path : null,
     };
   }
 
   close() {
-    if (this.port != null && this.port.isOpen) {
-      this.port.close();
-    }
-    this.cppApp.kill("SIGINT");
+    this.control.stream.write("exit\n");
   }
 
   reload() {
-    //logic for starting the cpp program
-    if (os.platform() === "win32") {
-      // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
-    } else if (os.platform() === "linux") {
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
-    } else {
-      log.err(
-        "Failed to reload serial interface: Unsupported platform! Found platform " +
-          os.platform()
-      );
-    }
+    // this.close();
 
-    this.cppApp.stdout.on("data", (data) => {
-      log.debug(`demux stdout: ${data}`);
-    });
+    this.ready = false;
+    this.connected = false;
+
+    this.setupDriver();
   }
 }
 

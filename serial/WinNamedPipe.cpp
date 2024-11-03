@@ -34,20 +34,36 @@ WinNamedPipe::WinNamedPipe(const char *name, bool create) : NamedPipe(name)
     }
 }
 
-int WinNamedPipe::read(void *buffer, int bufferSize)
+int WinNamedPipe::readStr(char *buffer, int bufferSize)
 {
     unsigned long int read = 1;
     unsigned int count = 0;
-    char *buf = (char *)buffer;
     while (count < bufferSize && read > 0)
     {
         read = 0;
-        ReadFile(hPipe, buf + count, 1, &read, NULL);
-        if (buf[count] == '\n')
+        ReadFile(hPipe, buffer + count, 1, &read, NULL);
+        if (buffer[count] == '\n')
+        {
+            buffer[count] = '\0';
             break;
+        }
         count += read;
     }
     return count;
+}
+
+int WinNamedPipe::writeStr(const char *buffer)
+{
+    unsigned long int written = 0;
+    WriteFile(hPipe, buffer, strlen(buffer), &written, NULL);
+    return written;
+}
+
+int WinNamedPipe::read(void *buffer, int bufferSize)
+{
+    unsigned long int read = 0;
+    ReadFile(hPipe, buffer, bufferSize, &read, NULL);
+    return read;
 }
 
 int WinNamedPipe::write(const void *buffer, int bufferSize)
@@ -61,6 +77,8 @@ WinNamedPipe::~WinNamedPipe()
 {
     if (hPipe != NULL)
     {
+        FlushFileBuffers(hPipe);
+        // DisconnectNamedPipe(hPipe);
         CloseHandle(hPipe);
     }
 }
