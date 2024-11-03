@@ -5,6 +5,7 @@
 #ifdef WINDOWS
 #include <WinSerialPort.h>
 #include <WinNamedPipe.h>
+#include <windows.h>
 #elif LINUX
 #include <LinuxNamedPipe.h>
 #include <LinuxSerialPort.h>
@@ -12,12 +13,16 @@
 #include <cstring>
 #include <iostream>
 #include <ostream>
+#include <cstdint>
 
 int main(int argc, char **argv)
 {
     unsigned char data[MAX_DATA_LENGTH];
     NamedPipe *pipeControl;
     NamedPipe *pipeStatus;
+    NamedPipe **dataPipes = nullptr;
+    uint8_t *pipeIndexes = nullptr;
+    int numPipes = 0;
 
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
@@ -48,73 +53,156 @@ int main(int argc, char **argv)
     size_t chunks2bot = 0;
     size_t chunks3bot = 0;
 
-    bool receivedPort = false;
-    char portBuf[50];
-    std::cout << "Starting..." << std::endl;
+    SerialPort *teensy = nullptr;
 
-    while (!receivedPort)
+    std::cout << "driver ready" << std::endl;
+
+    bool exit = false;
+    char controlStr[50];
+
+    while (!exit)
     {
-        // std::cout << "Awaiting port...\n";
-        memset(portBuf, 0, sizeof(portBuf));
-        if (pipeControl->read(portBuf, sizeof(portBuf)) > 0)
+        memset(controlStr, 0, sizeof(controlStr));
+        if (pipeControl->readStr(controlStr, sizeof(controlStr)) > 0)
         {
-            portBuf[sizeof(portBuf) - 1] = '\0';
-            std::cout << "Received port: " << portBuf << std::endl;
-            receivedPort = true;
-        }
-    }
+            std::cout << controlStr << std::endl;
+            if (strcmp(controlStr, "reset") == 0)
+            {
+                bool receivedPort = false;
+                char portBuf[50];
 
-    bool receivedBaudRate = false;
-    char baudRate[50];
+                while (!receivedPort)
+                {
+                    memset(portBuf, 0, sizeof(portBuf));
+                    if (pipeControl->readStr(portBuf, sizeof(portBuf)) > 0)
+                    {
+                        portBuf[sizeof(portBuf) - 1] = '\0';
+                        std::cout << "Received port: " << portBuf << std::endl;
+                        receivedPort = true;
+                    }
+                }
 
-    while (!receivedBaudRate)
-    {
-        // std::cout << "Awaiting baud rate...\n";
-        memset(baudRate, 0, sizeof(baudRate));
-        if (pipeControl->read(baudRate, sizeof(baudRate)) > 0)
-        {
-            baudRate[sizeof(baudRate) - 1] = '\0';
-            std::cout << "Received baud rate: " << baudRate << std::endl;
-            receivedBaudRate = true;
-        }
-    }
+                bool receivedBaudRate = false;
+                char baudRate[50];
 
-    SerialPort *teensy;
+                while (!receivedBaudRate)
+                {
+                    memset(baudRate, 0, sizeof(baudRate));
+                    if (pipeControl->readStr(baudRate, sizeof(baudRate)) > 0)
+                    {
+                        baudRate[sizeof(baudRate) - 1] = '\0';
+                        std::cout << "Received baud rate: " << baudRate << std::endl;
+                        receivedBaudRate = true;
+                    }
+                }
+
+                if (teensy != nullptr)
+                {
+                    delete teensy;
+                    teensy = nullptr;
+                }
 
 #ifdef WINDOWS
-    teensy = new WinSerialPort(portBuf);
+                // teensy = new WinSerialPort(portBuf);
 #elif LINUX
-    teensy = new LinuxSerialPort(strcat("./", portBuf));
+                teensy = new LinuxSerialPort(strcat("./", portBuf));
 #endif
 
-    // attempt to connect
-    time_t start = time(0);
-    while (!(teensy->isConnected()))
-    {
-        time_t end = time(0);
-        // std::cout << difftime(end, start) << std::endl;
-        if (difftime(end, start) > 30)
-            break; // 30 second timout
-    }
-
-    bool quit = false;
-
-    while (!quit)
-    {
-        char controlStr[50];
-        memset(controlStr, 0, sizeof(controlStr));
-        if (pipeControl->read(controlStr, sizeof(controlStr)) > 0)
-        {
-            if (strcmp(controlStr, "connected"))
-            {
-                if (teensy->isConnected())
+                // attempt to connect
+                time_t start = time(0);
+                bool timeout = false;
+                while (true && !timeout /* && !(teensy->isConnected())*/)
                 {
-                    pipeStatus->write("connected", 10);
+                    time_t end = time(0);
+                    if (difftime(end, start) > 1)
+                        timeout = true;
+                }
+            }
+            if (strcmp(controlStr, "data pipes") == 0)
+            {
+                bool gotNumPipes = false;
+                char numPipesStr[3] = {0};
+                while (!gotNumPipes)
+                {
+                    memset(numPipesStr, 0, sizeof(numPipesStr));
+                    if (pipeControl->readStr(numPipesStr, sizeof(numPipesStr)) > 0)
+                    {
+                        numPipesStr[sizeof(numPipesStr) - 1] = '\0';
+                        std::cout << "Received num pipes: " << numPipesStr << std::endl;
+                        gotNumPipes = true;
+                    }
+                }
+
+                if (dataPipes != nullptr)
+                {
+                    for (int i = 0; i < numPipes; i++)
+                    {
+                        delete dataPipes[i];
+                    }
+                    delete[] dataPipes;
+                    dataPipes = nullptr;
+                }
+
+                numPipes = atoi(numPipesStr);
+
+                if (pipeIndexes != nullptr)
+                {
+                    delete[] pipeIndexes;
+                    pipeIndexes = nullptr;
+                }
+                dataPipes = new NamedPipe *[numPipes];
+                pipeIndexes = new uint8_t[numPipes];
+
+                int gotPipeNames = 0;
+                char pipeName[50] = {0};
+                while (gotPipeNames < numPipes)
+                {
+                    memset(pipeName, 0, sizeof(pipeName));
+                    if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
+                    {
+                        pipeName[sizeof(pipeName) - 1] = '\0';
+                        int indexPos = 0;
+                        for (int i = 0; i < strlen(pipeName); i++)
+                        {
+                            if (pipeName[i] == ' ')
+                                indexPos = i;
+                        }
+
+                        int pipeIndex = atoi(pipeName + indexPos + 1);
+                        pipeIndexes[gotNumPipes] = pipeIndex;
+
+                        pipeName[indexPos] = '\0';
+                        std::cout << "Creating pipe of name: " << pipeName << std::endl;
+#ifdef WINDOWS
+                        char pipePath[60] = "\\\\.\\pipe\\";
+                        strcat(pipePath, pipeName);
+                        dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
+#elif LINUX
+                        char pipePath[60] = "./pipe/";
+                        strcat(pipePath, pipeName);
+                        // THESE PATHS MIGHT BE WRONG!
+                        dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
+#endif
+                    }
+                }
+
+                pipeStatus->writeStr("pipe creation successful");
+            }
+            if (strcmp(controlStr, "connected") == 0)
+            {
+                if ((teensy != nullptr && teensy->isConnected()) || true)
+                {
+                    pipeStatus->writeStr("connected");
                 }
                 else
                 {
-                    pipeStatus->write("not connected", 13);
+                    pipeStatus->writeStr("not connected");
                 }
+            }
+            if (strcmp(controlStr, "exit") == 0)
+            {
+                std::cout << "exiting" << std::endl;
+                exit = true;
             }
         }
     }
@@ -314,15 +402,9 @@ int main(int argc, char **argv)
     //     std::cout << totalCount << std::endl;
 
     //     teensy->closeSerial();
+    std::cout << "Exit" << std::endl;
     delete pipeControl;
     delete pipeStatus;
 
     return 0;
 }
-
-// #include "iostream"
-
-// int main()
-// {
-//     std::cout << "Hello World" << std::endl;
-// }

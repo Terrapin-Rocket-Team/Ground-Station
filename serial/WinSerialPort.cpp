@@ -135,4 +135,7 @@ bool WinSerialPort::isConnected()
   return this->connected;
 }
 
-void WinSerialPort::closeSerial() { CloseHandle(this->handler); }
+void WinSerialPort::closeSerial()
+{
+  CloseHandle(this->handler);
+}

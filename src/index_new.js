@@ -1,7 +1,7 @@
 window.onload = () => {
   // "global" vars
   let fullscreened = false;
-  let portsInUse = [];
+  let portInUse;
 
   /// top bar
 
@@ -48,8 +48,19 @@ window.onload = () => {
 
   //adds available ports to the custom dropdown
   const getAvailPorts = (idPrefix) => {
+    // loading
+    const options = document.getElementById(idPrefix + "-options");
+    while (options.childElementCount > 0) {
+      options.removeChild(options.firstChild);
+    }
+    const span = document.createElement("SPAN");
+    span.className = "serial";
+    span.textContent = "Loading...";
+    options.appendChild(span);
+
+    // when we have a response
     api.getPorts().then((ports) => {
-      const options = document.getElementById(idPrefix + "-options");
+      // remove loading components
       while (options.childElementCount > 0) {
         options.removeChild(options.firstChild);
       }
@@ -64,19 +75,24 @@ window.onload = () => {
         options.appendChild(span);
       } else {
         ports.forEach((port) => {
-          if (!portsInUse.some((el) => el.path === port.path)) {
+          if (portInUse !== port.path) {
             const span = document.createElement("SPAN");
             span.className = "serial";
             span.textContent = port.path;
             span.addEventListener("click", () => {
+              const img = document.getElementById(idPrefix + "-connection");
+              selected.textContent = "Connecting...";
+              img.setAttribute("src", "./images/serial_disconnected.svg");
+              img.setAttribute("title", "Connecting...");
+
               api.setPort({ idPrefix, path: port.path }).then((success) => {
-                const img = document.getElementById(idPrefix + "-connection");
                 if (success) {
-                  portsInUse.push({ idPrefix, path: port.path });
+                  portInUse = port.path;
                   selected.textContent = port.path;
                   img.setAttribute("src", "./images/serial_connected.svg");
                   img.setAttribute("title", "Serial Connected");
                 } else {
+                  selected.textContent = "Select Port";
                   img.setAttribute("src", "./images/serial_disconnected.svg");
                   img.setAttribute("title", "Connection Error");
                 }
