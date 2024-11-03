@@ -12,7 +12,7 @@ npm install
 ```
 
 If you want to generate an installer in addition to the basic zip file, add the maker for your platform from ```makers.txt``` under ```config.makers``` in package.json.
-```json
+```jsonc
 {
 //...
 
