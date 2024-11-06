@@ -4,6 +4,7 @@
 
 #include "LinuxNamedPipe.h"
 
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <ostream>
@@ -37,6 +38,14 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize) {
     }
 
     return bytesRead;
+}
+
+int LinuxNamedPipe::readStr(char *buffer, int bufferSize) {
+    return read(buffer, bufferSize);
+}
+
+int LinuxNamedPipe::writeStr(const char *buffer) {
+    return write(buffer, strlen(buffer));
 }
 
 int LinuxNamedPipe::write(const void *buffer, int bufferSize) {
