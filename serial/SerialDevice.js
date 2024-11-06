@@ -1,5 +1,4 @@
 const { SerialPort } = require("serialport");
-// const { APRSMessage } = require("./APRS");
 const { PipeStream } = require("./PipeStream");
 const { EventEmitter } = require("node:events");
 const { spawn } = require("child_process");
@@ -193,8 +192,11 @@ class SerialDevice extends EventEmitter {
                     try {
                       this.emit("data", name, JSON.parse(data));
                     } catch (err) {
-                      log.err("Error receiving " + name + ": " + err.message);
-                      this.emit("error", name, data);
+                      this.emit(
+                        "error",
+                        "Error receiving on " + name + ": " + err.message
+                      );
+                      log.debug("During error, received data: " + data);
                     }
                   });
                   this.deviceOutput.push(newStream);
@@ -224,28 +226,45 @@ class SerialDevice extends EventEmitter {
   }
 
   writeCommand(command) {
-    for (let i = 0; i < command.length; i++) {
-      // turn it into a 16 bit signed integer using INT16BE
-      this.command.stream.write(command[i]);
+    if (this.ready) {
+      for (let i = 0; i < command.length; i++) {
+        // turn it into a 16 bit signed integer using INT16BE
+        this.command.stream.write(command[i]);
+      }
+      log.info("Radio command sent: " + command);
     }
-    log.info("Radio command sent: " + command);
   }
 
   isConnected() {
-    return {
-      connected: this.connected,
-    };
+    return new Promise((res, rej) => {
+      if (this.ready) {
+        this.control.stream.write("connected\n");
+        this.status.stream.once("data", (data) => {
+          if (data.toString() === "connected") {
+            res(1);
+          } else {
+            res(0);
+          }
+        });
+      } else {
+        rej("serial driver has not started");
+      }
+    });
   }
 
   close() {
-    this.control.stream.write("exit\n");
+    if (this.ready) {
+      this.ready = false;
+      this.connected = false;
+      this.emit("close");
+      this.control.stream.write("exit\n");
+    }
   }
 
   reload() {
-    // this.close();
-
     this.ready = false;
     this.connected = false;
+    this.emit("close");
 
     this.setupDriver();
   }
