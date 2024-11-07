@@ -25,18 +25,6 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   }
   backup = tty;
 
-  /* Windows setup:
-      dcbSerialParameters.BaudRate = 600000; // Adjust to match desired bitrate
-      dcbSerialParameters.ByteSize = 8;
-      dcbSerialParameters.StopBits = ONESTOPBIT;
-      dcbSerialParameters.Parity = NOPARITY;
-      dcbSerialParameters.fDtrControl = DTR_CONTROL_ENABLE;
-      dcbSerialParameters.fRtsControl =
-          RTS_CONTROL_HANDSHAKE; // Enable RTS/CTS flow control
-      dcbSerialParameters.fOutxCtsFlow = TRUE;
-      dcbSerialParameters.fOutxDsrFlow = TRUE;
-   */
-
   tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
   tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in
                           // communication (most common)
