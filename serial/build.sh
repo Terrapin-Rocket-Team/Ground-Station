@@ -4,7 +4,7 @@ CORES=1
 
 mkdir -p serial
 cd serial
-cmake ../
+cmake ../../serial
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   cmake --build ./ --target DemuxLinux
   mkdir pipes

@@ -74,9 +74,9 @@ class SerialDevice extends EventEmitter {
     this.driver.once("exit", (code) => {
       log.info("Driver exited with code: " + code);
     });
-
     this.driver.stdout.once("data", (data) => {
       let dataStr = data.toString().replace("\r", "").split("\n");
+      log.info(dataStr)
 
       dataStr.forEach((str) => {
         if (str === "driver ready") {
