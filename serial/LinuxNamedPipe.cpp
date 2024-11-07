@@ -41,7 +41,20 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize) {
 }
 
 int LinuxNamedPipe::readStr(char *buffer, int bufferSize) {
-    return read(buffer, bufferSize);
+    int read = 1;
+    int count = 0;
+    while (count < bufferSize && read > 0)
+    {
+        read = 0;
+        read = read(buffer+count, 1);
+        if (buffer[count] == '\n')
+        {
+            buffer[count] = '\0';
+            break;
+        }
+        count += read;
+    }
+    return count;
 }
 
 int LinuxNamedPipe::writeStr(const char *buffer) {
