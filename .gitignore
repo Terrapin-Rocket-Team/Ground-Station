@@ -16,3 +16,6 @@ video/ffmpeg-7.0.1
 
 build/
 serial/*.bin
+cmake-build-debug/
+serial/cmake-build-debug/
+serial/serial
