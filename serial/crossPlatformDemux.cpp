@@ -15,6 +15,7 @@
 
 int main(int argc, char **argv)
 {
+    std::cout << "Hello from demux!" <<std::endl;
     unsigned char data[MAX_DATA_LENGTH];
     NamedPipe *hPipeIn;
     NamedPipe *hPipe1;
