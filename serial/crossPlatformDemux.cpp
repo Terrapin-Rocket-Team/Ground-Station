@@ -23,10 +23,10 @@ int main(int argc, char **argv)
     NamedPipe *hPipe3;
 
 #ifdef WINDOWS
-    hPipeIn = new WinNamedPipe("\\\\.\\pipe\\terpFcCommands", true);
-    hPipe1 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoOne", true);
-    hPipe2 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoTwo", true);
-    hPipe3 = new WinNamedPipe("\\\\.\\pipe\\terpTelemetry", true);
+    hPipeIn = new WinNamedPipe("..\\serial\\pipes\\terpFcCommands", true);
+    hPipe1 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoOne", true);
+    hPipe2 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoTwo", true);
+    hPipe3 = new WinNamedPipe("..\\serial\\pipes\\terpTelemetry", true);
 #elif LINUX
     // THESE PATHS MIGHT BE WRONG!
     hPipeIn = new LinuxNamedPipe("../serial/pipes/terpFcCommands", true);
