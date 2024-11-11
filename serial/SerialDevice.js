@@ -9,7 +9,7 @@ const { log } = require("../debug.js");
 const serialDriverPath = path.join(__dirname, "..", "build", "serial");
 
 /**
- * A class to communicate with the radio module using serialport
+ * A class to communicate with the radio module using Serial
  */
 class SerialDevice extends EventEmitter {
   /**
@@ -18,13 +18,14 @@ class SerialDevice extends EventEmitter {
     super();
     this.ready = false;
     this.connected = false;
+    this.inputStreamNames = [];
+    this.outputStreamNames = [];
     this.deviceInput = [];
     this.deviceOutput = [];
 
     this.driver = {};
     this.control = {};
     this.status = {};
-    this.command = {};
 
     this.chunks3 = "";
 
@@ -50,6 +51,23 @@ class SerialDevice extends EventEmitter {
         }
       });
     });
+  }
+
+  addInputStream(name) {
+    this.inputStreamNames.push(name);
+  }
+
+  addOutputStream(name) {
+    this.outputStreamNames.push(name);
+  }
+
+  /**
+   *
+   * @param {String} name
+   * @param {Writable} outStream
+   */
+  pipe(name, outStream) {
+    this.deviceOutput.find((o) => o.name === name).pipe(outStream);
   }
 
   setupDriver() {
@@ -143,30 +161,39 @@ class SerialDevice extends EventEmitter {
         this.status.stream.once("data", (data) => {
           if (data.toString() === "connected") {
             // setup data streams
-            let telemetryStreams = [
-              "telemetry-avionics",
-              "telemetry-airbrake",
-              "telemetry-payload",
-            ];
-            let commandStreams = ["command"];
+            // let telemetryStreams = [
+            //   "telemetry-avionics",
+            //   "telemetry-airbrake",
+            //   "telemetry-payload",
+            //   "video0",
+            //   "video1",
+            // ];
+            // let commandStreams = ["command"];
 
             // get driver ready to accept pipe names
             this.control.stream.write("data pipes\n");
 
             // write the number of pipes
             this.control.stream.write(
-              telemetryStreams.length + commandStreams.length + "\n"
+              this.outputStreamNames.length +
+                this.inputStreamNames.length +
+                "\n"
             );
 
             // write the names of all the command pipes
-            for (let i = 0; i < commandStreams.length; i++) {
-              this.control.stream.write(commandStreams[i] + " " + i + "\n");
+            for (let i = 0; i < this.inputStreamNames.length; i++) {
+              this.control.stream.write(
+                this.inputStreamNames[i] + " " + i + "\n"
+              );
             }
 
             // write the names of all the telemetry pipes
-            for (let i = 0; i < telemetryStreams.length; i++) {
+            for (let i = 0; i < this.outputStreamNames.length; i++) {
               this.control.stream.write(
-                telemetryStreams[i] + " " + (i + commandStreams.length) + "\n"
+                this.outputStreamNames[i] +
+                  " " +
+                  (i + this.inputStreamNames.length) +
+                  "\n"
               );
             }
 
@@ -176,17 +203,17 @@ class SerialDevice extends EventEmitter {
 
               if (success) {
                 // handle sending commands
-                commandStreams.forEach((name) => {
+                this.inputStreamNames.forEach((name) => {
                   let newStream = new PipeStream(name);
                   this.deviceInput.push(newStream);
                 });
 
-                this.command = this.deviceInput.find(
-                  (o) => o.name === "command"
-                );
+                // this.command = this.deviceInput.find(
+                //   (o) => o.name === "command"
+                // );
 
                 // handle telemetry data
-                telemetryStreams.forEach((name) => {
+                this.outputStreamNames.forEach((name) => {
                   let newStream = new PipeStream(name);
                   newStream.on("data", (data) => {
                     try {
@@ -225,13 +252,12 @@ class SerialDevice extends EventEmitter {
     });
   }
 
-  writeCommand(command) {
+  write(name, data) {
     if (this.ready) {
-      for (let i = 0; i < command.length; i++) {
-        // turn it into a 16 bit signed integer using INT16BE
-        this.command.stream.write(command[i]);
-      }
-      log.info("Radio command sent: " + command);
+      let stream = this.deviceInput.find((o) => o.name === name);
+      stream.write(data);
+
+      log.debug("Wrote to stream " + name + ": " + data);
     }
   }
 

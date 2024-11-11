@@ -8,7 +8,7 @@ const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
 const { APRSMessage } = require("./serial/APRS");
-const { FileStreamSource } = require("./video/video-source");
+const { FileStreamSource } = require("./video/video-io");
 
 const iconPath = "build/icons";
 
@@ -21,8 +21,6 @@ let mainWin,
   cacheMeta,
   closed,
   csvCreated,
-  lastHeading,
-  lastSpeed,
   currentCSV,
   videoControls;
 
@@ -701,27 +699,27 @@ ipcMain.on("update-settings", (event, settings) => {
 });
 
 //serial communication
-serial.on("data", (data) => {
-  if (!data.getHeading() && !data.getSpeed()) {
-    data.body.heading = lastHeading;
-    data.body.speed = lastSpeed;
-  } else {
-    lastHeading = data.body.heading;
-    lastSpeed = data.body.speed;
-  }
-  log.info(data.toString());
-  if (mainWin) mainWin.webContents.send("data", data);
-  if (videoWin) videoWin.webContents.send("data", data);
-  try {
-    if (!csvCreated) {
-      if (!fs.existsSync("./data")) fs.mkdirSync("./data");
-      currentCSV = new Date().toISOString().replace(/:/g, "-") + ".csv";
-      fs.writeFileSync(path.join("./data", currentCSV), "");
+serial.on("data", (name, data) => {
+  if (name.includes("telemetry")) {
+    log.debug(data);
+    if (mainWin) mainWin.webContents.send("data", data);
+    if (videoWin) videoWin.webContents.send("data", data);
+    try {
+      if (!csvCreated) {
+        if (!fs.existsSync("./data")) fs.mkdirSync("./data");
+        currentCSV = new Date().toISOString().replace(/:/g, "-") + ".csv";
+        fs.writeFileSync(path.join("./data", currentCSV), "");
+      }
+      fs.appendFileSync(
+        path.join("./data", currentCSV),
+        data.toCSV(csvCreated)
+      );
+      if (!csvCreated) csvCreated = true;
+    } catch (err) {
+      log.err('Error writing data: "' + err.message + '"');
     }
-    fs.appendFileSync(path.join("./data", currentCSV), data.toCSV(csvCreated));
-    if (!csvCreated) csvCreated = true;
-  } catch (err) {
-    log.err('Error writing data: "' + err.message + '"');
+  }
+  if (name.includes("video")) {
   }
 });
 
@@ -734,7 +732,7 @@ serial.on("video2chunk", () => {
 });
 
 serial.on("error", (message) => {
-  log.err("Error parsing APRS message: " + message);
+  log.err("Serial driver error: " + message);
 });
 
 serial.on("close", (path) => {
