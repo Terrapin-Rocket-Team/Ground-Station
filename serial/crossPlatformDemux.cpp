@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     size_t chunks3bot = 0;
 
     bool receivedPort = false;
-    char portBuf[1024];
+    char portBuf[1024] = {'\0'};
 
     while (!receivedPort)
     {
@@ -74,9 +74,9 @@ int main(int argc, char **argv)
 #ifdef WINDOWS
     teensy = new WinSerialPort(portBuf);
 #elif LINUX
-    teensy = new LinuxSerialPort(strcat("./", portBuf));
+    teensy = new LinuxSerialPort(portBuf);
 #endif
-
+    std::cout << "HERE" << std::endl;
     if (teensy->isConnected())
     {
         std::cout << "Connection made" << std::endl

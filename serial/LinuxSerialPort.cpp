@@ -4,8 +4,8 @@
 #include <cstring>
 #include <fcntl.h> // Contains file controls like O_RDWR
 #include <iostream>
-#include <termios.h> // Contains POSIX terminal control definitions
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   portHandle = open(portName, O_RDWR);
@@ -15,9 +15,9 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
     return;
   }
 
-  struct termios tty;
+  struct termios2 tty;
 
-  if (tcgetattr(portHandle, &tty) != 0) {
+  if (ioctl(portHandle, TCGETS, &tty) != 0) {
     std::cerr << "Error " << errno << " from tcgetattr " << strerror(errno)
               << "\n";
     connected = false;
@@ -56,11 +56,13 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   tty.c_cc[VMIN] = 0;
 
   // TODO: need to see how to match this with windows implementation
-  cfsetispeed(&tty, B9600);
-  cfsetospeed(&tty, B9600);
+  tty.c_cflag &= ~CBAUD;
+  tty.c_cflag |= BOTHER;
+  tty.c_ispeed = 600000;
+  tty.c_ospeed = 600000;
 
   // Save tty settings, also checking for error
-  if (tcsetattr(portHandle, TCSANOW, &tty) != 0) {
+  if (ioctl(portHandle, TCSANOW, &tty) != 0) {
     std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
               << "\n";
     connected = false;
@@ -85,7 +87,7 @@ void LinuxSerialPort::closeSerial() {
   if (connected) {
     // apparently tcsetattr settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-    if (tcsetattr(portHandle, TCSANOW, &backup) != 0) {
+    if (ioctl(portHandle, TCSANOW, &backup) != 0) {
       std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
                 << "\n";
       connected = false;
