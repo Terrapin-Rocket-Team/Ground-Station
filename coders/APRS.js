@@ -439,4 +439,8 @@ class APRSBody {
   }
 }
 
-module.exports = { APRSMessage, APRSBody };
+if (
+  typeof window === "undefined" ||
+  (typeof exports !== "undefined" && this === exports && exports !== window)
+)
+  module.exports = { APRSMessage, APRSBody };
