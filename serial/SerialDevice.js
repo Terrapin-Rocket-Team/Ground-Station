@@ -217,7 +217,7 @@ class SerialDevice extends EventEmitter {
                   let newStream = new PipeStream(name);
                   newStream.on("data", (data) => {
                     try {
-                      this.emit("data", name, JSON.parse(data));
+                      this.emit(name + "-data", JSON.parse(data));
                     } catch (err) {
                       this.emit(
                         "error",

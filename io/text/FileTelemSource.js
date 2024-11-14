@@ -1,14 +1,14 @@
 const TextSource = require("./TextSource");
-const { log } = require("../debug");
+const { log } = require("../../debug");
 const { Readable } = require("stream");
 const fs = require("fs");
-const { serial } = require("../serial/SerialDevice");
+const readline = require("readline");
 const path = require("path");
 
 /**
  * A class to play a local file as a video source
  */
-class FileStreamSource extends TextSource {
+class FileTelemSource extends TextSource {
   /**
    *
    * @param {String} file
@@ -24,7 +24,10 @@ class FileStreamSource extends TextSource {
     this.file = file;
     this.options = options;
 
-    serial.add;
+    const rl = readline.createInterface({
+      input: this.i,
+      crlfDelay: Infinity,
+    });
     this.lines = [];
     this.isPaused = false;
     this.isClosed = false;
@@ -42,11 +45,17 @@ class FileStreamSource extends TextSource {
 
     rl.on("close", () => {
       this.isClosed = true;
-      log.debug("Finished reading " + this.file);
+      log.debug("Finished reading " + this.name);
     });
 
     if (this.options.createLog) {
-      this.o = fs.createWriteStream("out_" + file);
+      const logName = path.join(
+        "data",
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
+      );
+      this.dataFile = fs.createWriteStream(logName);
+
+      log.debug("Log file created for " + this.name + ": " + logName);
     }
 
     setInterval(() => {
@@ -54,8 +63,8 @@ class FileStreamSource extends TextSource {
       // skip any empty lines
       while (!line) line = this.lines.shift();
       // send the line to the user defined parser
-      this.options.parser(line);
-      if (this.options.createLog) this.o.write(line);
+      this.options.parser(line); // currently a string, should be a JSON object
+      if (this.options.createLog) this.dataFile.write(line);
       // close if we finished sending all lines
       if (this.lines.length === 0 && this.isClosed) {
         this.emit("close");
@@ -69,4 +78,4 @@ class FileStreamSource extends TextSource {
   }
 }
 
-module.exports = FileStreamSource;
+module.exports = FileTelemSource;
