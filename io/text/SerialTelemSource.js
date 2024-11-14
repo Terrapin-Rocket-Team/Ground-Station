@@ -1,12 +1,11 @@
 const TextSource = require("./TextSource");
 const { log } = require("../../debug");
-const { Readable } = require("stream");
 const fs = require("fs");
 const { serial, SerialDevice } = require("../../serial/SerialDevice");
 const path = require("path");
 
 /**
- * A class to play a local file as a video source
+ * A class to read telemetry from a serial device
  */
 class SerialTelemSource extends TextSource {
   /**
@@ -31,8 +30,6 @@ class SerialTelemSource extends TextSource {
     this.file = file;
     this.options = options;
     this.dataFile = null;
-
-    this.lines = [];
 
     if (this.options.createLog) {
       const logName = path.join(
