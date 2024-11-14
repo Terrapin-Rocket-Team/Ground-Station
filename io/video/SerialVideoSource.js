@@ -16,7 +16,7 @@ const ffmpegPath = path.join(
 );
 
 /**
- * A class to stream video from a SerialDevice
+ * A class to stream video from a serial device
  */
 class SerialVideoSource extends VideoSource {
   /**

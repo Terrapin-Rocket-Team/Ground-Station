@@ -1,5 +1,5 @@
 /**
- * A class to handling encoding and decoding of APRS messages
+ * A class to convert APRS message output from the LoRa APRS library to a JSON object
  */
 class APRSMessage {
   /**

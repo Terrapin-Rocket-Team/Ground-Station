@@ -2,5 +2,6 @@ const VideoSource = require("./video/VideoSource");
 const FileVideoSource = require("./video/FileVideoSource");
 const SerialVideoSource = require("./video/SerialVideoSource");
 
-// package all the VideoSource classes together
+// collect all video-io modules
+
 module.exports = { VideoSource, FileVideoSource, SerialVideoSource };

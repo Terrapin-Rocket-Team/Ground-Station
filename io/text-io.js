@@ -4,6 +4,8 @@ const FileTelemSource = require("./text/FileTelemSource");
 const SerialTelemSource = require("./text/SerialTelemSource");
 const SerialCommandSink = require("./text/SerialCommandSink");
 
+// collect all text-io modules
+
 module.exports = {
   TextSource,
   TextSink,

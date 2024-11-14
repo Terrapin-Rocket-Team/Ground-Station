@@ -8,7 +8,9 @@ const { APRSMessage } = require("./coders/APRS");
 const { FileTelemSource } = require("./io/text-io");
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 
-const iconPath = "build/icons";
+const iconPath = path.join(__dirname, "build", "icons");
+const dataPath = path.join(__dirname, "data");
+const logPath = path.join(__dirname, "log");
 
 let mainWin,
   debugWin,
@@ -96,6 +98,13 @@ try {
   } catch (err) {
     log.err('Failed to create metadata file: "' + err.message + '"');
   }
+}
+
+try {
+  if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath);
+  if (!fs.existsSync(logPath)) fs.mkdirSync(logPath);
+} catch (err) {
+  log.err("Failed to create output folders: " + err.message);
 }
 
 //creates the main electron window

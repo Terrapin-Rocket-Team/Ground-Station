@@ -99,14 +99,14 @@ cd build
 # update perms
 chmod +x ../icons/build.sh
 chmod +x ../serial/build.sh
-chmod +x ../video/build.sh
+chmod +x ../coders/build.sh
 chmod +x ../src/build.sh
 
 # build dependencies first
 
 if [ $ALL = 1 ] || [ $ICONS = 1 ] ; then ../icons/build.sh ; fi
 if [ $ALL = 1 ] || [ $SERIAL = 1 ] ; then ../serial/build.sh ; fi
-if [ $ALL = 1 ] || [ $VIDEO = 1 ] ; then ../video/build.sh ; fi
+if [ $ALL = 1 ] || [ $VIDEO = 1 ] ; then ../coders/build.sh ; fi
 
 # then build main
 if [ $ALL = 1 ] || [ $SRC = 1 ] ; then ../src/build.sh ; fi

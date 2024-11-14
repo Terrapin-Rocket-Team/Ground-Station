@@ -1,12 +1,11 @@
 const TextSource = require("./TextSource");
 const { log } = require("../../debug");
-const { Readable } = require("stream");
 const fs = require("fs");
 const readline = require("readline");
 const path = require("path");
 
 /**
- * A class to play a local file as a video source
+ * A class read telemetry from a local file
  */
 class FileTelemSource extends TextSource {
   /**
@@ -28,7 +27,6 @@ class FileTelemSource extends TextSource {
       input: this.i,
       crlfDelay: Infinity,
     });
-    this.lines = [];
     this.isPaused = false;
     this.isClosed = false;
     this.firstLine = true;
