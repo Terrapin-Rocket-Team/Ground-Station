@@ -4,9 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
-const { APRSMessage } = require("./serial/APRS");
-const { FileTelemSource } = require("./text/text-io");
-const { FileStreamSource, SerialStreamSource } = require("./video/video-io");
+const { APRSMessage } = require("./coders/APRS");
+const { FileTelemSource } = require("./io/text-io");
+const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 
 const iconPath = "build/icons";
 
@@ -312,7 +312,7 @@ const createVideo = () => {
     });
   });
 
-  const vs1 = new SerialStreamSource("video-0", {
+  const vs1 = new SerialVideoSource("video-0", {
     resolution: { width: 640, height: 832 },
     framerate: 30,
     rotation: "cw",
@@ -774,7 +774,7 @@ if (config.debug) {
     if (config.video) {
       //test to see if first video exists
       //create new video source from file
-      let vs1 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoOne", true, {
+      let vs1 = new FileVideoSource("\\\\.\\pipe\\ffmpegVideoOne", true, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
@@ -786,7 +786,7 @@ if (config.debug) {
       vs1.startOutput();
       //test to see if second video exists
       //create new video source from file
-      let vs2 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoTwo", false, {
+      let vs2 = new FileVideoSource("\\\\.\\pipe\\ffmpegVideoTwo", false, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",

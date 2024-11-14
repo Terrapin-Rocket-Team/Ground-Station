@@ -1,6 +1,6 @@
 const VideoSource = require("./VideoSource");
-const { serial, SerialDevice } = require("../serial/SerialDevice");
-const { log } = require("../debug");
+const { serial, SerialDevice } = require("../../serial/SerialDevice");
+const { log } = require("../../debug");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
@@ -18,7 +18,7 @@ const ffmpegPath = path.join(
 /**
  * A class to stream video from a SerialDevice
  */
-class SerialStreamSource extends VideoSource {
+class SerialVideoSource extends VideoSource {
   /**
    * @param {String} file
    * @param {Object} options
@@ -26,25 +26,25 @@ class SerialStreamSource extends VideoSource {
    * @param {Number} options.resolution.width
    * @param {Number} options.resolution.height
    * @param {Number} options.framerate
-   * @param {String} options.rotation
+   * @param {String} [options.rotation]
    * @param {Boolean} [options.createLog]
+   * @param {Boolean} [options.createDecoderLog]
    * @param {SerialDevice} [sd]
    * @param {String} [name]
    */
   constructor(file, options, sd, name) {
-    console.log(sd);
-    console.log(name);
     //call the VideoSource constructor with the name as the file name if "name" is not given
-    super(name ? name : file, serial);
+    super(name ? name : file, sd ? sd : serial);
 
-    serial.addOutputStream(file);
+    this.sd = sd ? sd : serial;
 
-    log.debug("Creating serial stream source for port: " + file);
+    this.sd.addOutputStream(this.name);
+
+    log.debug("Creating serial video source for: " + file);
 
     this.file = file;
     this.options = options;
     this.ffmpeg = null;
-    this.logFile = null;
     this.data = Buffer.alloc(
       this.options.resolution.width * this.options.resolution.height * 2
     );
@@ -97,12 +97,23 @@ class SerialStreamSource extends VideoSource {
       ]);
     }
 
-    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
-    if (this.ffmpeg !== null && this.options.createLog) {
-      this.logFile = fs.createWriteStream("./ffmpeg-" + this.name + ".log");
-      this.ffmpeg.stderr.pipe(this.logFile);
+    if (this.options.createLog) {
+      const logName = path.join(
+        "data",
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1"
+      );
+      this.dataFile = fs.createWriteStream(logName);
 
-      log.debug("Log file created" + this.name + " " + this.logFile);
+      log.debug("Log file created for " + this.name + ": " + logName);
+    }
+
+    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
+    if (this.ffmpeg !== null && this.options.createDecoderLog) {
+      const logName = path.join("logs", "ffmpeg-" + this.name + ".log");
+      const logFile = fs.createWriteStream(logName);
+      this.ffmpeg.stderr.pipe(logFile);
+
+      log.debug("Log file created for " + this.name + ": " + logName);
     }
   }
 
@@ -190,4 +201,4 @@ class SerialStreamSource extends VideoSource {
   }
 }
 
-module.exports = SerialStreamSource;
+module.exports = SerialVideoSource;

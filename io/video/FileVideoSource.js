@@ -1,5 +1,5 @@
 const VideoSource = require("./VideoSource");
-const { log } = require("../debug");
+const { log } = require("../../debug");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
@@ -17,7 +17,7 @@ const ffmpegPath = path.join(
 /**
  * A class to play a local file as a video source
  */
-class FileStreamSource extends VideoSource {
+class FileVideoSource extends VideoSource {
   /**
    * @param {String} file
    * @param {Object} options
@@ -27,13 +27,14 @@ class FileStreamSource extends VideoSource {
    * @param {Number} options.framerate
    * @param {String} [options.rotation]
    * @param {Boolean} [options.createLog]
+   * @param {Boolean} [options.createDecoderLog]
    * @param {String} [name]
    */
   constructor(file, options, name) {
     //call the VideoSource constructor with the name as the file name
     super(name ? name : file, fs.createReadStream(file));
 
-    log.debug("Creating file stream source for: " + file);
+    log.debug("Creating file video source for: " + file);
 
     this.file = file;
     this.options = options;
@@ -91,12 +92,23 @@ class FileStreamSource extends VideoSource {
       ]);
     }
 
-    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
-    if (this.ffmpeg !== null && this.options.createLog) {
-      this.logFile = fs.createWriteStream("./ffmpeg-" + this.name + ".log");
-      this.ffmpeg.stderr.pipe(this.logFile);
+    if (this.options.createLog) {
+      const logName = path.join(
+        "data",
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1"
+      );
+      this.dataFile = fs.createWriteStream(logName);
 
-      log.debug("Log file created" + this.name + " " + this.logFile);
+      log.debug("Log file created for " + this.name + ": " + logName);
+    }
+
+    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
+    if (this.ffmpeg !== null && this.options.createDecoderLog) {
+      const logName = path.join("logs", "ffmpeg-" + this.name + ".log");
+      const logFile = fs.createWriteStream(logName);
+      this.ffmpeg.stderr.pipe(logFile);
+
+      log.debug("Log file created for " + this.name + ": " + logName);
     }
   }
 
@@ -184,4 +196,4 @@ class FileStreamSource extends VideoSource {
   }
 }
 
-module.exports = FileStreamSource;
+module.exports = FileVideoSource;
