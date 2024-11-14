@@ -345,7 +345,7 @@ window.onload = () => {
   }
 
   api.on("data", (data) => {
-    let msg = new APRSMessage(data);
+    let msg = new APRSTelem(data);
 
     //update signal strength
     // let ss = msg.getSignalStrength();

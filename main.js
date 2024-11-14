@@ -4,9 +4,9 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
-const { APRSMessage } = require("./coders/APRS");
 const { FileTelemSource } = require("./io/text-io");
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
+const APRSTelem = require("./coders/APRSTelem");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = path.join(__dirname, "data");
@@ -768,7 +768,7 @@ if (config.debug) {
           parser: (data) => {
             if (!closed && mainWin) {
               //make sure we got a valid line
-              let aprsMsg = APRSMessage.fromCSV(data);
+              let aprsMsg = APRSTelem.fromCSV(data);
               mainWin.webContents.send("data", aprsMsg);
               if (videoWin) videoWin.webContents.send("data", aprsMsg);
             }

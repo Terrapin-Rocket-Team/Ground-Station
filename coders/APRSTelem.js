@@ -20,27 +20,47 @@
 */
 class APRSTelem {
   /**
-   * @param {string|APRSMessage} message the APRS message
+   * @param {string|object} message the APRS message
    * @param {string} [stream]
    */
   constructor(message, stream) {
-    this.stream = stream;
+    if (stream) {
+      this.stream = stream;
 
-    if (typeof message === "string") {
-      message = JSON.parse(message);
+      if (typeof message === "string") {
+        message = JSON.parse(message);
+      }
+
+      this.deviceId = message.deviceId;
+      this.latitude = parseFloat(message.data.lat);
+      this.longitude = parseFloat(message.data.lng);
+      this.altitude = parseFloat(message.data.alt);
+      this.speed = parseFloat(message.data.spd);
+      this.heading = parseFloat(message.data.hdg);
+      this.orientation = [
+        parseFloat(message.data.orient[0]),
+        parseFloat(message.data.orient[1]),
+        parseFloat(message.data.orient[2]),
+      ];
+      this.stateFlags = parseInt(message.data.stateFlags);
+      this.rssi = parseInt(message.rssi); // TODO
+
+      this.t0Date = new Date(); // maybe switch t0 to be more like received time
+    } else {
+      this.stream = message.stream;
+
+      this.deviceId = message.deviceId;
+      this.latitude = message.latitude;
+      this.longitude = message.longitude;
+      this.altitude = message.altitude;
+      this.speed = message.speed;
+      this.heading = message.heading;
+      this.orientation = message.orientation;
+      this.stateFlags = message.stateFlags;
+      this.rssi = message.rssi; // TODO
+
+      this.t0Date = message.t0Date;
     }
-
-    this.deviceId = message.deviceId;
-    this.latitude = message.data.lat;
-    this.longitude = message.data.lng;
-    this.altitude = message.data.alt;
-    this.speed = message.data.spd;
-    this.heading = message.data.hdg;
-    this.orientation = message.data.orient;
-    this.stateFlags = message.data.stateFlags;
-    this.rssi = message.rssi; // TODO
-
-    this.t0Date = new Date(); // maybe switch t0 to be more like received time
   }
 
   /**
@@ -60,7 +80,7 @@ class APRSTelem {
           alt: csvArr[4],
           spd: csvArr[5],
           hdg: csvArr[6],
-          orient: [csv[7], csvArr[8], csvArr[9]],
+          orient: [csvArr[7], csvArr[8], csvArr[9]],
           stateFlags: csvArr[10],
         },
       },
@@ -100,7 +120,7 @@ class APRSTelem {
    * @returns {number[]} [latitude, longitude]
    */
   getLatLong() {
-    return this.getLatLongDecimal();
+    return [this.latitude, this.longitude];
   }
 
   /**
@@ -113,28 +133,17 @@ class APRSTelem {
   }
 
   /**
-   * @returns {Number[]} [latitude, longitude]
-   */
-  getLatLongDecimal() {
-    return [
-      this.getDegreesDecimal(this.lat),
-      this.getDegreesDecimal(this.long),
-    ];
-  }
-
-  /**
    * @returns {string} the latitude and longitude in decimal form formatted as a string
    */
   getLatLongDecimalFormatted() {
-    // TODO lat and long are no longer strings
     return (
-      this.getDegreesDecimal(this.latitude, true).toFixed(4) +
+      Math.abs(this.latitude).toFixed(4) +
       "\u00b0 " +
-      this.latitude.substring(this.latitude.length - 1, this.latitude.length) +
+      (this.latitude >= 0 ? "N" : "S") +
       "/" +
-      this.getDegreesDecimal(this.longitude, true).toFixed(4) +
+      Math.abs(this.longitude).toFixed(4) +
       "\u00b0 " +
-      this.longitude.substring(this.longitude.length - 1, this.longitude.length)
+      (this.longitude > 0 ? "E" : "W")
     );
   }
 
@@ -142,99 +151,54 @@ class APRSTelem {
    * @returns {string} the latitude and longitude in degress, minutes, seconds form as a string
    */
   getLatLongDMS() {
-    // TODO lat and long are no longer strings
-    return (
-      this.getDegrees(this.latitude) +
-      "\u00b0" +
-      this.getMinutes(this.latitude) +
-      "'" +
-      this.getSeconds(this.latitude) +
-      '"' +
-      this.latitude.substring(this.latitude.length - 1, this.latitude.length) +
-      " " +
-      this.getDegrees(this.longitude) +
-      "\u00b0" +
-      this.getMinutes(this.longitude) +
-      "'" +
-      this.getSeconds(this.longitude) +
-      '"' +
-      this.longitude.substring(this.longitude.length - 1, this.longitude.length)
-    );
-  }
-  /**
-   * @param {string} coord string containing of the APRS formatted latitude or longitude
-   * @param {boolean} [format] set to true to prevent use of negatives for West or South
-   * @returns {number} latitude or longitude in the regular format
-   */
-  getDegreesDecimal(coord, format) {
-    // TODO lat and long are no longer strings
-    let dir = !format ? coord.substring(coord.length - 1, coord.length) : "";
-    if (coord.length > 8) {
-      return (
-        (parseInt(coord.substring(0, 3)) +
-          parseFloat(coord.substring(3, coord.length - 1)) / 60) *
-        (dir === "S" || dir === "W" ? -1 : 1)
+    let latDegrees = Math.floor(this.latitude),
+      latMinutes = Math.floor(60 * (this.latitude - latDegrees)),
+      latSeconds = Math.floor(
+        60 * (60 * (this.latitude - latDegrees) - latMinutes)
       );
-    }
+    let longDegrees = Math.floor(this.longitude),
+      longMinutes = Math.floor(60 * (this.longitude - longDegrees)),
+      longSeconds = Math.floor(
+        60 * (60 * (this.longitude - longDegrees) - longMinutes)
+      );
     return (
-      (parseInt(coord.substring(0, 2)) +
-        parseFloat(coord.substring(2, coord.length - 1)) / 60) *
-      (dir === "S" || dir === "W" ? -1 : 1)
+      Math.abs(latDegrees) +
+      "\u00b0" +
+      Math.abs(latMinutes) +
+      "'" +
+      Math.abs(latSeconds) +
+      '"' +
+      (this.latitude > 0 ? "N" : "S") +
+      " " +
+      Math.abs(longDegrees) +
+      "\u00b0" +
+      Math.abs(longMinutes) +
+      "'" +
+      Math.abs(longSeconds) +
+      '"' +
+      (this.longitude > 0 ? "E" : "W")
     );
-  }
-
-  /**
-   * @param {string} coord string containing of the APRS formatted latitude or longitude
-   * @returns {string} the degrees part of the coordinate
-   */
-  getDegrees(coord) {
-    if (coord.length > 8) return coord.substring(0, 3);
-    return coord.substring(0, 2);
-  }
-
-  /**
-   * @param {string} coord string containing of the APRS formatted latitude or longitude
-   * @returns {string} the minutes part of the coordinate
-   */
-  getMinutes(coord) {
-    if (coord.length > 8) return coord.substring(3, 5);
-    return coord.substring(2, 4);
-  }
-
-  /**
-   * @param {string} coord string containing of the APRS formatted latitude or longitude
-   * @returns {string} the seconds part of the coordinate
-   */
-  getSeconds(coord) {
-    if (coord.length > 8) {
-      return (parseFloat("0." + coord.substring(6, coord.length - 1)) * 60)
-        .toFixed(0)
-        .toString();
-    }
-    return (parseFloat("0." + coord.substring(5, coord.length - 1)) * 60)
-      .toFixed(0)
-      .toString();
   }
 
   /**
    * @returns {float} last updated altitude
    */
   getAlt() {
-    return parseFloat(this.altitude);
+    return this.altitude;
   }
 
   /**
    * @returns {Number} last updated heading
    */
   getHeading() {
-    return parseInt(this.heading);
+    return this.heading;
   }
 
   /**
    * @returns {Number} last updated speed
    */
   getSpeed() {
-    return parseFloat(this.speed);
+    return this.speed;
   }
 
   /**
@@ -326,7 +290,7 @@ class APRSTelem {
     let csv = "";
     if (!csvCreated) {
       csv =
-        "Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags,T0,RSSI\r\n";
+        "Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags,T0,RSSI\n";
     }
     csv += `${this.stream},${this.deviceId},${this.latitude},${
       this.longitude
@@ -337,4 +301,8 @@ class APRSTelem {
   }
 }
 
-module.exports = APRSTelem;
+if (
+  typeof window === "undefined" ||
+  (typeof exports !== "undefined" && this === exports && exports !== window)
+)
+  module.exports = APRSTelem;
