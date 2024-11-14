@@ -1,14 +1,12 @@
-//TODO: launch the radio and data logging as a separate process (maybe) so saving data does not rely on the main app to work
-
 const { app, BrowserWindow, ipcMain } = require("electron");
 if (require("electron-squirrel-startup")) app.quit(); //for app maker
 const fs = require("fs");
-const readline = require("readline");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
 const { APRSMessage } = require("./serial/APRS");
-const { FileStreamSource } = require("./video/video-io");
+const { FileTelemSource } = require("./text/text-io");
+const { FileStreamSource, SerialStreamSource } = require("./video/video-io");
 
 const iconPath = "build/icons";
 
@@ -313,6 +311,14 @@ const createVideo = () => {
       isFullscreen: false,
     });
   });
+
+  const vs1 = new SerialStreamSource("video-0", {
+    resolution: { width: 640, height: 832 },
+    framerate: 30,
+    rotation: "cw",
+    createLog: config.debug,
+  });
+
   log.debug("Video streaming window created");
 };
 
@@ -748,46 +754,17 @@ if (config.debug) {
     if (fs.existsSync("./test.csv")) {
       try {
         //set up line reader
-        const testCSV = fs.createReadStream("./test.csv");
-        const rl = readline.createInterface({
-          input: testCSV,
-          crlfDelay: Infinity,
-        });
-        const lines = [];
-        let isPaused = false;
-        let firstLine = true;
-
-        rl.on("line", (line) => {
-          if (!firstLine) lines.push(line);
-          if (firstLine) firstLine = false;
-          //stop reading lines so we don't fill up memory
-          if (lines.length > 100) {
-            rl.pause();
-            isPaused = true;
-          }
-        });
-
-        rl.on("close", () => {
-          log.debug("Finished reading test.csv");
-        });
-
-        setInterval(() => {
-          if (!closed && mainWin) {
-            //get the next message
-            let line = lines.shift();
-            //make sure we got a valid line
-            if (line) {
-              let aprsMsg = APRSMessage.fromCSV(line);
+        const telem1Stream = new FileTelemSource("./test.csv", {
+          datarate: 1,
+          parser: (data) => {
+            if (!closed && mainWin) {
+              //make sure we got a valid line
+              let aprsMsg = APRSMessage.fromCSV(data);
               mainWin.webContents.send("data", aprsMsg);
               if (videoWin) videoWin.webContents.send("data", aprsMsg);
             }
-            //resume if we have emptied lots of lines
-            if (lines.length < 50 && isPaused) {
-              rl.resume();
-              isPaused = false;
-            }
-          }
-        }, 1000);
+          },
+        });
       } catch (err) {
         log.err('Failed to read test.csv: "' + err.message + '"');
       }
