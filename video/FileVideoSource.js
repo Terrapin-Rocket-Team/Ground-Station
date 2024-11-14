@@ -1,5 +1,4 @@
 const VideoSource = require("./VideoSource");
-const { serial } = require("../serial/SerialDevice");
 const { log } = require("../debug");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
@@ -16,9 +15,9 @@ const ffmpegPath = path.join(
 );
 
 /**
- * A class to stream video from a SerialDevice
+ * A class to play a local file as a video source
  */
-class SerialStreamSource extends VideoSource {
+class FileStreamSource extends VideoSource {
   /**
    * @param {String} file
    * @param {Object} options
@@ -26,17 +25,15 @@ class SerialStreamSource extends VideoSource {
    * @param {Number} options.resolution.width
    * @param {Number} options.resolution.height
    * @param {Number} options.framerate
-   * @param {String} options.rotation
-   * @param {Boolean} options.createLog
+   * @param {String} [options.rotation]
+   * @param {Boolean} [options.createLog]
    * @param {String} [name]
    */
   constructor(file, options, name) {
-    //call the VideoSource constructor with the name as the file name if "name" is not given
-    super(name ? name : file, serial);
+    //call the VideoSource constructor with the name as the file name
+    super(name ? name : file, fs.createReadStream(file));
 
-    serial.addOutputStream(file);
-
-    log.debug("Creating serial stream source for port: " + file);
+    log.debug("Creating file stream source for: " + file);
 
     this.file = file;
     this.options = options;
@@ -110,7 +107,7 @@ class SerialStreamSource extends VideoSource {
   startOutput() {
     //connect pipes
     this.o = this.ffmpeg.stdout;
-    this.i.pipe(this.name, this.ffmpeg.stdin);
+    this.i.pipe(this.ffmpeg.stdin);
 
     //handle data output from ffmpeg
     this.o.on("data", (chunks) => {
@@ -187,4 +184,4 @@ class SerialStreamSource extends VideoSource {
   }
 }
 
-module.exports = SerialStreamSource;
+module.exports = FileStreamSource;
