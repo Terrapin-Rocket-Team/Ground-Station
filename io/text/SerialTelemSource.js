@@ -12,7 +12,6 @@ class SerialTelemSource extends TextSource {
    *
    * @param {String} file
    * @param {Object} options
-   * @param {Number} options.datarate
    * @param {Function} options.parser
    * @param {Boolean} [options.createLog]
    * @param {SerialDevice} [sd]
@@ -43,7 +42,7 @@ class SerialTelemSource extends TextSource {
 
     this.sd.on(this.name + "-data", (data) => {
       this.emit("data", data);
-      if (this.dataFile) {
+      if (this.options.createLog && this.dataFile) {
         // if first time write csv header
         // write CSV of data to file
       }

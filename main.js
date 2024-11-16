@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
-const { FileTelemSource } = require("./io/text-io");
+const { FileTelemSource, SerialTelemSource } = require("./io/text-io");
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 const APRSTelem = require("./coders/APRSTelem");
 
@@ -12,16 +12,12 @@ const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = path.join(__dirname, "data");
 const logPath = path.join(__dirname, "log");
 
-let mainWin,
-  debugWin,
-  videoWin,
-  videoStreams = [],
+let windows = { main: null, video: null },
+  telemSources = [],
+  videoSources = [],
   config,
-  commandWin,
   cacheMeta,
   closed,
-  csvCreated,
-  currentCSV,
   videoControls;
 
 /*
@@ -38,19 +34,19 @@ baudRate: 115200 is default, baudrate to use with the connected serial port
 try {
   //load config
   config = JSON.parse(fs.readFileSync("./config.json"));
-  if (config.video === undefined)
+  if (config.noGUI !== undefined || config.version !== app.getVersion())
     log.warn(
-      "Older config version detected, save your settings to remove this warning"
+      "Older config version (likely v1.5) detected, save your settings to remove this warning"
     );
   log.useDebug = config.debug;
   log.debug("Config loaded");
 } catch (err) {
   //load defaults if no config file
   config = {
+    version: app.getVersion(),
     scale: 1,
     debugScale: 1,
     debug: false,
-    noGUI: false,
     video: false,
     //tileCache: true, //added tile cache toggling here - work in progress
     cacheMaxSize: 100000000,
@@ -118,7 +114,7 @@ const createMain = () => {
       : process.platform === "darwin"
       ? ".icns"
       : ".png";
-  mainWin = new BrowserWindow({
+  windows.main = new BrowserWindow({
     width: width * config.scale,
     height: height * config.scale,
     resizable: false,
@@ -130,140 +126,77 @@ const createMain = () => {
     },
   });
 
-  mainWin.loadFile(path.join(__dirname, "src/index_new.html"));
+  windows.main.loadFile(path.join(__dirname, "src/index_new.html"));
 
-  if (config.debug) mainWin.webContents.openDevTools({ mode: "detach" });
-  log.debug("Main window created");
+  if (config.debug) windows.main.webContents.openDevTools({ mode: "detach" });
 
-  mainWin.on("enter-full-screen", () => {
+  windows.main.on("enter-full-screen", () => {
     log.debug("Enter main fullscreen");
-    mainWin.webContents.send("fullscreen-change", {
+    windows.main.webContents.send("fullscreen-change", {
       win: "main",
       isFullscreen: true,
     });
   });
 
-  mainWin.on("leave-full-screen", () => {
+  windows.main.on("leave-full-screen", () => {
     log.debug("Leave main fullscreen");
-    mainWin.webContents.send("fullscreen-change", {
+    windows.main.webContents.send("fullscreen-change", {
       win: "main",
       isFullscreen: false,
     });
   });
 
   //make sure messages are not sent to a destroyed window
-  mainWin.once("close", () => {
-    if (!config.noGUI) {
-      closed = true;
-      serial.close();
-    }
-    mainWin.webContents.send("close"); // unused
-    if (!config.noGUI) {
-      if (debugWin) debugWin.close();
-      if (videoWin) videoWin.close();
-    }
+  windows.main.once("close", () => {
+    closed = true;
+    serial.close();
+    windows.main.webContents.send("close"); // unused
+    if (windows.video) windows.video.close();
   });
 
-  mainWin.once("closed", () => {
-    mainWin = null;
+  windows.main.once("closed", () => {
+    windows.main = null;
   });
+
+  if (!config.debug) {
+    const ts1 = new SerialTelemSource("telem-avionics", {
+      parser: (data) => {
+        let telem = new APRSTelem(data);
+        log.debug(telem);
+        if (windows.main) windows.main.webContents.send("data", telem);
+        if (windows.video) windows.video.webContents.send("data", telem);
+      },
+      createLog: true,
+    });
+
+    const ts2 = new SerialTelemSource("telem-airbrake", {
+      parser: (data) => {
+        let telem = new APRSTelem(data);
+        log.debug(telem);
+        if (windows.main) windows.main.webContents.send("data", telem);
+        if (windows.video) windows.video.webContents.send("data", telem);
+      },
+      createLog: true,
+    });
+
+    const ts3 = new SerialTelemSource("telem-payload", {
+      parser: (data) => {
+        let telem = new APRSTelem(data);
+        log.debug(telem);
+        if (windows.main) windows.main.webContents.send("data", telem);
+        if (windows.video) windows.video.webContents.send("data", telem);
+      },
+      createLog: true,
+    });
+
+    telemSources.push(ts1);
+    telemSources.push(ts2);
+    telemSources.push(ts3);
+  }
+
+  log.debug("Main window created");
 };
 
-//creates the debug electron window
-const createDebug = () => {
-  const width = 600,
-    height = 400;
-  const iconSuffix =
-    process.platform === "win32"
-      ? ".ico"
-      : process.platform === "darwin"
-      ? ".icns"
-      : ".png";
-  debugWin = new BrowserWindow({
-    width: width * config.debugScale,
-    height: height * config.debugScale,
-    resizable: false,
-    autoHideMenuBar: true,
-    icon: path.join(iconPath, "logo" + iconSuffix),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-
-  log.setWin(debugWin);
-
-  debugWin.loadFile(path.join(__dirname, "src/debug/debug.html"));
-
-  if (config.debug) debugWin.webContents.openDevTools({ mode: "detach" });
-
-  //send the debug window all previous logs once it is ready
-  debugWin.webContents.once("dom-ready", () => {
-    try {
-      if (fs.existsSync("./debug.log"))
-        debugWin.webContents.send(
-          "previous-logs",
-          fs.readFileSync("./debug.log").toString()
-        );
-    } catch (err) {
-      log.err('Could not load previous logs: "' + err.message + '"');
-    }
-  });
-
-  //reset when the window is closed
-  debugWin.once("close", () => {
-    if (config.noGUI) {
-      closed = true;
-      serial.close();
-    }
-    debugWin.webContents.send("close"); // unused
-    log.removeWin();
-    if (config.noGUI) {
-      if (mainWin) mainWin.close();
-      if (videoWin) videoWin.close();
-      if (commandWin) commandWin.close();
-    }
-  });
-
-  debugWin.once("closed", () => {
-    debugWin = null;
-  });
-  log.debug("Debug window created");
-};
-
-//creates the command electron window
-const createCommand = () => {
-  const width = 600,
-    height = 400;
-  const iconSuffix =
-    process.platform === "win32"
-      ? ".ico"
-      : process.platform === "darwin"
-      ? ".icns"
-      : ".png";
-
-  commandWin = new BrowserWindow({
-    width: width,
-    height: height,
-    resizable: false,
-    autoHideMenuBar: true,
-    icon: path.join(iconPath, "logo" + iconSuffix),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  commandWin.loadFile("serial/popup.html");
-
-  log.debug("Command window created");
-
-  commandWin.on("closed", () => {
-    commandWin = null;
-  });
-};
-
-//creates the debug electron window
 const createVideo = () => {
   const width = 1280,
     height = 720;
@@ -273,7 +206,7 @@ const createVideo = () => {
       : process.platform === "darwin"
       ? ".icns"
       : ".png";
-  videoWin = new BrowserWindow({
+  windows.video = new BrowserWindow({
     width: width * config.debugScale,
     height: height * config.debugScale,
     frame: false,
@@ -291,44 +224,58 @@ const createVideo = () => {
     video1: "none-1",
   };
 
-  videoWin.loadFile(path.join(__dirname, "src/video/video.html"));
+  windows.video.loadFile(path.join(__dirname, "src/video/video.html"));
 
-  if (config.debug) videoWin.webContents.openDevTools({ mode: "detach" });
+  if (config.debug) windows.video.webContents.openDevTools({ mode: "detach" });
 
   //reset when the window is closed
-  videoWin.once("close", () => {
-    videoWin.webContents.send("close"); // unused
+  windows.video.once("close", () => {
+    windows.video.webContents.send("close"); // unused
   });
 
-  videoWin.once("closed", () => {
-    videoWin = null;
+  windows.video.once("closed", () => {
+    windows.video = null;
   });
 
   //handle fullscreen changes
-  videoWin.on("enter-full-screen", () => {
+  windows.video.on("enter-full-screen", () => {
     log.debug("Enter video fullscreen");
-    videoWin.webContents.send("fullscreen-change", {
+    windows.video.webContents.send("fullscreen-change", {
       win: "video",
       isFullscreen: true,
     });
   });
 
-  videoWin.on("leave-full-screen", () => {
+  windows.video.on("leave-full-screen", () => {
     log.debug("Leave video fullscreen");
-    videoWin.webContents.send("fullscreen-change", {
+    windows.video.webContents.send("fullscreen-change", {
       win: "video",
       isFullscreen: false,
     });
   });
 
-  const vs1 = new SerialVideoSource("video-0", {
-    resolution: { width: 640, height: 832 },
-    framerate: 30,
-    rotation: "cw",
-    createLog: config.debug,
-  });
+  if (!config.debug) {
+    const vs1 = new SerialVideoSource("arc-0", {
+      resolution: { width: 640, height: 832 },
+      framerate: 30,
+      rotation: "cw",
+      createLog: true,
+      createDecoderLog: config.debug,
+    });
 
-  log.debug("Video streaming window created");
+    const vs2 = new SerialVideoSource("arc-1", {
+      resolution: { width: 640, height: 832 },
+      framerate: 30,
+      rotation: "cw",
+      createLog: true,
+      createDecoderLog: config.debug,
+    });
+
+    videoSources.push(vs1);
+    videoSources.push(vs2);
+  }
+
+  log.debug("Live stream window created");
 };
 
 //tells electron to ignore OS level display scaling
@@ -338,21 +285,13 @@ app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
 //when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
-  if (!config.noGUI) {
-    createMain();
-  } else {
-    createDebug();
-  }
-
+  createMain();
   if (config.video) createVideo();
+
   //open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      if (!config.noGUI) {
-        createMain();
-      } else {
-        createDebug();
-      }
+      createMain();
       if (config.video) createVideo();
     }
   });
@@ -364,88 +303,54 @@ app.on("window-all-closed", () => {
 });
 
 //app control
-ipcMain.on("close", (event, win) => {
-  if (win === "main") {
-    log.debug("Closing main window");
-    mainWin.close();
-  }
-  if (win === "video") {
-    log.debug("Closing video window");
-    videoWin.close();
-  }
+ipcMain.on("close", (event, name) => {
+  windows[name].close();
 });
 
-ipcMain.on("minimize", (event, win) => {
-  if (win === "main") {
-    mainWin.minimize();
-  }
-  if (win === "video") {
-    videoWin.minimize();
-  }
+ipcMain.on("minimize", (event, name) => {
+  windows[name].minimize();
 });
 
-ipcMain.on("open-popup", () => {
-  const popupWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  popupWindow.loadFile("popup.html");
+ipcMain.on("fullscreen", (event, name, isFullscreen) => {
+  windows[name].setFullScreen(isFullscreen);
 });
 
-ipcMain.on("fullscreen", (event, win, isFullscreen) => {
-  if (win === "main") {
-    mainWin.setFullScreen(isFullscreen);
-  }
-  if (win === "video") {
-    videoWin.setFullScreen(isFullscreen);
-  }
-});
+// TODO: remove
+// ipcMain.on("open-popup", () => {
+//   const popupWindow = new BrowserWindow({
+//     width: 400,
+//     height: 300,
+//     webPreferences: {
+//       contextIsolation: true,
+//       nodeIntegration: false,
+//     },
+//   });
+//   popupWindow.loadFile("popup.html");
+// });
 
 ipcMain.on("reload", (event, win, keepSettings) => {
+  // TODO: can we simplify this?
   log.debug("Reloading window");
   //main and debug are basically the same window, so reloading one reloads both
   if (win === "main" || win === "debug") {
+    // TODO: close serial connection, but keep pipes and the driver running
     serial.close();
     //if mainWin exists reload it
-    if (mainWin) {
-      mainWin.webContents.reloadIgnoringCache();
+    if (windows.main) {
+      windows.main.webContents.reloadIgnoringCache();
       //if in video mode send the video controls for the control panel
       if (config.video && videoControls) {
-        mainWin.webContents.once("dom-ready", () => {
-          mainWin.webContents.send("video-controls", videoControls);
+        windows.main.webContents.once("dom-ready", () => {
+          windows.main.webContents.send("video-controls", videoControls);
         });
       }
-    }
-    //if debugWin exists reload it
-    if (debugWin) {
-      debugWin.webContents.reloadIgnoringCache();
-      //send old logs
-      debugWin.webContents.once("dom-ready", () => {
-        try {
-          if (fs.existsSync("./debug.log"))
-            debugWin.webContents.send(
-              "previous-logs",
-              fs.readFileSync("./debug.log").toString()
-            );
-        } catch (err) {
-          log.err('Could not load previous logs: "' + err.message + '"');
-        }
-      });
     }
     serial.reload();
   }
 
-  //if commandWin exists close it
-  if (commandWin) commandWin.close();
-
   //handle reloading the video window separately
   if (win === "video") {
-    if (videoWin) videoWin.webContents.reloadIgnoringCache();
+    if (windows.video) windows.video.webContents.reloadIgnoringCache();
     //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
     if (!keepSettings) {
       videoControls = {
@@ -455,44 +360,31 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       };
       //send defaults to update mainWin
       if (videoControls)
-        mainWin.webContents.send("video-controls", videoControls);
+        windows.main.webContents.send("video-controls", videoControls);
     } else {
       //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
-      videoWin.webContents.once("dom-ready", () => {
-        videoWin.webContents.send("video-controls", videoControls);
+      windows.video.webContents.once("dom-ready", () => {
+        windows.video.webContents.send("video-controls", videoControls);
       });
     }
   }
 });
 
 ipcMain.on("dev-tools", (event, args) => {
-  if (mainWin) mainWin.webContents.openDevTools({ mode: "detach" });
-  if (debugWin) debugWin.webContents.openDevTools({ mode: "detach" });
-  if (videoWin) videoWin.webContents.openDevTools({ mode: "detach" });
+  if (windows.main) windows.main.webContents.openDevTools({ mode: "detach" });
+  if (windows.video) windows.video.webContents.openDevTools({ mode: "detach" });
 });
 
-ipcMain.on("open-gui", (event, args) => {
-  log.debug("Main window opened from debug");
-  if (!mainWin) createMain();
-  if (config.video && !videoWin) createVideo();
-});
-
-ipcMain.on("open-debug", (event, args) => {
-  log.debug("Debug window opened from main");
-  if (!debugWin) createDebug();
-});
-
-ipcMain.on("radio-command", (event, args) => {
-  log.debug("Sending radio command");
-  if (!commandWin) createCommand();
-});
+// ipcMain.on("radio-command", (event, args) => {
+//   log.debug("Sending radio command");
+//   if (!commandWin) createCommand();
+// });
 
 ipcMain.on("radio-command-sent", (event, command) => {
   for (let i = 0; i < command.length; i++) {
     if (command[i] === "") command[i] = 255;
   }
   serial.writeCommand(command);
-  if (commandWin) commandWin.close();
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
@@ -646,13 +538,16 @@ ipcMain.on("clear-tile-cache", (event, args) => {
 
 ipcMain.on("video-controls", (event, controls) => {
   log.debug("Updating video controls");
+
   //make sure we actually got a controls object
-  if (controls) videoControls = controls;
-  else log.warn("Failed setting video controls, new controls missing.");
-  //if so, pass it on to videoWin, if it exists
-  if (controls && videoWin)
-    videoWin.webContents.send("video-controls", videoControls);
-  else log.warn("Failed setting video controls, video window missing.");
+  if (controls) {
+    videoControls = controls;
+
+    //if so, pass it on to videoWin, if it exists
+    if (windows.video)
+      windows.video.webContents.send("video-controls", videoControls);
+    else log.warn("Failed setting video controls, video window missing.");
+  } else log.warn("Failed setting video controls, new controls missing.");
 });
 
 //getters
@@ -670,11 +565,11 @@ ipcMain.handle("get-settings", (event, args) => {
 
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
-  videoStreams.forEach((stream) => {
+  videoSources.forEach((stream) => {
     if (stream.hasFrame())
       //must use readFrame() to get rid of old frame
       videoData.push({ name: stream.name, data: stream.readFrame() });
-    else videoData.push(null);
+    else videoData.push(null); // TODO: this seems a bit odd
   });
   return videoData;
 });
@@ -704,6 +599,7 @@ ipcMain.handle("set-port", (event, portConfig) => {
 ipcMain.on("update-settings", (event, settings) => {
   if (settings) {
     config = settings;
+    config.version = app.getVersion();
     try {
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
       log.debug("Successfully updated settings");
@@ -713,46 +609,14 @@ ipcMain.on("update-settings", (event, settings) => {
   }
 });
 
-//serial communication
-serial.on("data", (name, data) => {
-  if (name.includes("telemetry")) {
-    log.debug(data);
-    if (mainWin) mainWin.webContents.send("data", data);
-    if (videoWin) videoWin.webContents.send("data", data);
-    try {
-      if (!csvCreated) {
-        if (!fs.existsSync("./data")) fs.mkdirSync("./data");
-        currentCSV = new Date().toISOString().replace(/:/g, "-") + ".csv";
-        fs.writeFileSync(path.join("./data", currentCSV), "");
-      }
-      fs.appendFileSync(
-        path.join("./data", currentCSV),
-        data.toCSV(csvCreated)
-      );
-      if (!csvCreated) csvCreated = true;
-    } catch (err) {
-      log.err('Error writing data: "' + err.message + '"');
-    }
-  }
-  if (name.includes("video")) {
-  }
-});
-
-serial.on("video1chunk", () => {
-  if (videoStreams[0]) videoStreams[0].i._read(1250);
-});
-
-serial.on("video2chunk", () => {
-  if (videoStreams[1]) videoStreams[1].i._read(1250);
-});
-
 serial.on("error", (message) => {
   log.err("Serial driver error: " + message);
 });
 
 serial.on("close", (path) => {
   log.info("Serial disconnected");
-  if (!closed && mainWin) mainWin.webContents.send("radio-close", path);
+  if (!closed && windows.main)
+    windows.main.webContents.send("serial-close", path);
 });
 
 //testing
@@ -763,17 +627,46 @@ if (config.debug) {
     if (fs.existsSync("./test.csv")) {
       try {
         //set up line reader
-        const telem1Stream = new FileTelemSource("./test.csv", {
+        const ts1D = new FileTelemSource("./test.csv", {
           datarate: 1,
           parser: (data) => {
-            if (!closed && mainWin) {
+            if (!closed && windows.main) {
               //make sure we got a valid line
               let aprsMsg = APRSTelem.fromCSV(data);
-              mainWin.webContents.send("data", aprsMsg);
-              if (videoWin) videoWin.webContents.send("data", aprsMsg);
+              windows.main.webContents.send("data", aprsMsg);
+              if (windows.video)
+                windows.video.webContents.send("data", aprsMsg);
             }
           },
         });
+        // const ts2D = new FileTelemSource("./test.csv", {
+        //   datarate: 1,
+        //   parser: (data) => {
+        //     if (!closed && windows.main) {
+        //       //make sure we got a valid line
+        //       let aprsMsg = APRSTelem.fromCSV(data);
+        //       windows.main.webContents.send("data", aprsMsg);
+        //       if (windows.video)
+        //         windows.video.webContents.send("data", aprsMsg);
+        //     }
+        //   },
+        // });
+        // const ts3D = new FileTelemSource("./test.csv", {
+        //   datarate: 1,
+        //   parser: (data) => {
+        //     if (!closed && windows.main) {
+        //       //make sure we got a valid line
+        //       let aprsMsg = APRSTelem.fromCSV(data);
+        //       windows.main.webContents.send("data", aprsMsg);
+        //       if (windows.video)
+        //         windows.video.webContents.send("data", aprsMsg);
+        //     }
+        //   },
+        // });
+
+        telemSources.push(ts1D);
+        // telemSources.push(ts2D);
+        // telemSources.push(ts3D);
       } catch (err) {
         log.err('Failed to read test.csv: "' + err.message + '"');
       }
@@ -781,29 +674,30 @@ if (config.debug) {
       log.warn("Could not find test.csv");
     }
     if (config.video) {
-      //test to see if first video exists
-      //create new video source from file
-      let vs1 = new FileVideoSource("\\\\.\\pipe\\ffmpegVideoOne", true, {
+      // TODO: test to see if first video exists
+      // create new video source from file
+      let vs1 = new FileVideoSource("video0.av1", true, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
         createLog: config.debug,
       });
-      //store for later
-      videoStreams.push(vs1);
-      //start the video
+
+      // TODO: test to see if second video exists
+      // create new video source from file
+      let vs2 = new FileVideoSource("video1.av1", false, {
+        resolution: { width: 640, height: 832 },
+        framerate: 30,
+        rotation: "cw",
+        createLog: config.debug,
+      });
+
+      // store for later
+      videoSources.push(vs2);
+      videoSources.push(vs1);
+
+      // start the video
       vs1.startOutput();
-      //test to see if second video exists
-      //create new video source from file
-      let vs2 = new FileVideoSource("\\\\.\\pipe\\ffmpegVideoTwo", false, {
-        resolution: { width: 640, height: 832 },
-        framerate: 30,
-        rotation: "cw",
-        createLog: config.debug,
-      });
-      //store for later
-      videoStreams.push(vs2);
-      //start the video
       vs2.startOutput();
     }
   }, 1000);
