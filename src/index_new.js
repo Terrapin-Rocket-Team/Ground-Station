@@ -8,6 +8,7 @@ window.onload = () => {
   //app control button listeners
   document.getElementById("fullscreen").addEventListener("click", () => {
     fullscreened = !fullscreened;
+    console.log(fullscreened);
     api.fullscreen("main", fullscreened);
   });
   document.getElementById("reload").addEventListener("click", () => {
@@ -87,7 +88,8 @@ window.onload = () => {
 
               api.setPort({ idPrefix, path: port.path }).then((success) => {
                 if (success) {
-                  portInUse = port.path;
+                  portInUse.path = port.path;
+                  portInUse.idPrefix = idPrefix;
                   selected.textContent = port.path;
                   img.setAttribute("src", "./images/serial_connected.svg");
                   img.setAttribute("title", "Serial Connected");
@@ -303,6 +305,7 @@ window.onload = () => {
   resizeGauges();
   api.on("fullscreen-change", (res) => {
     if (res.win === "main") {
+      fullscreened = res.isFullscreen;
       setTimeout(() => {
         resizeGauges();
       }, 10);
@@ -346,7 +349,6 @@ window.onload = () => {
 
   api.on("data", (data) => {
     let msg = new APRSTelem(data);
-
     //update signal strength
     // let ss = msg.getSignalStrength();
     // const connectionEl = document.getElementById("radio-connection");
@@ -546,10 +548,9 @@ window.onload = () => {
   });
 
   //update UI if serial connection is lost
-  api.on("radio-close", (portPath) => {
-    let connection = portsInUse.find((el) => el.path === portPath);
-    if (connection) {
-      const img = document.getElementById(connection.idPrefix + "-connection");
+  api.on("serial-close", (portPath) => {
+    if (portInUse.path === portPath) {
+      const img = document.getElementById(portInUse.idPrefix + "-connection");
       img.setAttribute("src", "./images/serial_disconnected.svg");
       img.setAttribute("title", "Connection Error");
     }

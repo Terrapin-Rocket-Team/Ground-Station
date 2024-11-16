@@ -54,8 +54,8 @@ class API extends EventEmitter {
       this.emit("data", data, name);
     });
 
-    ipcRenderer.on("radio-close", (event, portPath) => {
-      this.emit("radio-close", portPath);
+    ipcRenderer.on("serial-close", (event, portPath) => {
+      this.emit("serial-close", portPath);
     });
 
     ipcRenderer.on("fullscreen-change", (event, change) => {
