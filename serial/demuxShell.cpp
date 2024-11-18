@@ -66,8 +66,24 @@ int main(int argc, char **argv)
         if (pipeControl->readStr(controlStr, sizeof(controlStr)) > 0)
         {
             std::cout << controlStr << std::endl;
+            if (strcmp(controlStr, "close") == 0)
+            {
+                // close the serial connection
+                if (teensy != nullptr)
+                {
+                    delete teensy;
+                    teensy = nullptr;
+                }
+            }
             if (strcmp(controlStr, "reset") == 0)
             {
+
+                if (teensy != nullptr)
+                {
+                    delete teensy;
+                    teensy = nullptr;
+                }
+
                 bool receivedPort = false;
                 char portBuf[50];
 
@@ -96,14 +112,8 @@ int main(int argc, char **argv)
                     }
                 }
 
-                if (teensy != nullptr)
-                {
-                    delete teensy;
-                    teensy = nullptr;
-                }
-
 #ifdef WINDOWS
-                // teensy = new WinSerialPort(portBuf);
+                teensy = new WinSerialPort(portBuf);
 #elif LINUX
                 teensy = new LinuxSerialPort(strcat("./", portBuf));
 #endif
@@ -111,7 +121,7 @@ int main(int argc, char **argv)
                 // attempt to connect
                 time_t start = time(0);
                 bool timeout = false;
-                while (true && !timeout /* && !(teensy->isConnected())*/)
+                while (!timeout && !(teensy->isConnected()))
                 {
                     time_t end = time(0);
                     if (difftime(end, start) > 1)
@@ -142,47 +152,48 @@ int main(int argc, char **argv)
                     delete[] dataPipes;
                     dataPipes = nullptr;
                 }
-
-                numPipes = atoi(numPipesStr);
-
                 if (pipeIndexes != nullptr)
                 {
                     delete[] pipeIndexes;
                     pipeIndexes = nullptr;
                 }
-                dataPipes = new NamedPipe *[numPipes];
-                pipeIndexes = new uint8_t[numPipes];
-
-                int gotPipeNames = 0;
-                char pipeName[50] = {0};
-                while (gotPipeNames < numPipes)
+                numPipes = atoi(numPipesStr);
+                if (numPipes > 0)
                 {
-                    memset(pipeName, 0, sizeof(pipeName));
-                    if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
+                    dataPipes = new NamedPipe *[numPipes];
+                    pipeIndexes = new uint8_t[numPipes];
+
+                    int gotPipeNames = 0;
+                    char pipeName[50] = {0};
+                    while (gotPipeNames < numPipes)
                     {
-                        pipeName[sizeof(pipeName) - 1] = '\0';
-                        int indexPos = 0;
-                        for (int i = 0; i < strlen(pipeName); i++)
+                        memset(pipeName, 0, sizeof(pipeName));
+                        if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
                         {
-                            if (pipeName[i] == ' ')
-                                indexPos = i;
-                        }
+                            pipeName[sizeof(pipeName) - 1] = '\0';
+                            int indexPos = 0;
+                            for (int i = 0; i < strlen(pipeName); i++)
+                            {
+                                if (pipeName[i] == ' ')
+                                    indexPos = i;
+                            }
 
-                        int pipeIndex = atoi(pipeName + indexPos + 1);
-                        pipeIndexes[gotNumPipes] = pipeIndex;
+                            int pipeIndex = atoi(pipeName + indexPos + 1);
+                            pipeIndexes[gotNumPipes] = pipeIndex;
 
-                        pipeName[indexPos] = '\0';
-                        std::cout << "Creating pipe of name: " << pipeName << std::endl;
+                            pipeName[indexPos] = '\0';
+                            std::cout << "Creating pipe of name: " << pipeName << std::endl;
 #ifdef WINDOWS
-                        char pipePath[60] = "\\\\.\\pipe\\";
-                        strcat(pipePath, pipeName);
-                        dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
+                            char pipePath[60] = "\\\\.\\pipe\\";
+                            strcat(pipePath, pipeName);
+                            dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
 #elif LINUX
-                        char pipePath[60] = "./pipe/";
-                        strcat(pipePath, pipeName);
-                        // THESE PATHS MIGHT BE WRONG!
-                        dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
+                            char pipePath[60] = "./pipe/";
+                            strcat(pipePath, pipeName);
+                            // THESE PATHS MIGHT BE WRONG!
+                            dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
 #endif
+                        }
                     }
                 }
 

@@ -162,7 +162,7 @@ const createMain = () => {
     const ts1 = new SerialTelemSource("telem-avionics", {
       parser: (data) => {
         let telem = new APRSTelem(data);
-        log.debug(telem);
+        log.info(telem);
         if (windows.main) windows.main.webContents.send("data", telem);
         if (windows.video) windows.video.webContents.send("data", telem);
       },
@@ -172,7 +172,7 @@ const createMain = () => {
     const ts2 = new SerialTelemSource("telem-airbrake", {
       parser: (data) => {
         let telem = new APRSTelem(data);
-        log.debug(telem);
+        log.info(telem);
         if (windows.main) windows.main.webContents.send("data", telem);
         if (windows.video) windows.video.webContents.send("data", telem);
       },
@@ -182,7 +182,7 @@ const createMain = () => {
     const ts3 = new SerialTelemSource("telem-payload", {
       parser: (data) => {
         let telem = new APRSTelem(data);
-        log.debug(telem);
+        log.info(telem);
         if (windows.main) windows.main.webContents.send("data", telem);
         if (windows.video) windows.video.webContents.send("data", telem);
       },
@@ -333,8 +333,8 @@ ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
   //main and debug are basically the same window, so reloading one reloads both
   if (win === "main" || win === "debug") {
-    // TODO: close serial connection, but keep pipes and the driver running
-    serial.close();
+    // close serial connection, but keep pipes and the driver running
+    serial.reset();
     //if mainWin exists reload it
     if (windows.main) {
       windows.main.webContents.reloadIgnoringCache();
@@ -345,7 +345,6 @@ ipcMain.on("reload", (event, win, keepSettings) => {
         });
       }
     }
-    serial.reload();
   }
 
   //handle reloading the video window separately
@@ -514,7 +513,7 @@ ipcMain.handle("get-tiles", () => {
 });
 
 ipcMain.on("close-port", (event, args) => {
-  serial.close();
+  serial.reset();
 });
 
 ipcMain.on("clear-tile-cache", (event, args) => {
