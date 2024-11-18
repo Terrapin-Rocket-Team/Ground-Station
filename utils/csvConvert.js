@@ -3,7 +3,7 @@ const APRSTelem = require("../coders/APRSTelem");
 const readline = require("readline");
 const fs = require("fs");
 
-const oldCSVPath = "test_old.csv";
+const oldCSVPath = "2024-06-19T21-35-26.433Z.csv";
 const newCSVPath = "test.csv";
 
 const rl = readline.createInterface({
@@ -21,16 +21,16 @@ rl.on("line", (line) => {
     firstLine = false;
   } else {
     let oldMsg = APRSMessage.fromCSV(line);
-    let newMsgStr = "telem-0,3";
+    let newMsgStr = "00:00:00,telem-0,3";
     newMsgStr += "," + oldMsg.body.getDegreesDecimal(oldMsg.body.lat);
     newMsgStr += "," + oldMsg.body.getDegreesDecimal(oldMsg.body.long);
     newMsgStr += "," + oldMsg.body.alt;
     newMsgStr += "," + oldMsg.body.speed;
     newMsgStr += "," + oldMsg.body.heading;
     newMsgStr += ",0,0,0"; // no old orientation
-    newMsgStr += ",0"; // no old state flags
-    newMsgStr += "," + oldMsg.body.t0;
-    newMsgStr += "," + oldMsg.rssi;
+    newMsgStr += "," + oldMsg.getStageNumber(); // no old state flags
+    // newMsgStr += "," + oldMsg.body.t0;
+    // newMsgStr += "," + oldMsg.rssi;
 
     let newMsg = APRSTelem.fromCSV(newMsgStr);
     wr.write(newMsg.toCSV(firstLineWritten));

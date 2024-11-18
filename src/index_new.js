@@ -8,7 +8,6 @@ window.onload = () => {
   //app control button listeners
   document.getElementById("fullscreen").addEventListener("click", () => {
     fullscreened = !fullscreened;
-    console.log(fullscreened);
     api.fullscreen("main", fullscreened);
   });
   document.getElementById("reload").addEventListener("click", () => {
@@ -319,13 +318,18 @@ window.onload = () => {
   let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
   let spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
 
+  let altwr = document.getElementById("alt-wrapper");
+  let spdwr = document.getElementById("spd-wrapper");
+
   //persistent variables for the api data event handler
   let lastCoords = [];
   let lastStage = 0;
   let lastAlt = 0;
   let apogeeTime = 0;
   let loadedApogee = false;
-  let tPlusSet = false;
+  let apogeeFound = false;
+  let t0Set = false;
+  let t0 = {};
   let chartState = "seconds";
 
   // load previous data if it exists
@@ -347,60 +351,97 @@ window.onload = () => {
     }
   }
 
-  api.on("data", (data) => {
-    let msg = new APRSTelem(data);
-    //update signal strength
-    // let ss = msg.getSignalStrength();
-    // const connectionEl = document.getElementById("radio-connection");
-    // if (ss === "High") {
-    //   connectionEl.setAttribute("src", "./images/signal_strong.svg");
-    //   connectionEl.setAttribute("alt", "Signal Strong");
-    //   connectionEl.title = "Signal Strong";
-    // }
-    // if (ss === "Med") {
-    //   connectionEl.setAttribute("src", "./images/signal_mid.svg");
-    //   connectionEl.setAttribute("alt", "Signal Medium");
-    //   connectionEl.title = "Signal Medium";
-    // }
-    // if (ss === "Low") {
-    //   connectionEl.setAttribute("src", "./images/signal_weak.svg");
-    //   connectionEl.setAttribute("alt", "Signal Weak");
-    //   connectionEl.title = "Signal Weak";
-    // }
-    // if (ss === "None") {
-    //   connectionEl.setAttribute("src", "./images/no_signal.svg");
-    //   connectionEl.setAttribute("alt", "No Signal");
-    //   connectionEl.title = "No Signal";
-    // }
-
-    //set T+
-    if (!tPlusSet && msg.getStageNumber() > 0) {
-      let t = document.getElementById("t-plus-value");
-      let time = Date.now() - msg.getT0ms();
-
-      tPlusSet = true;
-      console.log("T+1");
-      t.textContent = mstohhmmss(time);
-      let ts = time / 1000;
-
-      if (altG.data.datasets[0].data.length === 0)
-        altG.data.datasets[0].data = [{ x: ts, y: null }];
-      if (spdG.data.datasets[0].data.length === 0)
-        spdG.data.datasets[0].data = [{ x: ts, y: null }];
-
-      setInterval(() => {
-        console.log("T+2");
-        t.textContent = mstohhmmss(Date.now() - msg.getT0ms());
-      }, 10);
+  const updateRadioStatus = (idPrefix, msg) => {
+    let ss = msg.getSignalStrength();
+    const signalEl = document.getElementById(idPrefix + "-signal");
+    if (ss === "High") {
+      signalEl.setAttribute("src", "./images/signal_strong.svg");
+      signalEl.setAttribute("alt", "Signal Strong");
+      signalEl.title = "Signal Strong";
     }
-    if (tPlusSet) {
+    if (ss === "Med") {
+      signalEl.setAttribute("src", "./images/signal_mid.svg");
+      signalEl.setAttribute("alt", "Signal Medium");
+      signalEl.title = "Signal Medium";
+    }
+    if (ss === "Low") {
+      signalEl.setAttribute("src", "./images/signal_weak.svg");
+      signalEl.setAttribute("alt", "Signal Weak");
+      signalEl.title = "Signal Weak";
+    }
+    if (ss === "None") {
+      signalEl.setAttribute("src", "./images/no_signal.svg");
+      signalEl.setAttribute("alt", "No Signal");
+      signalEl.title = "No Signal";
+    }
+
+    document.getElementById(idPrefix + "-strength").textContent =
+      msg.getRSSI() + " dBm";
+    // document.getElementById(idPrefix + "-bitrate").textContent =
+    //   msg.getRSSI() + " kbps"; // bitrate
+  };
+
+  const updateDisplays = (idPrefix, msg, updateFunctions) => {
+    updateFunctions.forEach((f) => f(idPrefix, msg));
+  };
+
+  const updateGauges = (idPrefix, msg) => {
+    let alt = document.getElementById(idPrefix + "-altitude");
+    let spd = document.getElementById(idPrefix + "-speed");
+
+    if (msg.getAlt() || msg.getAlt() === 0) {
+      alt.setAttribute("data-value-text", msg.getAlt());
+      alt.setAttribute("data-value", msg.getAlt() / 1000);
+      document.getElementById(idPrefix + "-alt-text").textContent =
+        msg.getAlt() + " ft";
+    } else {
+      alt.setAttribute("data-value-text", "\u2014");
+    }
+    if (msg.getSpeed() || msg.getSpeed() === 0) {
+      spd.setAttribute("data-value-text", msg.getSpeed());
+      spd.setAttribute("data-value", msg.getSpeed());
+      document.getElementById(idPrefix + "-spd-text").textContent =
+        msg.getSpeed() + " ft/s";
+    } else {
+      spd.setAttribute("data-value-text", "\u2014");
+    }
+  };
+  const updateStage = (idPrefix, msg) => {
+    let stageEl = document.getElementById(idPrefix + "-stage");
+    stageEl.textContent = msg.getStage();
+  };
+
+  const updateLatLong = (idPrefix, msg) => {
+    let fcoords = msg.getLatLongDecimal();
+    document.getElementById(idPrefix + "-lat").textContent = fcoords
+      ? fcoords.split("/")[0]
+      : "00.0000\u00b0N";
+    document.getElementById(idPrefix + "-long").textContent = fcoords
+      ? fcoords.split("/")[1]
+      : "000.0000\u00b0W";
+  };
+  const updateTemp = (idPrefix, msg) => {};
+  const updateFlapAngle = (idPrefix, msg) => {};
+  const updatePredApogee = (idPrefix, msg) => {};
+  const updateHeading = (idPrefix, msg) => {
+    let hdg = document.getElementById(idPrefix + "-heading");
+    if (msg.getHeading() || msg.getHeading() === 0) {
+      hdg.setAttribute("data-value-text", "false");
+      hdg.setAttribute("data-value", msg.getHeading());
+    } else {
+      hdg.setAttribute("data-value-text", "\u2014");
+    }
+  };
+
+  const updateCharts = (index, msg) => {
+    if (t0Set) {
       //update charts
-      let time = Date.now() - msg.getT0ms();
+      let time = Date.now() - t0;
       let ts = time / 1000;
 
       if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
-        let altData = altG.data.datasets[0].data;
-        let spdData = spdG.data.datasets[0].data;
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
         let altLabels = altG.data.labels;
         let spdLabels = spdG.data.labels;
 
@@ -409,14 +450,14 @@ window.onload = () => {
 
         altG = createChart("alt-graph", "Altitude", "min", "ft", 1 / 60, 1);
         spdG = createChart("spd-graph", "Speed", "min", "ft/s", 1 / 60, 1);
-        altG.data.datasets[0].data = altData;
-        spdG.data.datasets[0].data = spdData;
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
         spdG.data.labels = spdLabels;
         chartState = "minutes";
       } else if (ts > 120 * 60 && chartState != "hours") {
-        let altData = altG.data.datasets[0].data;
-        let spdData = spdG.data.datasets[0].data;
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
         let altLabels = altG.data.labels;
         let spdLabels = spdG.data.labels;
 
@@ -425,8 +466,8 @@ window.onload = () => {
 
         altG = createChart("alt-graph", "Altitude", "hrs", "ft", 1 / 3600, 1);
         spdG = createChart("spd-graph", "Speed", "hrs", "ft/s", 1 / 3600, 1);
-        altG.data.datasets[0].data = altData;
-        spdG.data.datasets[0].data = spdData;
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
         spdG.data.labels = spdLabels;
         chartState = "hours";
@@ -436,12 +477,13 @@ window.onload = () => {
         chartState == "minutes" ? 30 : chartState == "hours" ? 320 : 1;
 
       let interval = parseInt(
-        (ts - altG.data.datasets[0].data[0].x + 5 * factor) / 4
+        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
       );
 
       let arrL = [];
       for (let i = 0; i < 5; i++) {
-        arrL[i] = Math.floor(altG.data.datasets[0].data[0].x) + i * interval;
+        arrL[i] =
+          Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
       }
 
       altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
@@ -452,97 +494,103 @@ window.onload = () => {
       altG.data.labels = JSON.parse(JSON.stringify(arrL));
       spdG.data.labels = JSON.parse(JSON.stringify(arrL));
 
-      altG.data.datasets[0].data.push({
+      altG.data.datasets[index].data.push({
         x: ts,
         y: msg.getAlt() ? msg.getAlt() : 0,
       });
-      spdG.data.datasets[0].data.push({
+      spdG.data.datasets[index].data.push({
         x: ts,
         y: msg.getSpeed() ? msg.getSpeed() : 0,
       });
 
       sessionStorage.setItem(
-        "altData",
-        JSON.stringify(altG.data.datasets[0].data)
+        index + "-altData",
+        JSON.stringify(altG.data.datasets[index].data)
       );
       sessionStorage.setItem(
-        "spdData",
-        JSON.stringify(spdG.data.datasets[0].data)
+        index + "-spdData",
+        JSON.stringify(spdG.data.datasets[index].data)
       );
 
       altG.update();
       spdG.update();
     }
+  };
 
-    //update map
-    let coords = msg.getLatLong();
-    if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
-      updateMarker(
-        coords[0],
-        coords[1],
-        `<span style="font-size:calc(1.1vh + 3px);font-weight:520;">Approximate Location: </span><br><span style="font-size:calc(0.8vh+1px);">${msg.getLatLongFormat()}</span>`
-      );
-      lastCoords = coords;
+  api.on("metrics", (metric) => {
+    // signal strength
+    // bitrate
+    updateRadioStatus("telem", msg);
+
+    // set T+
+    if (!t0Set && msg.getStageNumber() > 0) {
+      let t = document.getElementById("t-plus-value");
+      let time = Date.now() - msg.getT0ms();
+
+      t0Set = true;
+      t.textContent = mstohhmmss(time);
+      let ts = time / 1000;
+
+      if (altG.data.datasets[0].data.length === 0)
+        altG.data.datasets[0].data = [{ x: ts, y: null }];
+      if (spdG.data.datasets[0].data.length === 0)
+        spdG.data.datasets[0].data = [{ x: ts, y: null }];
+
+      setInterval(() => {
+        t.textContent = mstohhmmss(Date.now() - msg.getT0ms());
+      }, 10);
     }
+  });
+  // temporary t0 hardcode
+  t0 = Date.now();
+  t0Set = true;
+  let s = (Date.now() - t0) / 1000;
+  if (altG.data.datasets[0].data.length === 0)
+    altG.data.datasets[0].data = [{ x: s, y: null }];
+  if (spdG.data.datasets[0].data.length === 0)
+    spdG.data.datasets[0].data = [{ x: s, y: null }];
 
-    //update gauges
-    // if (msg.getAlt() || msg.getAlt() === 0) {
-    //   alt.setAttribute("data-value-text", msg.getAlt());
-    //   alt.setAttribute("data-value", msg.getAlt() / 1000);
-    //   document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
-    // } else {
-    //   alt.setAttribute("data-value-text", "\u2014");
-    // }
-    // if (msg.getSpeed() || msg.getSpeed() === 0) {
-    //   spd.setAttribute("data-value-text", msg.getSpeed());
-    //   spd.setAttribute("data-value", msg.getSpeed() / 100);
-    //   document.getElementById("spd-text").textContent =
-    //     msg.getSpeed() + " ft/s";
-    // } else {
-    //   spd.setAttribute("data-value-text", "\u2014");
-    // }
-    // if (msg.getHeading() || msg.getHeading() === 0) {
-    //   hdg.setAttribute("data-value-text", "false");
-    //   hdg.setAttribute("data-value", msg.getHeading());
-    // } else {
-    //   hdg.setAttribute("data-value-text", "\u2014");
-    // }
+  api.on("data", (data) => {
+    let msg = new APRSTelem(data);
 
-    // //update lat/long
-    // let fcoords = msg.getLatLongFormat();
-    // document.getElementById("lat").textContent = fcoords
-    //   ? fcoords.split("/")[0]
-    //   : "00.0000\u00b0N";
-    // document.getElementById("long").textContent = fcoords
-    //   ? fcoords.split("/")[1]
-    //   : "000.0000\u00b0W";
+    if (msg.stream === "telem-0") {
+      updateDisplays("t1", msg, [
+        updateGauges,
+        updateLatLong,
+        updateTemp,
+        updateStage,
+      ]);
 
-    // //update stage
-    // let prog = document.getElementById("stage-progress");
-    // let sn = msg.getStageNumber();
-    // let percents = [16, 33, 50, 67, 84, 100];
-    // if (sn >= 0) {
-    //   prog.textContent = percents[sn] + "%";
-    //   prog.setAttribute("value", percents[sn]);
-    //   document.getElementById("s" + sn).className = "stage in-progress";
-    //   if (sn > 0)
-    //     document.getElementById("s" + (sn - 1)).className = "stage complete";
-    //   for (let i = lastStage; i < sn; i++) {
-    //     document.getElementById("s" + i).className = "stage complete";
-    //   }
-    //   lastStage = sn;
-    // }
+      updateCharts(0, msg);
 
-    // apogee check
-    if (!loadedApogee) {
-      if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
-        lastAlt = msg.getAlt();
-        apogeeTime = Date.now();
+      // update map
+      let coords = msg.getLatLong();
+      if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
+        updateMarker(
+          coords[0],
+          coords[1],
+          `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(
+            true
+          )}</span></div>`
+        );
+        lastCoords = coords;
       }
-      if (Date.now() - apogeeTime > 6000) {
-        console.log("Apogee");
-        document.getElementById("apogee-value").textContent = lastAlt + " ft";
-        sessionStorage.setItem("apogee", lastAlt);
+
+      // apogee check
+      if (!loadedApogee) {
+        if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
+          lastAlt = msg.getAlt();
+          apogeeTime = Date.now();
+        }
+        if (
+          !apogeeFound &&
+          msg.getStageNumber() > 0 &&
+          Date.now() - apogeeTime > 6000
+        ) {
+          apogeeFound = true;
+          document.getElementById("apogee-value").textContent = lastAlt + " ft";
+          sessionStorage.setItem("apogee", lastAlt);
+        }
       }
     }
   });

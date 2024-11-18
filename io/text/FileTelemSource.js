@@ -56,21 +56,24 @@ class FileTelemSource extends TextSource {
       log.debug("Log file created for " + this.name + ": " + logName);
     }
 
-    setInterval(() => {
-      let line = this.lines.shift();
-      // skip any empty lines
-      while (!line) line = this.lines.shift();
-      // send the line to the user defined parser
-      this.options.parser(line); // currently a string, should be a JSON object
-      if (this.options.createLog) this.dataFile.write(line);
-      // close if we finished sending all lines
-      if (this.lines.length === 0 && this.isClosed) {
-        this.emit("close");
-      }
-      // resume if we have emptied lots of lines
-      if (this.lines.length < 50 && this.isPaused) {
-        rl.resume();
-        this.isPaused = false;
+    let loop = setInterval(() => {
+      if (!this.isClosed) {
+        let line = this.lines.shift();
+        // skip any empty lines
+        while (!line) line = this.lines.shift();
+        // send the line to the user defined parser
+        this.options.parser(line); // currently a string, should be a JSON object
+        if (this.options.createLog) this.dataFile.write(line);
+        // close if we finished sending all lines
+        if (this.lines.length === 0 && this.isClosed) {
+          clearInterval(loop);
+          this.emit("close");
+        }
+        // resume if we have emptied lots of lines
+        if (this.lines.length < 50 && this.isPaused) {
+          rl.resume();
+          this.isPaused = false;
+        }
       }
     }, options.datarate * 1000);
   }

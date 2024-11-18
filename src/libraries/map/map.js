@@ -40,14 +40,9 @@ const buildMap = (id) => {
  */
 const updateMarker = (lat, lng, html) => {
   markers.clearLayers();
-  let marker = L.marker([lat, lng]);
-  marker.bindTooltip(html, { permanent: true }).openTooltip();
+  let marker = L.popup().setLatLng([lat, lng]).setContent(html).addTo(map);
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
-  // map.setZoom(15);
-  // setTimeout(() => {
-  //   map.setZoom(15);
-  // }, 2000);
 };
 
 //clear markers and refresh map sizing, needs to be called when a page is loaded or the tiles will not load correctly

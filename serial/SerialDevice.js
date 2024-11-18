@@ -97,8 +97,6 @@ class SerialDevice extends EventEmitter {
 
       dataStr.forEach((str) => {
         if (str === "driver ready") {
-          let streamsReady = 0;
-
           // create a stream to control the serial driver
           this.control = new PipeStream("control");
 
@@ -208,10 +206,6 @@ class SerialDevice extends EventEmitter {
                   this.deviceInput.push(newStream);
                 });
 
-                // this.command = this.deviceInput.find(
-                //   (o) => o.name === "command"
-                // );
-
                 // handle telemetry data
                 this.outputStreamNames.forEach((name) => {
                   let newStream = new PipeStream(name);
@@ -229,15 +223,22 @@ class SerialDevice extends EventEmitter {
                   this.deviceOutput.push(newStream);
                 });
 
-                this.waitReady(
-                  this.deviceInput.concat(this.deviceOutput),
-                  () => {
-                    // resolve the promise
-                    this.emit("connected");
-                    this.connected = true;
-                    res(1);
-                  }
-                );
+                if (this.deviceInput.length + this.deviceOutput.length > 0) {
+                  this.waitReady(
+                    this.deviceInput.concat(this.deviceOutput),
+                    () => {
+                      // resolve the promise
+                      this.emit("connected");
+                      this.connected = true;
+                      res(1);
+                    }
+                  );
+                } else {
+                  // resolve the promise
+                  this.emit("connected");
+                  this.connected = true;
+                  res(1);
+                }
               } else {
                 rej({ message: "Requested pipes could not be created" });
               }
@@ -278,21 +279,30 @@ class SerialDevice extends EventEmitter {
     });
   }
 
+  reset() {
+    if (this.ready) this.control.stream.write("close\n");
+  }
+
   close() {
-    if (this.ready) {
-      this.ready = false;
-      this.connected = false;
-      this.emit("close");
-      this.control.stream.write("exit\n");
-    }
+    this.ready = false;
+    this.connected = false;
+    this.emit("close");
+    if (this.ready) this.control.stream.write("exit\n");
+    else if (this.driver) this.driver.kill();
   }
 
   reload() {
     this.ready = false;
     this.connected = false;
     this.emit("close");
+    if (this.ready) this.control.stream.write("exit\n");
+    else if (this.driver) this.driver.kill();
 
-    this.setupDriver();
+    if (this.ready || this.driver) {
+      this.driver.once("exit", () => {
+        this.setupDriver();
+      });
+    } else this.setupDriver();
   }
 }
 

@@ -417,7 +417,9 @@ span .value {
 .gauge-text {
   position: absolute;
   font-size: 3.2vh;
+  width: 70%;
   transform: translateX(-50%);
+  text-align: center;
   bottom: 3vh;
   left: 50%;
 }
@@ -670,4 +672,13 @@ span.predicted-apogee {
 ::-webkit-scrollbar-thumb:hover {
   background: #970000;
   cursor: pointer;
+}
+
+.leaflet-popup-content-wrapper * {
+  min-width: max-content;
+  margin: 0;
+}
+
+.leaflet-popup-close-button {
+  display: none;
 }

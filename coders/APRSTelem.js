@@ -6,7 +6,6 @@
 {
     "type": "APRSTelem",
     "deviceId": 3,
-    "rssi": -45,
     "data": {
         "lat": 0.0,
         "lng": 0.0,
@@ -14,7 +13,10 @@
         "spd": 0.0,
         "hdg": 0.0,
         "orient": [0.0, 0.0, 0.0],
-        "stateFlags": 0
+        "stateFlags": 0,
+        "state": {
+          ...
+        }
     }
 }
 */
@@ -24,6 +26,7 @@ class APRSTelem {
    * @param {string} [stream]
    */
   constructor(message, stream) {
+    this.time = new Date();
     if (stream) {
       this.stream = stream;
 
@@ -43,23 +46,21 @@ class APRSTelem {
         parseFloat(message.data.orient[2]),
       ];
       this.stateFlags = parseInt(message.data.stateFlags);
-      this.rssi = parseInt(message.rssi); // TODO
-
-      this.t0Date = new Date(); // maybe switch t0 to be more like received time
     } else {
       this.stream = message.stream;
 
       this.deviceId = message.deviceId;
-      this.latitude = message.latitude;
-      this.longitude = message.longitude;
-      this.altitude = message.altitude;
-      this.speed = message.speed;
-      this.heading = message.heading;
-      this.orientation = message.orientation;
-      this.stateFlags = message.stateFlags;
-      this.rssi = message.rssi; // TODO
-
-      this.t0Date = message.t0Date;
+      this.latitude = parseFloat(message.latitude);
+      this.longitude = parseFloat(message.longitude);
+      this.altitude = parseFloat(message.altitude);
+      this.speed = parseFloat(message.speed);
+      this.heading = parseFloat(message.heading);
+      this.orientation = [
+        parseFloat(message.orientation[0]),
+        parseFloat(message.orientation[1]),
+        parseFloat(message.orientation[2]),
+      ];
+      this.stateFlags = parseInt(message.stateFlags);
     }
   }
 
@@ -72,19 +73,18 @@ class APRSTelem {
     let csvArr = csvData.split(",");
     return new APRSTelem(
       {
-        deviceId: csvArr[1],
-        rssi: csvArr[12],
+        deviceId: csvArr[2],
         data: {
-          lat: csvArr[2],
-          lng: csvArr[3],
-          alt: csvArr[4],
-          spd: csvArr[5],
-          hdg: csvArr[6],
-          orient: [csvArr[7], csvArr[8], csvArr[9]],
-          stateFlags: csvArr[10],
+          lat: csvArr[3],
+          lng: csvArr[4],
+          alt: csvArr[5],
+          spd: csvArr[6],
+          hdg: csvArr[7],
+          orient: [csvArr[8], csvArr[9], csvArr[10]],
+          stateFlags: csvArr[11],
         },
       },
-      csvArr[0]
+      csvArr[1]
     );
   }
 
@@ -124,23 +124,15 @@ class APRSTelem {
   }
 
   /**
-   * @param {Boolean} [dms] set true to format in degress, minutes, seconds
-   * @returns {string} string containing the latitude and longitude
-   */
-  getLatLongFormat(dms) {
-    if (!dms) return this.getLatLongDecimalFormatted();
-    return this.getLatLongDMS();
-  }
-
-  /**
    * @returns {string} the latitude and longitude in decimal form formatted as a string
    */
-  getLatLongDecimalFormatted() {
+  getLatLongDecimal(br) {
     return (
       Math.abs(this.latitude).toFixed(4) +
       "\u00b0 " +
       (this.latitude >= 0 ? "N" : "S") +
       "/" +
+      (br ? "<br>" : "") +
       Math.abs(this.longitude).toFixed(4) +
       "\u00b0 " +
       (this.longitude > 0 ? "E" : "W")
@@ -219,16 +211,16 @@ class APRSTelem {
   /**
    * @returns {Date} a Date object containing the date of T0
    */
-  getT0() {
-    return this.t0Date;
-  }
+  // getT0() {
+  //   return this.t0Date;
+  // }
 
   /**
    * @returns {Number} the T0 time in milliseconds
    */
-  getT0ms() {
-    return this.t0Date.getTime();
-  }
+  // getT0ms() {
+  //   return this.t0Date.getTime();
+  // }
 
   /**
    * @returns {String} High/Medium/Low/None signal strength, rssi range: >-60/-90<x<-60/-120<x<-90/<-120
@@ -236,9 +228,9 @@ class APRSTelem {
   getSignalStrength() {
     return this.rssi > -60
       ? "High"
-      : this.rssi < -90 && this.rssi > -120
+      : this.rssi <= -90 && this.rssi > -120
       ? "Low"
-      : this.rssi > -90 && this.rssi < -60
+      : this.rssi <= -60 && this.rssi > -90
       ? "Med"
       : "None";
   }
@@ -251,38 +243,38 @@ class APRSTelem {
    * Creates a Date object from a t0 time in UTC
    * @returns {Date} the Date object
    */
-  dateFromT0(time0) {
-    return new Date( // 2
-      new Date()
-        .toString()
-        .match(
-          /[A-Z][a-z][a-z] [A-Z][a-z][a-z] [0-9][0-9] [0-9][0-9][0-9][0-9] /g
-        )[0] +
-        new Date( // 1
-          new Date()
-            .toISOString()
-            .match(
-              /^([+-][0-9][0-9])?[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/g
-            )[0] +
-            time0 +
-            "Z"
-        ).toTimeString() // 1 - get local t0
-    ); // 2 get local date and combine with local t0
-  }
+  // dateFromT0(time0) {
+  //   return new Date( // 2
+  //     new Date()
+  //       .toString()
+  //       .match(
+  //         /[A-Z][a-z][a-z] [A-Z][a-z][a-z] [0-9][0-9] [0-9][0-9][0-9][0-9] /g
+  //       )[0] +
+  //       new Date( // 1
+  //         new Date()
+  //           .toISOString()
+  //           .match(
+  //             /^([+-][0-9][0-9])?[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/g
+  //           )[0] +
+  //           time0 +
+  //           "Z"
+  //       ).toTimeString() // 1 - get local t0
+  //   ); // 2 get local date and combine with local t0
+  // }
 
   /**
    * @returns {string} the APRS message object as a string
    */
   toString() {
-    return `${this.stream}@${this.deviceId} | Latitude: ${
-      this.latitude
-    }, Longitude: ${this.longitude}, Altitude: ${this.altitude}, Speed: ${
-      this.speed
-    }, Heading: ${this.heading}, Orientation: [${this.orientation[0]},${
-      this.orientation[1]
-    },${this.orientation[2]}], State Flags: ${
+    return `${this.time.toISOString().split("T")[1]} ${this.stream}@${
+      this.deviceId
+    } | Latitude: ${this.latitude}, Longitude: ${this.longitude}, Altitude: ${
+      this.altitude
+    }, Speed: ${this.speed}, Heading: ${this.heading}, Orientation: [${
+      this.orientation[0]
+    },${this.orientation[1]},${this.orientation[2]}], State Flags: ${
       this.stateFlags
-    }, T0: ${"T0"}, RSSI: ${this.rssi}\r\n`;
+    }\n`;
   }
 
   //convert lat/long to a better format
@@ -290,13 +282,15 @@ class APRSTelem {
     let csv = "";
     if (!csvCreated) {
       csv =
-        "Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags,T0,RSSI\n";
+        "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags\n";
     }
-    csv += `${this.stream},${this.deviceId},${this.latitude},${
-      this.longitude
-    },${this.altitude},${this.speed},${this.heading},${this.orientation[0]},${
-      this.orientation[1]
-    },${this.orientation[2]},${this.stateFlags},${"T0"},${this.rssi}\r\n`;
+    csv += `${this.time.toISOString().split("T")[1]},${this.stream},${
+      this.deviceId
+    },${this.latitude},${this.longitude},${this.altitude},${this.speed},${
+      this.heading
+    },${this.orientation[0]},${this.orientation[1]},${this.orientation[2]},${
+      this.stateFlags
+    }\n`;
     return csv;
   }
 }
