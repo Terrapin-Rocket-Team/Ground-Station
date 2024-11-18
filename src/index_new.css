@@ -678,7 +678,3 @@ span.predicted-apogee {
   min-width: max-content;
   margin: 0;
 }
-
-.leaflet-popup-close-button {
-  display: none;
-}
