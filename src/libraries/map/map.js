@@ -40,7 +40,15 @@ const buildMap = (id) => {
  */
 const updateMarker = (lat, lng, html) => {
   markers.clearLayers();
-  let marker = L.popup().setLatLng([lat, lng]).setContent(html).addTo(map);
+  let marker = L.popup({
+    closeButton: false,
+    autoClose: false,
+    closeOnClick: false,
+    closeOnEscapeKey: false,
+  })
+    .setLatLng([lat, lng])
+    .setContent(html)
+    .addTo(map);
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
 };
