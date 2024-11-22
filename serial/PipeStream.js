@@ -1,5 +1,4 @@
 const fs = require("fs");
-const net = require("net");
 const path = require("path");
 const os = require("os");
 const { log } = require("../debug.js");
@@ -13,34 +12,36 @@ if (os.platform() === "win32") {
 }
 
 class PipeStream {
-  constructor(name, callback) {
+  constructor(name, encoding, type) {
     this.stream = null;
     this.name = name;
     this.path = path.join(pipePathBase, name);
+    this.encoding = encoding;
+    this.type = type;
 
-    this.stream = net.connect(this.path, () => {
-      log.debug("connected " + this.path);
-      if (callback) callback();
-    });
+    // setup the stream itself
+    let action = "";
+
+    if (type === "r") {
+      // this.stream = fs.createReadStream(this.path, { encoding });
+      this.stream = fs.createReadStream(this.path);
+      action = "reading from";
+    } else if (type === "w") {
+      this.stream = fs.createWriteStream(this.path, { encoding });
+      action = "writing to";
+    } else {
+      log.err("Invalid type for PipeStream " + this.path);
+      return;
+    }
 
     this.stream.on("error", (err) => {
-      log.err("Error on pipe: " + this.path + "\n" + err.message);
-    });
-    this.stream.on("end", () => {
-      log.debug("disconnected " + this.path);
+      log.err("Failed " + action + " pipe: " + this.path + "\n" + err.message);
     });
   }
 
   // simply adds a listener to the stream within
   on(eventName, listener) {
     this.stream.on(eventName, listener);
-  }
-
-  close() {
-    if (this.stream != null) {
-      this.stream.end();
-      this.stream = null;
-    }
   }
 }
 

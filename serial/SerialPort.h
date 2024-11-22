@@ -10,11 +10,10 @@
 #define ARDUINO_WAIT_TIME 2000
 #define MAX_DATA_LENGTH 2048
 
-class SerialPort
-{
+class SerialPort {
 public:
-  SerialPort(const char *portName) {};
-  virtual ~SerialPort() {};
+  SerialPort(const char *portName){};
+  ~SerialPort(){};
 
   virtual int readSerialPort(void *buffer, unsigned int buf_size) = 0;
   virtual bool writeSerialPort(void *buffer, unsigned int buf_size) = 0;
