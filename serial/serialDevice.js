@@ -28,8 +28,7 @@ class SerialDevice extends EventEmitter {
 
     //logic for starting the cpp program
     if (os.platform() === "win32") {
-      // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
     } else if (os.platform() === "linux") {
       this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
     } else {
@@ -38,13 +37,6 @@ class SerialDevice extends EventEmitter {
           os.platform()
       );
     }
-
-    this.cppApp.on("error", (err) => {
-      log.err(err.message);
-    });
-    this.cppApp.on("exit", (code) => {
-      log.info("exited with code: " + code);
-    });
 
     this.cppApp.stdout.on("data", (data) => {
       log.debug(`demux stdout: ${data}`);
@@ -80,7 +72,7 @@ class SerialDevice extends EventEmitter {
 
       // setup the driver
       this.control.stream.write(port + "\n");
-      this.control.stream.write(baudRate.toString() + "\n");
+      this.control.stream.write(baudRate + "\n");
 
       // create a stream to receive status from the driver
       this.deviceOutput.push(new PipeStream("status", "ascii", "r"));
@@ -118,7 +110,8 @@ class SerialDevice extends EventEmitter {
           this.connected = true;
           res(1);
         } else {
-          rej({ message: data });
+          log.err("Could not connect: " + data);
+          rej(data);
         }
       });
     });
@@ -149,10 +142,9 @@ class SerialDevice extends EventEmitter {
   reload() {
     //logic for starting the cpp program
     if (os.platform() === "win32") {
-      // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
+      this.cppApp = spawn("./serial/DemuxWindows.exe");
     } else if (os.platform() === "linux") {
-      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
+      this.cppApp = spawn("./serial/DemuxLinux");
     } else {
       log.err(
         "Failed to reload serial interface: Unsupported platform! Found platform " +
