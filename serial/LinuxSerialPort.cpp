@@ -18,7 +18,7 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   struct termios2 tty;
 
   if (ioctl(portHandle, TCGETS, &tty) != 0) {
-    std::cerr << "Error " << errno << " from tcgetattr " << strerror(errno)
+    std::cerr << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
               << "\n";
     connected = false;
     return;
@@ -55,7 +55,6 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
                         // as any data is received.
   tty.c_cc[VMIN] = 0;
 
-  // TODO: need to see how to match this with windows implementation
   tty.c_cflag &= ~CBAUD;
   tty.c_cflag |= BOTHER;
   tty.c_ispeed = 600000;
@@ -63,7 +62,7 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
 
   // Save tty settings, also checking for error
   if (ioctl(portHandle, TCSANOW, &tty) != 0) {
-    std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
+    std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
               << "\n";
     connected = false;
   }
@@ -85,10 +84,10 @@ int LinuxSerialPort::readSerialPort(void *buffer, unsigned int buf_size) {
 
 void LinuxSerialPort::closeSerial() {
   if (connected) {
-    // apparently tcsetattr settings persist after the process ends,
+    // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
     if (ioctl(portHandle, TCSANOW, &backup) != 0) {
-      std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
+      std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
                 << "\n";
       connected = false;
     }
