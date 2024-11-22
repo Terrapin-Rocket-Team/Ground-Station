@@ -15,7 +15,7 @@
 
 int main(int argc, char **argv)
 {
-    std::cout << "Hello from demux!" <<std::endl;
+    std::cout << "Hello from demux!" << std::endl;
     unsigned char data[MAX_DATA_LENGTH];
     NamedPipe *hPipeIn;
     NamedPipe *hPipe1;
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
     while (!receivedPort)
     {
-        std::cout << "Awaiting port...\n";
+        // std::cout << "Awaiting port...\n";
         memset(portBuf, '\0', sizeof(portBuf));
         if (hPipeIn->read(portBuf, sizeof(portBuf)))
         {
