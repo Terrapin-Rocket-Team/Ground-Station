@@ -223,23 +223,6 @@ class APRSTelem {
   // }
 
   /**
-   * @returns {String} High/Medium/Low/None signal strength, rssi range: >-60/-90<x<-60/-120<x<-90/<-120
-   */
-  getSignalStrength() {
-    return this.rssi > -60
-      ? "High"
-      : this.rssi <= -90 && this.rssi > -120
-      ? "Low"
-      : this.rssi <= -60 && this.rssi > -90
-      ? "Med"
-      : "None";
-  }
-
-  getRSSI() {
-    return this.rssi;
-  }
-
-  /**
    * Creates a Date object from a t0 time in UTC
    * @returns {Date} the Date object
    */
@@ -274,7 +257,7 @@ class APRSTelem {
       this.orientation[0]
     },${this.orientation[1]},${this.orientation[2]}], State Flags: ${
       this.stateFlags
-    }\n`;
+    }`;
   }
 
   //convert lat/long to a better format

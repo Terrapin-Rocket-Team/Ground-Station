@@ -4,9 +4,15 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
-const { FileTelemSource, SerialTelemSource } = require("./io/text-io");
+const {
+  FileTelemSource,
+  SerialTelemSource,
+  SerialCommandSink,
+  FileCommandSink,
+} = require("./io/text-io");
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 const APRSTelem = require("./coders/APRSTelem");
+const Metrics = require("./coders/Metrics");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = path.join(__dirname, "data");
@@ -15,10 +21,15 @@ const logPath = path.join(__dirname, "log");
 let windows = { main: null, video: null },
   telemSources = [],
   videoSources = [],
+  commandSink,
   config,
   cacheMeta,
   closed,
-  videoControls;
+  videoControls = {
+    layout: "two-video",
+    video0: "none-0",
+    video1: "none-1",
+  };
 
 /*
 Config options:
@@ -158,6 +169,10 @@ const createMain = () => {
     windows.main = null;
   });
 
+  windows.main.webContents.once("dom-ready", () => {
+    windows.main.webContents.send("video-controls", videoControls);
+  });
+
   if (!config.debug) {
     const ts1 = new SerialTelemSource("telem-avionics", {
       parser: (data) => {
@@ -192,6 +207,8 @@ const createMain = () => {
     telemSources.push(ts1);
     telemSources.push(ts2);
     telemSources.push(ts3);
+
+    // commandSink = new SerialCommandSink();
   }
 
   log.debug("Main window created");
@@ -216,13 +233,6 @@ const createVideo = () => {
       preload: path.join(__dirname, "preload.js"),
     },
   });
-
-  //default video window state
-  videoControls = {
-    layout: "two-video",
-    video0: "none-0",
-    video1: "none-1",
-  };
 
   windows.video.loadFile(path.join(__dirname, "src/video/video.html"));
 
@@ -374,16 +384,11 @@ ipcMain.on("dev-tools", (event, args) => {
   if (windows.video) windows.video.webContents.openDevTools({ mode: "detach" });
 });
 
-// ipcMain.on("radio-command", (event, args) => {
-//   log.debug("Sending radio command");
-//   if (!commandWin) createCommand();
-// });
-
-ipcMain.on("radio-command-sent", (event, command) => {
+ipcMain.on("send-command", (event, command) => {
   for (let i = 0; i < command.length; i++) {
     if (command[i] === "") command[i] = 255;
   }
-  serial.writeCommand(command);
+  if (commandSink) commandSink.write(command);
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
@@ -625,7 +630,7 @@ if (config.debug) {
     //test to see whether the test csv file exists
     if (fs.existsSync("./test.csv")) {
       try {
-        //set up line reader
+        //set up telemetry sources
         const ts1D = new FileTelemSource("./test.csv", {
           datarate: 1,
           parser: (data) => {
@@ -663,9 +668,26 @@ if (config.debug) {
         //   },
         // });
 
+        const metrics = new FileTelemSource("./metrics.csv", {
+          datarate: 1,
+          parser: (data) => {
+            if (!closed && windows.main) {
+              //make sure we got a valid line
+              let m = Metrics.fromCSV(data);
+              windows.main.webContents.send("metrics", m);
+              if (windows.video) windows.video.webContents.send("metrics", m);
+            }
+          },
+        });
+
         telemSources.push(ts1D);
         // telemSources.push(ts2D);
         // telemSources.push(ts3D);
+        telemSources.push(metrics);
+
+        commandSink = new FileCommandSink(path.join(logPath, "commands.txt"), {
+          asString: true,
+        });
       } catch (err) {
         log.err('Failed to read test.csv: "' + err.message + '"');
       }
@@ -673,31 +695,42 @@ if (config.debug) {
       log.warn("Could not find test.csv");
     }
     if (config.video) {
-      // TODO: test to see if first video exists
-      // create new video source from file
-      let vs1 = new FileVideoSource("video0.av1", true, {
-        resolution: { width: 640, height: 832 },
-        framerate: 30,
-        rotation: "cw",
-        createLog: config.debug,
-      });
+      // test to see if first video exists
+      if (fs.existsSync("./video0.av1")) {
+        // create new video source from file
+        let vs1 = new FileVideoSource(
+          "./video0.av1",
+          {
+            resolution: { width: 640, height: 832 },
+            framerate: 30,
+            rotation: "cw",
+            createLog: true,
+            createDecoderLog: config.debug,
+          },
+          "video0"
+        );
+        videoSources.push(vs1);
+        // start the video
+        vs1.startOutput();
+      }
 
       // TODO: test to see if second video exists
-      // create new video source from file
-      let vs2 = new FileVideoSource("video1.av1", false, {
-        resolution: { width: 640, height: 832 },
-        framerate: 30,
-        rotation: "cw",
-        createLog: config.debug,
-      });
-
-      // store for later
-      videoSources.push(vs2);
-      videoSources.push(vs1);
-
-      // start the video
-      vs1.startOutput();
-      vs2.startOutput();
+      if (fs.existsSync("./video1.av1")) {
+        // create new video source from file
+        let vs2 = new FileVideoSource(
+          "./video1.av1",
+          {
+            resolution: { width: 640, height: 832 },
+            framerate: 30,
+            rotation: "cw",
+            createDecoderLog: config.debug,
+          },
+          "video1"
+        );
+        videoSources.push(vs2);
+        // start the video
+        vs2.startOutput();
+      }
     }
   }, 1000);
 }

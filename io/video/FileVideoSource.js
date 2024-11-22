@@ -8,6 +8,7 @@ const path = require("path");
 const ffmpegPath = path.join(
   __dirname,
   "..",
+  "..",
   "build",
   "video",
   "ffmpeg-7.0.1",
@@ -104,7 +105,7 @@ class FileVideoSource extends VideoSource {
 
     //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
     if (this.ffmpeg !== null && this.options.createDecoderLog) {
-      const logName = path.join("logs", "ffmpeg-" + this.name + ".log");
+      const logName = path.join("log", "ffmpeg-" + this.name + ".log");
       const logFile = fs.createWriteStream(logName);
       this.ffmpeg.stderr.pipe(logFile);
 
@@ -120,6 +121,7 @@ class FileVideoSource extends VideoSource {
     //connect pipes
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.ffmpeg.stdin);
+    if (this.options.createLog) this.i.pipe(this.dataFile);
 
     //handle data output from ffmpeg
     this.o.on("data", (chunks) => {

@@ -1,11 +1,12 @@
 window.onload = () => {
   // "global" vars
   let fullscreened = false;
+  let videoControls = {};
   let portInUse;
 
   /// top bar
 
-  //app control button listeners
+  // app control button listeners
   document.getElementById("fullscreen").addEventListener("click", () => {
     fullscreened = !fullscreened;
     api.fullscreen("main", fullscreened);
@@ -20,7 +21,7 @@ window.onload = () => {
     api.close("main");
   });
 
-  //custom dropdown setup
+  // custom dropdown setup
   const setupDropdown = (idPrefix, callback, reload) => {
     const drop = document.getElementById(idPrefix + "-drop");
     const options = document.getElementById(idPrefix + "-options");
@@ -46,7 +47,7 @@ window.onload = () => {
       });
   };
 
-  //adds available ports to the custom dropdown
+  // adds available ports to the custom dropdown
   const getAvailPorts = (idPrefix) => {
     // loading
     const options = document.getElementById(idPrefix + "-options");
@@ -135,6 +136,9 @@ window.onload = () => {
   setupSidebar(visButtonsTop, topVisual);
   setupSidebar(visButtonsBottom, bottomVisual);
 
+  /// visuals
+
+  // adds options that are static once loaded to a dropdown
   const setupStaticOptions = (idPrefix, optionsList, clickCallback) => {
     const options = document.getElementById(idPrefix + "-options");
     while (options.childElementCount > 0) {
@@ -147,33 +151,106 @@ window.onload = () => {
       span.className = idPrefix;
       span.textContent = option;
       span.addEventListener("click", () => {
-        selected.textContent = option;
-        if (clickCallback) clickCallback(option);
+        if (clickCallback) {
+          if (clickCallback(option)) {
+            selected.textContent = option;
+          }
+        } else {
+          selected.textContent = option;
+        }
       });
       options.appendChild(span);
     });
   };
 
+  // video control setup dropdown options
   const getVideoLayouts = (idPrefix) => {
     const layoutOptions = ["Full", "Partial", "Telemetry Only"];
 
-    setupStaticOptions(idPrefix, layoutOptions);
+    setupStaticOptions(idPrefix, layoutOptions, (option) => {
+      if (option == "Full") videoControls.layout = "two-video";
+      if (option == "Partial") videoControls.layout = "one-video";
+      if (option == "Telemetry Only") videoControls.layout = "telemetry-only";
+      return true;
+    });
   };
-
   const getVideo0Displays = (idPrefix) => {
     const video0Options = ["Input 0", "Input 1", "Charts", "None"];
 
-    setupStaticOptions(idPrefix, video0Options);
+    setupStaticOptions(idPrefix, video0Options, (option) => {
+      if (option !== videoControls.video1) {
+        if (option == "Input 0") videoControls.video0 = "live-video-0";
+        if (option == "Input 1") videoControls.video0 = "live-video-1";
+        if (option == "Charts") videoControls.video0 = "charts";
+        if (option == "None") videoControls.video0 = "none-0";
+        return true;
+      }
+      return false;
+    });
   };
   const getVideo1Displays = (idPrefix) => {
-    const video1Options = ["Input 0", "Input 1", "Charts", "None"];
+    const video1Options = ["Input 1", "Input 0", "Charts", "None"];
 
-    setupStaticOptions(idPrefix, video1Options);
+    setupStaticOptions(idPrefix, video1Options, (option) => {
+      if (option !== videoControls.video0) {
+        if (option == "Input 1") videoControls.video1 = "live-video-1";
+        if (option == "Input 0") videoControls.video1 = "live-video-0";
+        if (option == "Charts") videoControls.video1 = "charts";
+        if (option == "None") videoControls.video1 = "none-0";
+        return true;
+      }
+      return false;
+    });
   };
 
   setupDropdown("video-layout", getVideoLayouts, false);
   setupDropdown("video-0", getVideo0Displays, false);
   setupDropdown("video-1", getVideo1Displays, false);
+
+  document.getElementById("control-update").addEventListener("click", () => {
+    api.updateVideoControls(videoControls);
+  });
+
+  api.on("video-controls", (controls) => {
+    console.log(controls);
+    videoControls = controls;
+    let option = "";
+    if (videoControls.layout === "two-video") option = "Full";
+    if (videoControls.layout === "one-video") option = "Partial";
+    if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
+    document.getElementById("video-layout-selected").textContent;
+    if (videoControls.video0 === "live-video-0") option = "Input 0";
+    if (videoControls.video0 === "live-video-1") option = "Input 1";
+    if (videoControls.video0 === "charts") option = "Charts";
+    if (videoControls.video0 === "none-0") option = "None";
+    document.getElementById("video-0-selected").textContent = option;
+    if (videoControls.video1 === "live-video-1") option = "Input 1";
+    if (videoControls.video1 === "live-video-0") option = "Input 0";
+    if (videoControls.video1 === "charts") option = "Charts";
+    if (videoControls.video1 === "none-0") option = "None";
+    document.getElementById("video-1-selected").textContent = option;
+  });
+
+  // map
+  buildMap("map");
+
+  // charts
+  let altG = createChart("alt-graph", "s", "ft", 1, 1, [
+    { name: "Avionics Altitude", color: "#ca0000cc" },
+    { name: "Airbrake Altitude", color: "#caffef00" },
+    { name: "Payload Altitude", color: "#ca313131" },
+  ]);
+  let spdG = createChart("spd-graph", "s", "ft/s", 1, 1, [
+    { name: "Avionics Speed", color: "#ca0000cc" },
+    { name: "Airbrake Speed", color: "#caffef00" },
+    { name: "Payload Speed", color: "#ca313131" },
+  ]);
+
+  let altwr = document.getElementById("alt-wrapper");
+  let spdwr = document.getElementById("spd-wrapper");
+
+  // rocket orientation
+  // TODO
 
   /// radio/commands
 
@@ -182,6 +259,7 @@ window.onload = () => {
     "Pi Start Video",
     "Record Launch Data",
     "Restart Pi",
+    "Frequency Hop",
   ];
 
   const commandSyntax = [
@@ -189,6 +267,7 @@ window.onload = () => {
     "PSV: <time> <H/M/S>",
     "RLD: <record?>",
     "RP: N/A",
+    "FH: <frequency> <radio>",
   ];
 
   //adds commands to custom dropdown
@@ -283,7 +362,9 @@ window.onload = () => {
       "] > " +
       command;
     previousCommands.appendChild(span);
-    // add code to send command to backend here
+
+    // send command to backend
+    api.sendCommand(command);
   });
 
   /// middle/data display
@@ -302,6 +383,8 @@ window.onload = () => {
   };
 
   resizeGauges();
+
+  /// update GUI when size changes
   api.on("fullscreen-change", (res) => {
     if (res.win === "main") {
       fullscreened = res.isFullscreen;
@@ -311,19 +394,8 @@ window.onload = () => {
     }
   });
 
-  // map
-  buildMap("map");
-
-  // charts
-  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1);
-  let spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1);
-
-  let altwr = document.getElementById("alt-wrapper");
-  let spdwr = document.getElementById("spd-wrapper");
-
-  //persistent variables for the api data event handler
+  // persistent variables for handling received telemetry
   let lastCoords = [];
-  let lastStage = 0;
   let lastAlt = 0;
   let apogeeTime = 0;
   let loadedApogee = false;
@@ -334,12 +406,21 @@ window.onload = () => {
 
   // load previous data if it exists
   {
-    altG.data.datasets[0].data = sessionStorage.getItem("altData")
-      ? JSON.parse(sessionStorage.getItem("altData"))
-      : [];
-    spdG.data.datasets[0].data = sessionStorage.getItem("spdData")
-      ? JSON.parse(sessionStorage.getItem("spdData"))
-      : [];
+    let chartDataIds = ["t1", "t2", "t3"];
+    chartDataIds.forEach((idPrefix) => {
+      let index = parseInt(idPrefix.split("t")[1]) - 1;
+
+      altG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-altData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
+        : [];
+      spdG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-spdData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
+        : [];
+    });
 
     if (
       sessionStorage.getItem("apogee") &&
@@ -349,10 +430,22 @@ window.onload = () => {
         parseInt(sessionStorage.getItem("apogee")) + " ft";
       loadedApogee = true;
     }
+
+    if (sessionStorage.getItem("t0")) {
+      t0 = new Date(parseInt(sessionStorage.getItem("t0")));
+      t0Set = true;
+
+      setInterval(() => {
+        document.getElementById("t-plus-value").textContent = mstohhmmss(
+          Date.now() - t0
+        );
+      }, 10);
+    }
   }
 
-  const updateRadioStatus = (idPrefix, msg) => {
-    let ss = msg.getSignalStrength();
+  /// radio panel updates
+  const updateRadioStatus = (idPrefix, metric) => {
+    let ss = metric.getSignalStrength();
     const signalEl = document.getElementById(idPrefix + "-signal");
     if (ss === "High") {
       signalEl.setAttribute("src", "./images/signal_strong.svg");
@@ -376,15 +469,17 @@ window.onload = () => {
     }
 
     document.getElementById(idPrefix + "-strength").textContent =
-      msg.getRSSI() + " dBm";
-    // document.getElementById(idPrefix + "-bitrate").textContent =
-    //   msg.getRSSI() + " kbps"; // bitrate
+      metric.getRSSI() + " dBm";
+    document.getElementById(idPrefix + "-bitrate").textContent =
+      metric.getBitrate("k").toFixed(3) + " kbps"; // bitrate
   };
 
+  /// individual telemetry panel updates
   const updateDisplays = (idPrefix, msg, updateFunctions) => {
     updateFunctions.forEach((f) => f(idPrefix, msg));
   };
 
+  /// update functions that are global across all telemetry streams
   const updateGauges = (idPrefix, msg) => {
     let alt = document.getElementById(idPrefix + "-altitude");
     let spd = document.getElementById(idPrefix + "-speed");
@@ -411,6 +506,7 @@ window.onload = () => {
     stageEl.textContent = msg.getStage();
   };
 
+  /// update functions that are specific to different streams
   const updateLatLong = (idPrefix, msg) => {
     let fcoords = msg.getLatLongDecimal();
     document.getElementById(idPrefix + "-lat").textContent = fcoords
@@ -433,7 +529,9 @@ window.onload = () => {
     }
   };
 
-  const updateCharts = (index, msg) => {
+  /// updates for visuals (can be passed to updateDisplays)
+  const updateCharts = (idPrefix, msg) => {
+    let index = parseInt(idPrefix.split("t")[1]) - 1;
     if (t0Set) {
       //update charts
       let time = Date.now() - t0;
@@ -448,8 +546,16 @@ window.onload = () => {
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "min", "ft", 1 / 60, 1);
-        spdG = createChart("spd-graph", "Speed", "min", "ft/s", 1 / 60, 1);
+        altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, [
+          { name: "Avionics Altitude", color: "#ca0000cc" },
+          { name: "Airbrake Altitude", color: "#caffef00" },
+          { name: "Payload Altitude", color: "#ca313131" },
+        ]);
+        spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, [
+          { name: "Avionics Speed", color: "#ca0000cc" },
+          { name: "Airbrake Speed", color: "#caffef00" },
+          { name: "Payload Speed", color: "#ca313131" },
+        ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
@@ -464,8 +570,16 @@ window.onload = () => {
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "hrs", "ft", 1 / 3600, 1);
-        spdG = createChart("spd-graph", "Speed", "hrs", "ft/s", 1 / 3600, 1);
+        altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, [
+          { name: "Avionics Altitude", color: "#ca0000cc" },
+          { name: "Airbrake Altitude", color: "#caffef00" },
+          { name: "Payload Altitude", color: "#ca313131" },
+        ]);
+        spdG = createChart("spd-graph", "hr", "ft/s", 1 / 3600, 1, [
+          { name: "Avionics Speed", color: "#ca0000cc" },
+          { name: "Airbrake Speed", color: "#caffef00" },
+          { name: "Payload Speed", color: "#ca313131" },
+        ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
@@ -474,7 +588,7 @@ window.onload = () => {
       }
 
       let factor =
-        chartState == "minutes" ? 30 : chartState == "hours" ? 320 : 1;
+        chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
 
       let interval = parseInt(
         (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
@@ -504,11 +618,11 @@ window.onload = () => {
       });
 
       sessionStorage.setItem(
-        index + "-altData",
+        idPrefix + "-altData",
         JSON.stringify(altG.data.datasets[index].data)
       );
       sessionStorage.setItem(
-        index + "-spdData",
+        idPrefix + "-spdData",
         JSON.stringify(spdG.data.datasets[index].data)
       );
 
@@ -516,82 +630,99 @@ window.onload = () => {
       spdG.update();
     }
   };
+  const updateMap = (idPrefix, msg) => {
+    // update map
+    let coords = msg.getLatLong();
+    if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
+      updateMarker(
+        coords[0],
+        coords[1],
+        `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(
+          true
+        )}</span></div>`
+      );
+      lastCoords = coords;
+    }
+  };
 
-  api.on("metrics", (metric) => {
-    // signal strength
-    // bitrate
-    updateRadioStatus("telem", msg);
-
-    // set T+
-    if (!t0Set && msg.getStageNumber() > 0) {
-      let t = document.getElementById("t-plus-value");
-      let time = Date.now() - msg.getT0ms();
-
+  /// updates for status bar
+  const updateT0 = (idPrefix, msg) => {
+    if (msg.getStageNumber() > 0 && !t0Set) {
+      // temporary t0 hardcode
+      t0 = Date.now();
+      sessionStorage.setItem("t0", t0);
       t0Set = true;
-      t.textContent = mstohhmmss(time);
-      let ts = time / 1000;
-
       if (altG.data.datasets[0].data.length === 0)
-        altG.data.datasets[0].data = [{ x: ts, y: null }];
+        altG.data.datasets[0].data = [{ x: 0, y: null }];
       if (spdG.data.datasets[0].data.length === 0)
-        spdG.data.datasets[0].data = [{ x: ts, y: null }];
+        spdG.data.datasets[0].data = [{ x: 0, y: null }];
 
       setInterval(() => {
-        t.textContent = mstohhmmss(Date.now() - msg.getT0ms());
+        document.getElementById("t-plus-value").textContent = mstohhmmss(
+          Date.now() - t0
+        );
       }, 10);
     }
+  };
+  const updateApogee = (idPrefix, msg) => {
+    // apogee check
+    if (!loadedApogee) {
+      if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
+        lastAlt = msg.getAlt();
+        apogeeTime = Date.now();
+      }
+      if (
+        !apogeeFound &&
+        msg.getStageNumber() > 0 &&
+        Date.now() - apogeeTime > 6000
+      ) {
+        apogeeFound = true;
+        document.getElementById("apogee-value").textContent = lastAlt + " ft";
+        sessionStorage.setItem("apogee", lastAlt);
+      }
+    }
+  };
+
+  api.on("metrics", (metric) => {
+    // update signal strength and bitrate
+    let m = new Metrics(metric);
+    if (m.deviceId === "3") {
+      updateRadioStatus("telem", m);
+    }
   });
-  // temporary t0 hardcode
-  t0 = Date.now();
-  t0Set = true;
-  let s = (Date.now() - t0) / 1000;
-  if (altG.data.datasets[0].data.length === 0)
-    altG.data.datasets[0].data = [{ x: s, y: null }];
-  if (spdG.data.datasets[0].data.length === 0)
-    spdG.data.datasets[0].data = [{ x: s, y: null }];
 
   api.on("data", (data) => {
     let msg = new APRSTelem(data);
 
-    if (msg.stream === "telem-0") {
+    if (msg.stream === "telem-avionics") {
       updateDisplays("t1", msg, [
+        updateT0, // order matters, update t0 first
         updateGauges,
         updateLatLong,
         updateTemp,
         updateStage,
+        updateCharts,
+        updateMap,
+        updateApogee,
       ]);
-
-      updateCharts(0, msg);
-
-      // update map
-      let coords = msg.getLatLong();
-      if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
-        updateMarker(
-          coords[0],
-          coords[1],
-          `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(
-            true
-          )}</span></div>`
-        );
-        lastCoords = coords;
-      }
-
-      // apogee check
-      if (!loadedApogee) {
-        if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
-          lastAlt = msg.getAlt();
-          apogeeTime = Date.now();
-        }
-        if (
-          !apogeeFound &&
-          msg.getStageNumber() > 0 &&
-          Date.now() - apogeeTime > 6000
-        ) {
-          apogeeFound = true;
-          document.getElementById("apogee-value").textContent = lastAlt + " ft";
-          sessionStorage.setItem("apogee", lastAlt);
-        }
-      }
+    }
+    if (msg.stream === "telem-airbrake") {
+      updateDisplays("t2", msg, [
+        updateGauges,
+        updateFlapAngle,
+        updatePredApogee,
+        updateStage,
+        updateCharts,
+      ]);
+    }
+    if (msg.stream === "telem-payload") {
+      updateDisplays("t3", msg, [
+        updateGauges,
+        updateLatLong,
+        updateHeading,
+        updateStage,
+        updateCharts,
+      ]);
     }
   });
 

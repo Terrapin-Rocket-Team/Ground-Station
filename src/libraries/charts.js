@@ -8,24 +8,14 @@
  * @param {number} yConvert the conversion factor for the y axis
  * @returns {Chart} the charts.js chart object
  */
-const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
-  return new Chart(
+const createChart = (id, xUnits, yUnits, xConvert, yConvert, lines) => {
+  let chart = new Chart(
     document.getElementById(id),
     (ChartOptions = {
       type: "line",
       data: {
         labels: [0, 2, 4, 6, 8],
-        datasets: [
-          {
-            label: name,
-            data: [
-              { x: 0, y: null },
-              { x: 8, y: null },
-            ],
-            xAxisID: "x",
-            yAxisID: "y",
-          },
-        ],
+        datasets: [],
       },
       options: {
         maintainAspectRatio: false,
@@ -64,14 +54,28 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
           point: {
             radius: 0,
           },
-          line: {
-            backgroundColor: "#ca0000cc",
-            borderColor: "#ca0000cc",
-          },
+          // line: {
+          //   backgroundColor: "#ca0000cc",
+          //   borderColor: "#ca0000cc",
+          // },
         },
       },
     })
   );
+
+  lines.forEach((line) => {
+    chart.data.datasets.push({
+      label: line.name,
+      borderColor: line.color,
+      data: [
+        { x: 0, y: null },
+        { x: 8, y: null },
+      ],
+      xAxisID: "x",
+      yAxisID: "y",
+    });
+  });
+  return chart;
 };
 
 const roundTo = (n, d) => {
