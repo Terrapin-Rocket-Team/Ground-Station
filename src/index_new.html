@@ -38,12 +38,7 @@
             title="Serial Disconnected"
           />
           <span id="serial-selected">Select Port</span>
-          <img
-            src="./images/arrow_right.svg"
-            alt=">"
-            id="serial-arrow"
-            class="drop-arrow"
-          />
+          <img src="./images/arrow_right.svg" alt=">" id="serial-arrow" />
           <div class="options" id="serial-options"></div>
         </div>
         <a
@@ -72,76 +67,13 @@
       <div id="grid-display">
         <div id="visual">
           <div id="visual-sidebar">
-            <div id="top-sidebar">
-              <span id="map-vis" class="vis-button-top active">Map</span>
-              <span id="rocket-vis" class="vis-button-top">Rocket</span>
-            </div>
-            <div id="bottom-sidebar">
-              <span id="graph-vis" class="vis-button-bottom active"
-                >Graphs</span
-              >
-              <span id="control-vis" class="vis-button-bottom">Control</span>
-            </div>
+            <span id="rocket-vis">Rocket</span>
+            <span id="map-vis">Map</span>
+            <span id="graph-vis">Graph</span>
+            <span id="control-vis">Control</span>
           </div>
-          <div id="visual-top">
-            <div id="map-wrapper" class="visual active">
-              <div id="map"></div>
-            </div>
-            <div id="rocket-wrapper" class="visual">Not Implemented</div>
-          </div>
-          <div id="visual-bottom">
-            <div id="graph-wrapper" class="visual active">
-              Altitude
-              <div id="alt-wrapper">
-                <canvas id="alt-graph" class="chart"></canvas>
-              </div>
-              Speed
-              <div id="spd-wrapper">
-                <canvas id="spd-graph" class="chart"></canvas>
-              </div>
-            </div>
-            <div id="control-wrapper" class="visual">
-              <!--Custom dropdown-->
-              <div id="video-layout-control" class="video-control-section">
-                <div class="dropdown inactive" id="video-layout-drop">
-                  <span id="video-layout-selected">Full</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-layout-arrow"
-                    class="drop-arrow"
-                  />
-                  <div class="options" id="video-layout-options"></div>
-                </div>
-              </div>
-              <div id="video-0-control" class="video-control-section">
-                <div class="dropdown inactive" id="video-0-drop">
-                  <span id="video-0-selected">Input 0</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-0-arrow"
-                    class="drop-arrow"
-                  />
-                  <div class="options" id="video-0-options"></div>
-                </div>
-              </div>
-              <div id="video-1-control" class="video-control-section">
-                <div class="dropdown inactive" id="video-1-drop">
-                  <span id="video-1-selected">Input 0</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-1-arrow"
-                    class="drop-arrow"
-                  />
-                  <div class="options" id="video-1-options"></div>
-                </div>
-              </div>
-              <button id="reload-video">Reload</button>
-              <button id="control-update">Update</button>
-            </div>
-          </div>
+          <div id="visual-top">Visual Top</div>
+          <div id="visual-bottom">Visual Bottom</div>
         </div>
         <div id="status">
           <span id="t-plus"
@@ -153,7 +85,6 @@
           >
         </div>
         <div id="telem-1" class="telem">
-          <span id="t1-title" class="telem-title">Avionics</span>
           <div id="t1-alt-gauge-container" class="gauge-container">
             <!-- Telemetry 1 altitude gauge -->
             <canvas
@@ -162,287 +93,53 @@
               data-type="radial-gauge"
               data-width="300"
               data-height="300"
+              data-borders="true"
+              data-border-inner-width="0"
+              data-border-middle-width="0"
+              data-border-outer-width="2"
               data-units="ft x 1000"
+              data-title="Altitude"
+              data-value="0"
+              data-value-text="&#8212;"
               data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="32"
-              data-major-ticks="0,4,8,12,16,20,24,28,32"
-              data-minor-ticks="4"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 30, "to": 32, "color": "rgba(200, 50, 50, .75)"} ]'
+              data-max-value="12"
+              data-major-ticks="0,2,4,6,8,10,12"
+              data-minor-ticks="5"
+              data-stroke-ticks="false"
+              data-highlights='[
+              { "from": 0, "to": 10, "color": "rgba(0,255,0,.15)" },
+              { "from": 10, "to": 11, "color": "rgba(255,255,0,.15)" },
+              { "from": 11, "to": 12, "color": "rgba(255,0,0,.15)" }
+          ]'
               data-color-plate="#fff"
+              data-color-major-ticks="#222"
+              data-color-minor-ticks="#222"
+              data-color-title="#000"
+              data-color-units="#000"
+              data-color-numbers="#222"
+              data-needle-type="line"
+              data-needle-start="0"
+              data-needle-end="90"
+              data-color-needle-start="#f00"
+              data-color-needle-end="#f00"
+              data-color-needle-shadow-down="#555"
+              data-value-box="false"
+              data-value-text-shadow="false"
+              data-value-int="5"
+              data-value-dec="0"
+              data-value-box-border-radius="0"
+              data-color-value-box-rect="#fff"
+              data-color-value-box-rect-end="#fff"
+              data-color-value-box-shadow="false"
+              data-color-value-box-background="#fff"
               data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
             ></canvas>
             <span id="t1-alt-text" class="gauge-text">&#8212;</span>
           </div>
-          <div id="t1-spd-gauge-container" class="gauge-container">
-            <!-- Telemetry 1 speed gauge -->
-            <canvas
-              id="t1-speed"
-              class="gauge"
-              data-type="radial-gauge"
-              data-width="300"
-              data-height="300"
-              data-units="knots"
-              data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="720"
-              data-major-ticks="0,60,120,180,240,300,360,420,480,540,600,660,720"
-              data-minor-ticks="2"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 660, "to": 720, "color": "rgba(200, 50, 50, .75)"} ]'
-              data-color-plate="#fff"
-              data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
-            ></canvas>
-            <span id="t1-spd-text" class="gauge-text">&#8212;</span>
-          </div>
-          <span class="computer-state lat-long"
-            ><span id="t1-lat" class="lat">00.0000 &#176;N</span> /
-            <span id="t1-long" class="long">000.0000 &#176;W</span></span
-          >
-          <span class="computer-state"
-            >Internal Temp: <span id="t1-temp">&#8212;</span>&#176;</span
-          >
-          <span class="computer-state"
-            >Stage: <span id="t1-stage">Preflight</span></span
-          >
         </div>
-        <div id="telem-2" class="telem">
-          <span id="t2-title" class="telem-title">Airbrake</span>
-          <div id="t2-alt-gauge-container" class="gauge-container">
-            <!-- Telemetry 2 altitude gauge -->
-            <canvas
-              id="t2-altitude"
-              class="gauge"
-              data-type="radial-gauge"
-              data-width="300"
-              data-height="300"
-              data-units="ft x 1000"
-              data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="32"
-              data-major-ticks="0,4,8,12,16,20,24,28,32"
-              data-minor-ticks="4"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 30, "to": 32, "color": "rgba(200, 50, 50, .75)"} ]'
-              data-color-plate="#fff"
-              data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
-            ></canvas>
-            <span id="t2-alt-text" class="gauge-text">&#8212;</span>
-          </div>
-          <div id="t2-spd-gauge-container" class="gauge-container">
-            <!-- Telemetry 2 speed gauge -->
-            <canvas
-              id="t2-speed"
-              class="gauge"
-              data-type="radial-gauge"
-              data-width="300"
-              data-height="300"
-              data-units="knots"
-              data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="720"
-              data-major-ticks="0,60,120,180,240,300,360,420,480,540,600,660,720"
-              data-minor-ticks="2"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 660, "to": 720, "color": "rgba(200, 50, 50, .75)"} ]'
-              data-color-plate="#fff"
-              data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
-            ></canvas>
-            <span id="t2-spd-text" class="gauge-text">&#8212;</span>
-          </div>
-          <span class="computer-state"
-            >Flap angle: <span id="t2-flap-angle">&#8212;</span>&#176;</span
-          >
-          <span class="computer-state predicted-apogee"
-            >Predicted Apogee: <span id="t2-apogee">&#8212; ft</span></span
-          >
-          <span class="computer-state"
-            >Stage: <span id="t2-stage">Preflight</span></span
-          >
-        </div>
-        <div id="telem-3" class="telem">
-          <span id="t3-title" class="telem-title">Payload</span>
-          <div id="t3-alt-gauge-container" class="gauge-container">
-            <!-- Telemetry 3 altitude gauge -->
-            <canvas
-              id="t3-altitude"
-              class="gauge"
-              data-type="radial-gauge"
-              data-width="300"
-              data-height="300"
-              data-units="ft x 1000"
-              data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="32"
-              data-major-ticks="0,4,8,12,16,20,24,28,32"
-              data-minor-ticks="4"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 30, "to": 32, "color": "rgba(200, 50, 50, .75)"} ]'
-              data-color-plate="#fff"
-              data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
-            ></canvas>
-            <span id="t3-alt-text" class="gauge-text">&#8212;</span>
-          </div>
-          <div id="t3-spd-gauge-container" class="gauge-container">
-            <!-- Telemetry 3 speed gauge -->
-            <canvas
-              id="t3-speed"
-              class="gauge"
-              data-type="radial-gauge"
-              data-width="300"
-              data-height="300"
-              data-units="knots"
-              data-min-value="0"
-              data-start-angle="60"
-              data-ticks-angle="240"
-              data-value-box="false"
-              data-max-value="720"
-              data-major-ticks="0,60,120,180,240,300,360,420,480,540,600,660,720"
-              data-minor-ticks="2"
-              data-stroke-ticks="true"
-              data-highlights='[ {"from": 660, "to": 720, "color": "rgba(200, 50, 50, .75)"} ]'
-              data-color-plate="#fff"
-              data-border-shadow-width="0"
-              data-borders="false"
-              data-needle-type="arrow"
-              data-needle-width="2"
-              data-needle-circle-size="7"
-              data-needle-circle-outer="true"
-              data-needle-circle-inner="false"
-              data-animation-duration="1500"
-              data-animation-rule="linear"
-            ></canvas>
-            <span id="t3-spd-text" class="gauge-text">&#8212;</span>
-          </div>
-          <span class="lat-long computer-state"
-            ><span id="t3-lat" class="lat">00.0000 &#176;N</span> /
-            <span id="t3-long" class="long">000.0000 &#176;W</span></span
-          >
-          <span class="computer-state"
-            >Heading: <span id="t3-heading">&#8212;</span>&#176;</span
-          >
-          <span class="computer-state"
-            >Stage: <span id="t3-stage">Preflight</span></span
-          >
-        </div>
-        <div id="radio">
-          <div id="radio-status-telem" class="radio-status">
-            Telemetry
-            <img
-              src="images/signal_strong.svg"
-              alt="Strong signal"
-              id="telem-signal"
-            />
-            <span id="telem-strength">&#8212; dBm</span>
-            <span id="telem-bitrate">&#8212; kbps</span>
-          </div>
-          <div id="radio-status-video0" class="radio-status">
-            Video 0
-            <img
-              src="images/signal_strong.svg"
-              alt="Strong signal"
-              id="video0-signal"
-            />
-            <span id="video0-strength">&#8212; dBm</span>
-            <span id="video0-bitrate">&#8212; kbps</span>
-          </div>
-          <div id="radio-status-video1" class="radio-status">
-            Video 1
-            <img
-              src="images/signal_strong.svg"
-              alt="Strong signal"
-              id="video1-signal"
-            />
-            <span id="video1-strength">&#8212; dBm</span>
-            <span id="video1-bitrate">&#8212; kbps</span>
-          </div>
-          <div id="radio-command-container">
-            <div id="command-grid">
-              <!--Custom dropdown-->
-              <div class="dropdown inactive" id="command-drop">
-                <span id="command-selected">Select Command</span>
-                <img
-                  src="./images/arrow_right.svg"
-                  alt=">"
-                  id="command-arrow"
-                  class="drop-arrow"
-                />
-                <div class="options" id="command-options"></div>
-              </div>
-              <span id="command-syntax-holder"
-                ><span id="command-syntax">No command selected</span></span
-              >
-              <input type="text" name="command-args" id="command-args" />
-              <span id="previous-commands" title="Sent commands"></span>
-              <div id="command-buttons">
-                <button type="button" id="reset-command" class="command-button">
-                  Reset
-                </button>
-                <div id="send-command" class="command-button">
-                  Send
-                  <button
-                    type="button"
-                    id="confirm-send"
-                    class="command-button inactive"
-                  >
-                    Confirm
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div id="telem-2" class="telem">Telem 2</div>
+        <div id="telem-3" class="telem">Telem 3</div>
+        <div id="radio">Command/Radio</div>
       </div>
     </div>
     <!--3rd party libraries, must be loaded after rest of document-->
