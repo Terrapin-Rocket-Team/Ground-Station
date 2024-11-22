@@ -55,8 +55,16 @@ window.onload = () => {
     none0 = document.getElementById("none-0"),
     none1 = document.getElementById("none-1");
 
-  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
-    spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
+  let altG = createChart("alt-graph", "min", "ft", 1, 1, [
+      { name: "Avionics Altitude", color: "#ca0000cc" },
+      { name: "Airbrake Altitude", color: "#caffef00" },
+      { name: "Payload Altitude", color: "#ca313131" },
+    ]),
+    spdG = createChart("spd-graph", "min", "ft/s", 1, 1, [
+      { name: "Avionics Speed", color: "#ca0000cc" },
+      { name: "Airbrake Speed", color: "#caffef00" },
+      { name: "Payload Speed", color: "#ca313131" },
+    ]),
     altwr = document.getElementById("alt-wrapper"),
     spdwr = document.getElementById("spd-wrapper");
 
@@ -73,14 +81,14 @@ window.onload = () => {
       thisFrame.forEach((video) => {
         if (video) {
           //temporary name
-          if (video.name.charAt(video.name.length - 1) == '2') {
+          if (video.name === "video1") {
             LV1.frame.y.bytes = video.data.y;
             LV1.frame.u.bytes = video.data.u;
             LV1.frame.v.bytes = video.data.v;
             LV1.ctx.drawFrame(LV1.frame);
           }
           //temporary name
-          else {
+          else if (video.name === "video0") {
             LV0.frame.y.bytes = video.data.y;
             LV0.frame.u.bytes = video.data.u;
             LV0.frame.v.bytes = video.data.v;
@@ -181,12 +189,12 @@ window.onload = () => {
   }
 
   api.on("data", (data) => {
-    let msg = new APRSMessage(data);
+    let msg = new APRSTelem(data);
 
     //set T+
     //TODO: display T+?
     if (!tPlusSet && msg.getStageNumber() > 0) {
-      let time = Date.now() - msg.getT0ms();
+      let time = Date.now() - msg.time;
 
       tPlusSet = true;
       let ts = time / 1000;
@@ -198,7 +206,7 @@ window.onload = () => {
     }
     if (tPlusSet) {
       //update charts
-      let time = Date.now() - msg.getT0ms();
+      let time = Date.now() - msg.time;
       let ts = time / 1000;
 
       if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
@@ -210,8 +218,16 @@ window.onload = () => {
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "min", "ft", 1 / 60, 1);
-        spdG = createChart("spd-graph", "Speed", "min", "ft/s", 1 / 60, 1);
+        altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, [
+          { name: "Avionics Altitude", color: "#ca0000cc" },
+          { name: "Airbrake Altitude", color: "#caffef00" },
+          { name: "Payload Altitude", color: "#ca313131" },
+        ]);
+        spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, [
+          { name: "Avionics Speed", color: "#ca0000cc" },
+          { name: "Airbrake Speed", color: "#caffef00" },
+          { name: "Payload Speed", color: "#ca313131" },
+        ]);
         altG.data.datasets[0].data = altData;
         spdG.data.datasets[0].data = spdData;
         altG.data.labels = altLabels;
@@ -226,8 +242,16 @@ window.onload = () => {
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "hrs", "ft", 1 / 3600, 1);
-        spdG = createChart("spd-graph", "Speed", "hrs", "ft/s", 1 / 3600, 1);
+        altG = createChart("alt-graph", "min", "ft", 1 / 3600, 1, [
+          { name: "Avionics Altitude", color: "#ca0000cc" },
+          { name: "Airbrake Altitude", color: "#caffef00" },
+          { name: "Payload Altitude", color: "#ca313131" },
+        ]);
+        spdG = createChart("spd-graph", "min", "ft/s", 1 / 3600, 1, [
+          { name: "Avionics Speed", color: "#ca0000cc" },
+          { name: "Airbrake Speed", color: "#caffef00" },
+          { name: "Payload Speed", color: "#ca313131" },
+        ]);
         altG.data.datasets[0].data = altData;
         spdG.data.datasets[0].data = spdData;
         altG.data.labels = altLabels;
