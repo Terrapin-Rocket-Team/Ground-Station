@@ -28,9 +28,8 @@ const createChart = (id, name, xUnits, yUnits, xConvert, yConvert) => {
         ],
       },
       options: {
+        aspectRatio: 1.6,
         maintainAspectRatio: false,
-        resizeDelay: 10,
-        responsive: true,
         animation: false,
         plugins: {
           legend: {
