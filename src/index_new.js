@@ -160,22 +160,22 @@ window.onload = () => {
 
   /// radio/commands
 
-  const commandList = [
-    "Pi Power On",
-    "Pi Start Video",
-    "Record Launch Data",
-    "Restart Pi",
-  ];
-
-  const commandSyntax = [
-    "PPO: <time> <H/M/S>",
-    "PSV: <time> <H/M/S>",
-    "RLD: <record?>",
-    "RP: N/A",
-  ];
-
   //adds commands to custom dropdown
   const getCommands = (idPrefix) => {
+    const commandList = [
+      "Pi Power On",
+      "Pi Start Video",
+      "Record Launch Data",
+      "Restart Pi",
+    ];
+
+    const commandSyntax = [
+      "PPO: <time> <H/M/S>",
+      "PSV: <time> <H/M/S>",
+      "RLD: <record?>",
+      "RP: N/A",
+    ];
+
     const commandCallback = (option) => {
       let index = commandList.findIndex((command) => {
         return command === option;
@@ -194,44 +194,6 @@ window.onload = () => {
   const commandArgs = document.getElementById("command-args");
   const previousCommands = document.getElementById("previous-commands");
 
-  let commandValid = false;
-
-  commandArgs.addEventListener("input", () => {
-    console.log("here");
-    let commandText = commandArgs.value;
-
-    if (commandText.length > 0) {
-      let cmdMatch = commandText.match(/[A-Z][A-Z][A-Z]?:( [A-z0-9])*/g);
-
-      if (cmdMatch) {
-        let command = cmdMatch[0];
-        let index = -1;
-        if ((index = commandText.search(": ")) > 0) {
-          command = commandText.slice(0, index);
-        }
-
-        for (let i = 0; i < commandSyntax.length; i++) {
-          let cmdName = commandSyntax[i].substring(
-            0,
-            commandSyntax[i].search(": ")
-          );
-          if (cmdName === command) {
-            document.getElementById("command-syntax").textContent =
-              commandSyntax[i];
-            document.getElementById("command-selected").textContent =
-              commandList[i];
-            commandArgs.className = "valid";
-            break;
-          }
-        }
-      } else {
-        commandArgs.className = "invalid";
-      }
-    } else {
-      commandArgs.className = "empty";
-    }
-  });
-
   document.getElementById("reset-command").addEventListener("click", () => {
     document.getElementById("command-syntax").textContent =
       "No command selected";
@@ -244,10 +206,8 @@ window.onload = () => {
   });
 
   document.getElementById("send-command").addEventListener("click", (e) => {
-    if (commandValid) {
-      e.stopPropagation();
-      document.getElementById("confirm-send").classList.toggle("inactive");
-    }
+    e.stopPropagation();
+    document.getElementById("confirm-send").classList.toggle("inactive");
   });
 
   document.getElementById("confirm-send").addEventListener("click", () => {
