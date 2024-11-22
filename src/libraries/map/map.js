@@ -44,10 +44,10 @@ const updateMarker = (lat, lng, html) => {
   marker.bindTooltip(html, { permanent: true }).openTooltip();
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
-  // map.setZoom(15);
-  // setTimeout(() => {
-  //   map.setZoom(15);
-  // }, 2000);
+  map.setZoom(14);
+  setTimeout(() => {
+    map.setZoom(15);
+  }, 2000);
 };
 
 //clear markers and refresh map sizing, needs to be called when a page is loaded or the tiles will not load correctly
