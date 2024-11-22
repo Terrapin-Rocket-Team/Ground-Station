@@ -126,6 +126,9 @@ class Radio extends EventEmitter {
 
   reload() {
     //logic for starting the cpp program
+    //kill before rest
+    if(this.cppApp) this.cppApp.kill()
+
     if (os.platform() === "win32") {
       this.cppApp = spawn("./serial/DemuxWindows.exe");
     } else if (os.platform() === "linux") {
