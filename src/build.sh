@@ -4,7 +4,7 @@ rm -rf src
 mkdir -p src
 cd ..
 npx electron-forge package
-mv out/Terp\ Rockets\ Ground\ Station-win32-x64/* build/src/
+mv out/Terp\ Rockets\ Ground\ Station*/* build/src/
 cd build/src/resources/app
 rm -rf ./*.log
 rm -f test.csv

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "SerialPort.h"
-#include <termios.h>
+#include "asm/termbits.h"
+
 class LinuxSerialPort : public SerialPort
 {
 private:
   int portHandle;
   bool connected;
-  struct termios backup;
+  termios2 backup;
 
 public:
   LinuxSerialPort(const char *portName);

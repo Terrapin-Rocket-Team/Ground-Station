@@ -15,6 +15,7 @@
 
 int main(int argc, char **argv)
 {
+    std::cout << "Hello from demux!" << std::endl;
     unsigned char data[MAX_DATA_LENGTH];
     NamedPipe *hPipeIn;
     NamedPipe *hPipe1;
@@ -22,16 +23,15 @@ int main(int argc, char **argv)
     NamedPipe *hPipe3;
 
 #ifdef WINDOWS
-    hPipeIn = new WinNamedPipe("\\\\.\\pipe\\terpFcCommands", true);
-    hPipe1 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoOne", true);
-    hPipe2 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoTwo", true);
-    hPipe3 = new WinNamedPipe("\\\\.\\pipe\\terpTelemetry", true);
+    hPipeIn = new WinNamedPipe("..\\serial\\pipes\\terpFcCommands", true);
+    hPipe1 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoOne", true);
+    hPipe2 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoTwo", true);
+    hPipe3 = new WinNamedPipe("..\\serial\\pipes\\terpTelemetry", true);
 #elif LINUX
-    // THESE PATHS MIGHT BE WRONG!
-    hPipeIn = new LinuxNamedPipe("./pipe/terpFcCommands", true);
-    hPipe1 = new LinuxNamedPipe("./pipe/ffmpegVideoOne", true);
-    hPipe2 = new LinuxNamedPipe("./pipe/ffmpegVideoTwo", true);
-    hPipe3 = new LinuxNamedPipe("./pipe/terpTelemetry", true);
+    hPipeIn = new LinuxNamedPipe("../serial/pipes/terpFcCommands", true);
+    hPipe1 = new LinuxNamedPipe("../serial/pipes/ffmpegVideoOne", true);
+    hPipe2 = new LinuxNamedPipe("../serial/pipes/ffmpegVideoTwo", true);
+    hPipe3 = new LinuxNamedPipe("../serial/pipes/terpTelemetry", true);
 #endif
 
     size_t x;
@@ -55,11 +55,11 @@ int main(int argc, char **argv)
     size_t chunks3bot = 0;
 
     bool receivedPort = false;
-    char portBuf[1024];
+    char portBuf[1024] = {'\0'};
 
     while (!receivedPort)
     {
-        std::cout << "Awaiting port...\n";
+        // std::cout << "Awaiting port...\n";
         memset(portBuf, '\0', sizeof(portBuf));
         if (hPipeIn->read(portBuf, sizeof(portBuf)))
         {
@@ -74,9 +74,9 @@ int main(int argc, char **argv)
 #ifdef WINDOWS
     teensy = new WinSerialPort(portBuf);
 #elif LINUX
-    teensy = new LinuxSerialPort(strcat("./", portBuf));
+    teensy = new LinuxSerialPort(portBuf);
 #endif
-
+    std::cout << "HERE" << std::endl;
     if (teensy->isConnected())
     {
         std::cout << "Connection made" << std::endl
