@@ -1,1 +1,1 @@
-Add device ID and rssi to JSON functions
+Add device ID to JSON functions

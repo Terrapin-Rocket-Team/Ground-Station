@@ -20,6 +20,8 @@ class FileTelemSource extends TextSource {
   constructor(file, options, name) {
     super(name ? name : file, fs.createReadStream(file));
 
+    log.debug("Creating file telem source for: " + this.name);
+
     this.file = file;
     this.options = options;
 

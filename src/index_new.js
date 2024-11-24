@@ -4,6 +4,12 @@ window.onload = () => {
   let videoControls = {};
   let portInUse;
 
+  const t1Color = getComputedStyle(document.body).getPropertyValue(
+      "--t1-color"
+    ),
+    t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
+    t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
+
   /// top bar
 
   // app control button listeners
@@ -207,6 +213,10 @@ window.onload = () => {
   setupDropdown("video-0", getVideo0Displays, false);
   setupDropdown("video-1", getVideo1Displays, false);
 
+  document.getElementById("reload-video").addEventListener("click", () => {
+    api.reload("video", true);
+  });
+
   document.getElementById("control-update").addEventListener("click", () => {
     api.updateVideoControls(videoControls);
   });
@@ -235,14 +245,14 @@ window.onload = () => {
 
   // charts
   let altG = createChart("alt-graph", "s", "ft", 1, 1, [
-    { name: "Avionics Altitude", color: "#ca0000cc" },
-    { name: "Airbrake Altitude", color: "#ffef00ff" },
-    { name: "Payload Altitude", color: "#313131ff" },
+    { name: "Avionics Altitude", color: t1Color },
+    { name: "Airbrake Altitude", color: t2Color },
+    { name: "Payload Altitude", color: t3Color },
   ]);
   let spdG = createChart("spd-graph", "s", "ft/s", 1, 1, [
-    { name: "Avionics Speed", color: "#ca0000cc" },
-    { name: "Airbrake Speed", color: "#ffef00ff" },
-    { name: "Payload Speed", color: "#313131ff" },
+    { name: "Avionics Speed", color: t1Color },
+    { name: "Airbrake Speed", color: t2Color },
+    { name: "Payload Speed", color: t3Color },
   ]);
 
   let altwr = document.getElementById("alt-wrapper");
@@ -253,43 +263,45 @@ window.onload = () => {
 
   /// radio/commands
 
-  const commandList = [
-    "Pi Power On",
-    "Pi Start Video",
-    "Record Launch Data",
-    "Restart Pi",
-    "Frequency Hop",
-  ];
-
-  const commandSyntax = [
-    "PPO: <time> <H/M/S>",
-    "PSV: <time> <H/M/S>",
-    "RLD: <record?>",
-    "RP: N/A",
-    "FH: <frequency> <radio>",
-  ];
-
-  //adds commands to custom dropdown
-  const getCommands = (idPrefix) => {
-    const commandCallback = (option) => {
-      let index = commandList.findIndex((command) => {
-        return command === option;
-      });
-      document.getElementById("command-syntax").textContent =
-        commandSyntax[index];
-      document.getElementById("command-args").value =
-        commandSyntax[index].split(" ")[0] + " ";
-    };
-
-    setupStaticOptions(idPrefix, commandList, commandCallback);
-  };
-
-  setupDropdown("command", getCommands, false);
+  const commandList = APRSCmd.getCommandList();
 
   const commandArgs = document.getElementById("command-args");
   const previousCommands = document.getElementById("previous-commands");
 
   let commandValid = false;
+
+  //adds commands to custom dropdown
+  const getCommands = (idPrefix) => {
+    const commandCallback = (option) => {
+      let index = commandList.findIndex((command) => {
+        return command.name === option;
+      });
+      document.getElementById("command-syntax").textContent =
+        commandList[index].abbrv + ": " + commandList[index].syntax;
+      document.getElementById("command-args").value =
+        commandList[index].abbrv + ": ";
+
+      // check if syntax is valid (in case there are no args)
+      commandValid = commandList[index].validator(
+        commandList[index].abbrv + ": "
+      );
+      // if valid change color
+      if (commandValid) commandArgs.className = "valid";
+      // if invalid but valid command show partially valid
+      else commandArgs.className = "part-valid";
+      return true;
+    };
+
+    setupStaticOptions(
+      idPrefix,
+      commandList.map((command) => {
+        return command.name;
+      }),
+      commandCallback
+    );
+  };
+
+  setupDropdown("command", getCommands, false);
 
   commandArgs.addEventListener("input", () => {
     let commandText = commandArgs.value;
@@ -304,18 +316,21 @@ window.onload = () => {
           command = commandText.slice(0, index);
         }
 
-        for (let i = 0; i < commandSyntax.length; i++) {
-          let cmdName = commandSyntax[i].substring(
-            0,
-            commandSyntax[i].search(": ")
-          );
+        for (let i = 0; i < commandList.length; i++) {
+          let cmdName = commandList[i].abbrv;
+          // check if current abbreviation matches the input
           if (cmdName === command) {
+            // update syntax and dropdown
             document.getElementById("command-syntax").textContent =
-              commandSyntax[i];
+              commandList[i].abbrv + ": " + commandList[i].syntax;
             document.getElementById("command-selected").textContent =
-              commandList[i];
-            commandValid = true;
-            commandArgs.className = "valid";
+              commandList[i].name;
+            // check if syntax is valid
+            commandValid = commandList[i].validator(commandText);
+            // if valid change color
+            if (commandValid) commandArgs.className = "valid";
+            // if invalid but valid command show partially valid
+            else commandArgs.className = "part-valid";
             break;
           }
         }
@@ -334,6 +349,7 @@ window.onload = () => {
       "No command selected";
     commandArgs.value = "";
     document.getElementById("command-selected").textContent = "Select Command";
+    commandArgs.className = "empty";
   });
 
   document.addEventListener("click", () => {
@@ -420,6 +436,9 @@ window.onload = () => {
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
         : [];
     });
+
+    altG.update();
+    spdG.update();
 
     if (
       sessionStorage.getItem("apogee") &&
@@ -545,14 +564,14 @@ window.onload = () => {
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
         altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, [
-          { name: "Avionics Altitude", color: "#ca0000cc" },
-          { name: "Airbrake Altitude", color: "#ffef00ff" },
-          { name: "Payload Altitude", color: "#313131ff" },
+          { name: "Avionics Altitude", color: t1Color },
+          { name: "Airbrake Altitude", color: t2Color },
+          { name: "Payload Altitude", color: t3Color },
         ]);
         spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, [
-          { name: "Avionics Speed", color: "#ca0000cc" },
-          { name: "Airbrake Speed", color: "#ffef00ff" },
-          { name: "Payload Speed", color: "#313131ff" },
+          { name: "Avionics Speed", color: t1Color },
+          { name: "Airbrake Speed", color: t2Color },
+          { name: "Payload Speed", color: t3Color },
         ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
@@ -569,14 +588,14 @@ window.onload = () => {
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
         altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, [
-          { name: "Avionics Altitude", color: "#ca0000cc" },
-          { name: "Airbrake Altitude", color: "#ffef00ff" },
-          { name: "Payload Altitude", color: "#313131ff" },
+          { name: "Avionics Altitude", color: t1Color },
+          { name: "Airbrake Altitude", color: t2Color },
+          { name: "Payload Altitude", color: t3Color },
         ]);
         spdG = createChart("spd-graph", "hr", "ft/s", 1 / 3600, 1, [
-          { name: "Avionics Speed", color: "#ca0000cc" },
-          { name: "Airbrake Speed", color: "#ffef00ff" },
-          { name: "Payload Speed", color: "#313131ff" },
+          { name: "Avionics Speed", color: t1Color },
+          { name: "Airbrake Speed", color: t2Color },
+          { name: "Payload Speed", color: t3Color },
         ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;

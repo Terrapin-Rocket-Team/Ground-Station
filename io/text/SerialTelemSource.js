@@ -3,6 +3,8 @@ const { log } = require("../../debug");
 const fs = require("fs");
 const { serial, SerialDevice } = require("../../serial/SerialDevice");
 const path = require("path");
+const Metrics = require("../../coders/Metrics");
+const APRSTelem = require("../../coders/APRSTelem");
 
 /**
  * A class to read telemetry from a serial device
@@ -10,15 +12,15 @@ const path = require("path");
 class SerialTelemSource extends TextSource {
   /**
    *
-   * @param {String} file
+   * @param {String} name
    * @param {Object} options
    * @param {Function} options.parser
+   * @param {Boolean} [options.isMetrics]
    * @param {Boolean} [options.createLog]
    * @param {SerialDevice} [sd]
-   * @param {String} [name]
    */
-  constructor(file, options, sd, name) {
-    super(name ? name : file, sd ? sd : serial);
+  constructor(options, sd, name) {
+    super(name, sd ? sd : serial);
 
     this.sd = sd ? sd : serial;
 
@@ -26,9 +28,9 @@ class SerialTelemSource extends TextSource {
 
     log.debug("Creating serial telem source for: " + this.name);
 
-    this.file = file;
     this.options = options;
     this.dataFile = null;
+    this.firstLine = true;
 
     if (this.options.createLog) {
       const logName = path.join(
@@ -43,14 +45,18 @@ class SerialTelemSource extends TextSource {
     this.sd.on(this.name + "-data", (data) => {
       this.emit("data", data);
       if (this.options.createLog && this.dataFile) {
-        // if first time write csv header
         // write CSV of data to file
+        let obj;
+        if (options.isMetrics) obj = new Metrics(data);
+        if (!options.isMetrics) obj = new APRSTelem(data);
+
+        // if first time write csv header
+        this.dataFile.write(obj.toCSV(this.firstLine) + "\n");
+        if (this.firstLine) this.firstLine = false;
       }
     });
 
-    this.sd.on("close", () => {
-      // reset
-    });
+    // TODO: handle serial close?
   }
 }
 

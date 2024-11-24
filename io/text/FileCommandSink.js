@@ -1,9 +1,10 @@
 const TextSink = require("./TextSink");
 const { log } = require("../../debug");
 const fs = require("fs");
+const APRSCmd = require("../../coders/APRSCmd");
 
 /**
- * A class read telemetry from a local file
+ * A class write commands to a local file
  */
 class FileCommandSink extends TextSink {
   /**
@@ -17,6 +18,8 @@ class FileCommandSink extends TextSink {
   constructor(file, options, name) {
     super(name ? name : file, fs.createWriteStream(file));
 
+    log.debug("Creating file command sink for: " + this.name);
+
     this.file = file;
     this.options = options;
   }
@@ -27,7 +30,20 @@ class FileCommandSink extends TextSink {
       outputText = text;
     }
     if (this.options.asString) {
-      outputText = text;
+      let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
+      if (!aprsCmd.loadCmd(text)) {
+        log.err("Error parsing command");
+        return;
+      }
+      outputText = aprsCmd.toString();
+    }
+    if (this.options.asJSON) {
+      let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
+      if (!aprsCmd.loadCmd(text)) {
+        log.err("Error parsing command");
+        return;
+      }
+      outputText = JSON.stringify(aprsCmd);
     }
     this.o.write(outputText + "\n");
   }
