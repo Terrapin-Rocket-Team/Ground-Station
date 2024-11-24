@@ -14,6 +14,7 @@
 #include <iostream>
 #include <ostream>
 #include <cstdint>
+#include <filesystem>
 
 int main(int argc, char **argv)
 {
@@ -24,13 +25,15 @@ int main(int argc, char **argv)
     uint8_t *pipeIndexes = nullptr;
     int numPipes = 0;
 
+    // std::cout << std::filesystem::current_path() << std::endl;
+
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
     pipeStatus = new WinNamedPipe("\\\\.\\pipe\\status", true);
 #elif LINUX
     // THESE PATHS MIGHT BE WRONG!
-    pipeControl = new LinuxNamedPipe("./pipe/control", true);
-    pipeStatus = new LinuxNamedPipe("./pipe/status", true);
+    pipeControl = new LinuxNamedPipe("./build/serial/pipes/control", true, true);
+    pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true, false);
 #endif
 
     size_t x;
@@ -188,10 +191,10 @@ int main(int argc, char **argv)
                             strcat(pipePath, pipeName);
                             dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
 #elif LINUX
-                            char pipePath[60] = "./pipe/";
+                            char pipePath[60] = "./build/serial/pipes/";
                             strcat(pipePath, pipeName);
                             // THESE PATHS MIGHT BE WRONG!
-                            dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
+                            dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true, false);
 #endif
                         }
                     }

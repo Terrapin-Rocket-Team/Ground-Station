@@ -6,12 +6,13 @@
 #define LINUXNAMEDPIPE_H
 #include <NamedPipe.h>
 
-
-class LinuxNamedPipe : public NamedPipe {
+class LinuxNamedPipe : public NamedPipe
+{
 private:
     int handle;
+
 public:
-    LinuxNamedPipe(const char *name, bool create);
+    LinuxNamedPipe(const char *name, bool create, bool write);
     ~LinuxNamedPipe() override;
 
     int read(void *buffer, int bufferSize) override;
@@ -20,6 +21,4 @@ public:
     int writeStr(const char *buffer) override;
 };
 
-
-
-#endif //LINUXNAMEDPIPE_H
+#endif // LINUXNAMEDPIPE_H

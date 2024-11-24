@@ -3,7 +3,21 @@ const { log } = require("../../debug");
 const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+
+let exeName = "";
+//logic for starting the driver program
+if (os.platform() === "win32") {
+  exeName = "ffmpeg.exe";
+} else if (os.platform() === "linux") {
+  exeName = "ffmpeg";
+} else {
+  log.err(
+    "Failed to start serial interface: Unsupported platform! Found platform " +
+      os.platform()
+  );
+}
 
 const ffmpegPath = path.join(
   __dirname,
@@ -12,7 +26,7 @@ const ffmpegPath = path.join(
   "build",
   "video",
   "ffmpeg-7.0.1",
-  "ffmpeg.exe"
+  exeName
 );
 
 /**

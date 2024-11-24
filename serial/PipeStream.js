@@ -1,4 +1,3 @@
-const fs = require("fs");
 const net = require("net");
 const path = require("path");
 const os = require("os");
@@ -9,7 +8,7 @@ let pipePathBase;
 if (os.platform() === "win32") {
   pipePathBase = "\\\\.\\pipe";
 } else if (os.platform() === "linux") {
-  pipePathBase = path.join(".", "build", "serial", "pipe");
+  pipePathBase = path.join(__dirname, "..", "build", "serial", "pipes");
 }
 
 class PipeStream {
@@ -25,6 +24,7 @@ class PipeStream {
 
     this.stream.on("error", (err) => {
       log.err("Error on pipe: " + this.path + "\n" + err.message);
+      log.err(err);
     });
     this.stream.on("end", () => {
       log.debug("disconnected " + this.path);

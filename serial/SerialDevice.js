@@ -76,7 +76,8 @@ class SerialDevice extends EventEmitter {
       // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
       this.driver = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
     } else if (os.platform() === "linux") {
-      this.driver = spawn(path.join(serialDriverPath, "DemuxLinux"));
+      // this.driver = spawn(path.join(serialDriverPath, "DemuxLinux"));
+      this.driver = spawn(path.join(serialDriverPath, "DemuxShell"));
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +

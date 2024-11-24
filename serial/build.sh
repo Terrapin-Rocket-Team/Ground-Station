@@ -7,8 +7,8 @@ cd serial
 rm CMakeCache.txt
 cmake ../../serial
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  cmake --build ./ --target DemuxLinux
-  mkdir pipes
+  cmake --build ./ --target DemuxShell
+  mkdir -p pipes
 else
   cmake --build ./ --target DemuxWindows
 fi

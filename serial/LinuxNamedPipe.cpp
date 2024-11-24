@@ -12,41 +12,50 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-LinuxNamedPipe::LinuxNamedPipe(const char* name, bool create) : NamedPipe(name) {
-    if(create) {
-        if(mkfifo(name, 0666)) {
+LinuxNamedPipe::LinuxNamedPipe(const char *name, bool create, bool write) : NamedPipe(name)
+{
+    if (create)
+    {
+        if (mkfifo(name, 0666))
+        {
             std::cerr << "Error creating named pipe: " << name << std::endl;
             std::cerr << "This is most likely because the pipe already exists. If so, ignore this error." << std::endl;
         }
     }
 
-    handle = open(name, O_RDWR);
-    if(handle == -1) {
+    handle = open(name, write ? O_WRONLY : O_RDONLY);
+    if (handle == -1)
+    {
         std::cerr << "Error opening named pipe: " << name << std::endl;
     }
 }
 
-LinuxNamedPipe::~LinuxNamedPipe() {
-    if(handle != -1)
+LinuxNamedPipe::~LinuxNamedPipe()
+{
+    if (handle != -1)
         close(handle);
 }
 
-int LinuxNamedPipe::read(void *buffer, int bufferSize) {
+int LinuxNamedPipe::read(void *buffer, int bufferSize)
+{
     int bytesRead = 0;
-    if((bytesRead = ::read(handle, buffer, bufferSize)) <= 0) {
+    if ((bytesRead = ::read(handle, buffer, bufferSize)) <= 0)
+    {
+        std::cout << bytesRead << std::endl;
         std::cout << "Error reading from named pipe at " << path << std::endl;
     }
 
     return bytesRead;
 }
 
-int LinuxNamedPipe::readStr(char *buffer, int bufferSize) {
+int LinuxNamedPipe::readStr(char *buffer, int bufferSize)
+{
     int bytesRead = 1;
     int count = 0;
     while (count < bufferSize && bytesRead > 0)
     {
         bytesRead = 0;
-        bytesRead = read(buffer+count, 1);
+        bytesRead = read(buffer + count, 1);
         if (buffer[count] == '\n')
         {
             buffer[count] = '\0';
@@ -57,13 +66,16 @@ int LinuxNamedPipe::readStr(char *buffer, int bufferSize) {
     return count;
 }
 
-int LinuxNamedPipe::writeStr(const char *buffer) {
+int LinuxNamedPipe::writeStr(const char *buffer)
+{
     return write(buffer, strlen(buffer));
 }
 
-int LinuxNamedPipe::write(const void *buffer, int bufferSize) {
+int LinuxNamedPipe::write(const void *buffer, int bufferSize)
+{
     int bytesWritten = 0;
-    if((bytesWritten = ::write(handle, buffer, bufferSize)) <= 0) {
+    if ((bytesWritten = ::write(handle, buffer, bufferSize)) <= 0)
+    {
         std::cout << "Error writing to named pipe at " << path << std::endl;
     }
 

@@ -116,7 +116,7 @@ try {
 }
 
 //creates the main electron window
-const createWindow = () => {
+const createMain = () => {
   const width = 1200,
     height = 800;
 
@@ -562,11 +562,11 @@ ipcMain.on("video-controls", (event, controls) => {
 
 //getters
 ipcMain.handle("get-ports", (event, args) => {
-  return radio.getAvailablePorts();
+  return serial.getAvailablePorts();
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
-  return radio.isConnected();
+  return serial.isConnected();
 });
 
 ipcMain.handle("get-settings", (event, args) => {
@@ -631,7 +631,7 @@ serial.on("error", (message) => {
   log.err("Serial driver error: " + message);
 });
 
-radio.on("close", (path) => {
+serial.on("close", (path) => {
   log.info("Serial disconnected");
   if (!closed && windows.main)
     windows.main.webContents.send("serial-close", path);
