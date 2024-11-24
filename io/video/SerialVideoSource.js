@@ -107,7 +107,7 @@ class SerialVideoSource extends VideoSource {
       log.debug("Log file created for " + this.name + ": " + logName);
     }
 
-    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
+    // if ffmpeg was properly initialized, set up a write stream for the log file if necessary
     if (this.ffmpeg !== null && this.options.createDecoderLog) {
       const logName = path.join("logs", "ffmpeg-" + this.name + ".log");
       const logFile = fs.createWriteStream(logName);

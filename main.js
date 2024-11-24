@@ -35,8 +35,10 @@ let windows = { main: null, video: null },
 See default-config.json for default settings
 */
 try {
-  //load config
+  // load config
   config = JSON.parse(fs.readFileSync("./config.json"));
+  // temporary check for property values being defined
+  // will eventually just check config version
   if (
     config.debugScale !== undefined ||
     config.noGUI !== undefined ||
@@ -48,7 +50,7 @@ try {
   log.useDebug = config.debug.value;
   log.debug("Config loaded");
 } catch (err) {
-  //load defaults if no config file
+  // load defaults if no config file
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
     config = JSON.parse(fs.readFileSync("./default-config.json"));
@@ -79,11 +81,11 @@ try {
 try {
   //load cache metadata
   cacheMeta = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "src/cachedtiles/metadata.json"))
+    fs.readFileSync(path.join(__dirname, "src", "cachedtiles", "metadata.json"))
   );
   log.debug("Cache metadata loaded");
 } catch (err) {
-  //load defaults if no metadata file
+  // load defaults if no metadata file
   cacheMeta = {
     tiles: {},
     fileList: [],
@@ -92,13 +94,17 @@ try {
   log.warn(
     'Failed to load cache metadata file, using defaults: "' + err.message + '"'
   );
-  //create new metadata file
+  // create new metadata file
   try {
-    if (!fs.existsSync(path.join(__dirname, "src/cachedtiles")))
-      fs.mkdirSync(path.join(__dirname, "src/cachedtiles"));
-    if (!fs.existsSync(path.join(__dirname, "src/cachedtiles/metadata.json"))) {
+    if (!fs.existsSync(path.join(__dirname, "src", "cachedtiles")))
+      fs.mkdirSync(path.join(__dirname, "src", "cachedtiles"));
+    if (
+      !fs.existsSync(
+        path.join(__dirname, "src", "cachedtiles", "metadata.json")
+      )
+    ) {
       fs.writeFileSync(
-        path.join(__dirname, "src/cachedtiles/metadata.json"),
+        path.join(__dirname, "src", "cachedtiles", "metadata.json"),
         JSON.stringify(cacheMeta, null, "\t")
       );
       log.info("Metadata file successfully created");
@@ -206,11 +212,23 @@ const createMain = () => {
       createLog: true,
     });
 
+    const metrics = new SerialTelemSource("metrics", {
+      parser: (data) => {
+        let telem = new APRSTelem(data);
+        log.info(telem);
+        if (windows.main) windows.main.webContents.send("data", telem);
+        if (windows.video) windows.video.webContents.send("data", telem);
+      },
+      isMetrics: true,
+      createLog: true,
+    });
+
     telemSources.push(ts1);
     telemSources.push(ts2);
     telemSources.push(ts3);
+    telemSources.push(metrics);
 
-    // commandSink = new SerialCommandSink();
+    commandSink = new SerialCommandSink("command", { createLog: true });
   }
 
   log.debug("Main window created");
@@ -328,24 +346,10 @@ ipcMain.on("fullscreen", (event, name, isFullscreen) => {
   windows[name].setFullScreen(isFullscreen);
 });
 
-// TODO: remove
-// ipcMain.on("open-popup", () => {
-//   const popupWindow = new BrowserWindow({
-//     width: 400,
-//     height: 300,
-//     webPreferences: {
-//       contextIsolation: true,
-//       nodeIntegration: false,
-//     },
-//   });
-//   popupWindow.loadFile("popup.html");
-// });
-
 ipcMain.on("reload", (event, win, keepSettings) => {
-  // TODO: can we simplify this?
   log.debug("Reloading window");
-  //main and debug are basically the same window, so reloading one reloads both
-  if (win === "main" || win === "debug") {
+  // handle reloading main window
+  if (win === "main") {
     // close serial connection, but keep pipes and the driver running
     serial.reset();
     //if mainWin exists reload it
@@ -511,7 +515,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 
     //write metadata
     fs.writeFileSync(
-      path.join(__dirname, "src/cachedtiles/metadata.json"),
+      path.join(__dirname, "src", "cachedtiles", "metadata.json"),
       JSON.stringify(cacheMeta, null, "\t")
     );
   } catch (err) {
@@ -744,7 +748,6 @@ if (config.debug.value) {
             resolution: { width: 640, height: 832 },
             framerate: 30,
             rotation: "cw",
-            createLog: true,
             createDecoderLog: config.debug.value,
           },
           "video0"
@@ -754,7 +757,7 @@ if (config.debug.value) {
         vs1.startOutput();
       }
 
-      // TODO: test to see if second video exists
+      // test to see if second video exists
       if (fs.existsSync("./video1.av1")) {
         // create new video source from file
         let vs2 = new FileVideoSource(

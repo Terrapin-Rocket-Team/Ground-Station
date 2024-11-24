@@ -16,7 +16,9 @@ class TextSink extends EventEmitter {
     this.lines = [];
   }
 
-  write(text) {}
+  write(text) {
+    this.o.write(text);
+  }
 }
 
 module.exports = TextSink;
