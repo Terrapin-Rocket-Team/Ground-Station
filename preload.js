@@ -100,6 +100,7 @@ class API extends EventEmitter {
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
+    this.resetSettings = () => ipcRenderer.invoke("reset-settings");
     this.getVideo = () => ipcRenderer.invoke("get-video");
 
     //setters
