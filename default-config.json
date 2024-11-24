@@ -1,0 +1,42 @@
+{
+	"version": "2.0.0",
+	"scale": {
+		"name": "Main Window Scale",
+		"description": "Changes the scale of the debug window for different sized screens.",
+		"value": 1,
+		"type": "dropdown",
+		"range": [0.50,0.75,1.00,1.25,1.50,1.75,2.00]
+	},
+	"debug": {
+		"name": "Debug Mode",
+		"description": "Turn on debug mode to log debug statements and open the devtools with each window.",
+		"value": false,
+		"type": "toggle"
+	},
+	"video": {
+		"name": "Video Mode",
+		"description": "Turn on to switch the ground station to video streaming mode.",
+		"value": false,
+		"type": "toggle"
+	},
+	"tileCache": {
+		"name": "Toggle tile caching (Not Implemented)",
+		"description": "Turn off caching of map tiles to the disk. If disabled, map may not work when offline.",
+		"value": true,
+		"type": "toggle"
+	},
+	"cacheMaxSize": { 
+		"name": "Map Cache Size (bytes)",
+		"description": "The maximum size of the cache for loading tiles offline.",
+		"value": 100000000,
+		"type": "number",
+		"range": [0, -1]
+	},
+	"baudRate": {
+		"name": "Serial Port Baud Rate",
+		"description": "The baud rate used when connecting to the radio receiver over serial.",
+		"value": 115200,
+		"type": "number",
+		"range": [0, -1]
+	}
+}

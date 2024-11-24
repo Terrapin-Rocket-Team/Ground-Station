@@ -1,5 +1,3 @@
-//TODO: comments
-
 window.onload = () => {
   let config, newConfig;
 
@@ -12,7 +10,6 @@ window.onload = () => {
       newConfig.baudRate = parseInt(baudRate.value);
     }
     newConfig.scale = parseFloat(scale.textContent);
-    newConfig.debugScale = parseFloat(debugScale.textContent);
     if (!configEquals(config, newConfig)) {
       api.setSettings(newConfig);
       if (showAlert)
@@ -32,9 +29,6 @@ window.onload = () => {
   document.getElementById("close").addEventListener("click", () => {
     handleNavigateAway(false);
     api.close("main");
-  });
-  document.getElementById("debug").addEventListener("click", () => {
-    api.openDebug();
   });
 
   document.getElementById("home").addEventListener("click", () => {
@@ -67,9 +61,7 @@ window.onload = () => {
 
   // the main settings inputs
   let scale = document.getElementById("scale-selected"),
-    debugScale = document.getElementById("debug-scale-selected"),
     debugToggle = document.getElementById("debug-toggle"),
-    noGUIToggle = document.getElementById("noGUI-toggle"),
     videoToggle = document.getElementById("video-toggle"),
     //tileToggle = document.getElementById("tile-toggle"), //added tile toggling here
     cacheMaxSize = document.getElementById("cacheMaxSize-input"),
@@ -80,15 +72,7 @@ window.onload = () => {
     config = c;
     newConfig = JSON.parse(JSON.stringify(config));
     scale.textContent = config.scale.toFixed(2);
-    debugScale.textContent = config.debugScale.toFixed(2);
     setToggle(config.debug, debugToggle);
-    setToggle(config.noGUI, noGUIToggle);
-    if (config.video === undefined) {
-      console.warn(
-        "Older config is being used, this will be corrected when settings are saved"
-      );
-      config.video = false;
-    }
     setToggle(config.video, videoToggle);
     //setToggle(config.noGUI, tileToggle); //added tile toggling here
     cacheMaxSize.value = config.cacheMaxSize;
@@ -125,26 +109,6 @@ window.onload = () => {
     });
   }
 
-  // click listener for the debug scale dropdown
-  document.getElementById("debug-scale-drop").addEventListener("click", () => {
-    const drop = document.getElementById("debug-scale-drop");
-    const options = document.getElementById("debug-scale-options");
-    if (drop.classList.contains("active")) {
-      options.style.display = "none";
-      document
-        .getElementById("debug-scale-arrow")
-        .setAttribute("src", "../images/arrow_right.svg");
-    } else {
-      options.style.display = "block";
-      document
-        .getElementById("debug-scale-arrow")
-        .setAttribute("src", "../images/arrow_down.svg");
-    }
-    drop.classList.toggle("active");
-    drop.classList.toggle("inactive");
-    options.classList.toggle("active");
-  });
-
   // click listeners for each debug scale option
   const dScaleOpts = document.getElementsByClassName("debug-scale");
   const dScaleSelected = document.getElementById("debug-scale-selected");
@@ -161,11 +125,6 @@ window.onload = () => {
     setToggle(newConfig.debug, debugToggle);
   });
 
-  noGUIToggle.addEventListener("click", () => {
-    newConfig.noGUI = !newConfig.noGUI;
-    setToggle(newConfig.noGUI, noGUIToggle);
-  });
-
   videoToggle.addEventListener("click", () => {
     newConfig.video = !newConfig.video;
     setToggle(newConfig.video, videoToggle);
@@ -176,9 +135,7 @@ window.onload = () => {
     // reset the object (should be the same as the default settings in main.js)
     newConfig = {
       scale: 1,
-      debugScale: 1,
       debug: false,
-      noGUI: false,
       video: false,
       cacheMaxSize: 100000000,
       baudRate: 115200,
@@ -186,9 +143,7 @@ window.onload = () => {
 
     // reset the inputs
     scale.textContent = newConfig.scale.toFixed(2);
-    debugScale.textContent = newConfig.debugScale.toFixed(2);
     setToggle(newConfig.debug, debugToggle);
-    setToggle(newConfig.noGUI, noGUIToggle);
     setToggle(newConfig.video, videoToggle);
     cacheMaxSize.value = newConfig.cacheMaxSize;
     baudRate.value = newConfig.baudRate;
@@ -202,18 +157,14 @@ window.onload = () => {
   const configEquals = (config1, config2) => {
     console.log(
       config1.scale === config2.scale,
-      config1.debugScale === config2.debugScale,
       config1.debug === config2.debug,
-      config1.noGUI === config2.noGUI,
       config1.video === config2.video,
       config1.cacheMaxSize === config2.cacheMaxSize,
       config1.baudRate === config2.baudRate
     );
     return (
       config1.scale === config2.scale &&
-      config1.debugScale === config2.debugScale &&
       config1.debug === config2.debug &&
-      config1.noGUI === config2.noGUI &&
       config1.video === config2.video &&
       config1.cacheMaxSize === config2.cacheMaxSize &&
       config1.baudRate === config2.baudRate

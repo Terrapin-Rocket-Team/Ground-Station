@@ -212,7 +212,6 @@ window.onload = () => {
   });
 
   api.on("video-controls", (controls) => {
-    console.log(controls);
     videoControls = controls;
     let option = "";
     if (videoControls.layout === "two-video") option = "Full";
@@ -237,13 +236,13 @@ window.onload = () => {
   // charts
   let altG = createChart("alt-graph", "s", "ft", 1, 1, [
     { name: "Avionics Altitude", color: "#ca0000cc" },
-    { name: "Airbrake Altitude", color: "#caffef00" },
-    { name: "Payload Altitude", color: "#ca313131" },
+    { name: "Airbrake Altitude", color: "#ffef00ff" },
+    { name: "Payload Altitude", color: "#313131ff" },
   ]);
   let spdG = createChart("spd-graph", "s", "ft/s", 1, 1, [
     { name: "Avionics Speed", color: "#ca0000cc" },
-    { name: "Airbrake Speed", color: "#caffef00" },
-    { name: "Payload Speed", color: "#ca313131" },
+    { name: "Airbrake Speed", color: "#ffef00ff" },
+    { name: "Payload Speed", color: "#313131ff" },
   ]);
 
   let altwr = document.getElementById("alt-wrapper");
@@ -522,10 +521,9 @@ window.onload = () => {
   const updateHeading = (idPrefix, msg) => {
     let hdg = document.getElementById(idPrefix + "-heading");
     if (msg.getHeading() || msg.getHeading() === 0) {
-      hdg.setAttribute("data-value-text", "false");
-      hdg.setAttribute("data-value", msg.getHeading());
+      hdg.textContent = msg.getHeading();
     } else {
-      hdg.setAttribute("data-value-text", "\u2014");
+      hdg.innerHTML = "&#8212;";
     }
   };
 
@@ -548,13 +546,13 @@ window.onload = () => {
 
         altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, [
           { name: "Avionics Altitude", color: "#ca0000cc" },
-          { name: "Airbrake Altitude", color: "#caffef00" },
-          { name: "Payload Altitude", color: "#ca313131" },
+          { name: "Airbrake Altitude", color: "#ffef00ff" },
+          { name: "Payload Altitude", color: "#313131ff" },
         ]);
         spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, [
           { name: "Avionics Speed", color: "#ca0000cc" },
-          { name: "Airbrake Speed", color: "#caffef00" },
-          { name: "Payload Speed", color: "#ca313131" },
+          { name: "Airbrake Speed", color: "#ffef00ff" },
+          { name: "Payload Speed", color: "#313131ff" },
         ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
@@ -572,13 +570,13 @@ window.onload = () => {
 
         altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, [
           { name: "Avionics Altitude", color: "#ca0000cc" },
-          { name: "Airbrake Altitude", color: "#caffef00" },
-          { name: "Payload Altitude", color: "#ca313131" },
+          { name: "Airbrake Altitude", color: "#ffef00ff" },
+          { name: "Payload Altitude", color: "#313131ff" },
         ]);
         spdG = createChart("spd-graph", "hr", "ft/s", 1 / 3600, 1, [
           { name: "Avionics Speed", color: "#ca0000cc" },
-          { name: "Airbrake Speed", color: "#caffef00" },
-          { name: "Payload Speed", color: "#ca313131" },
+          { name: "Airbrake Speed", color: "#ffef00ff" },
+          { name: "Payload Speed", color: "#313131ff" },
         ]);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
@@ -652,10 +650,12 @@ window.onload = () => {
       t0 = Date.now();
       sessionStorage.setItem("t0", t0);
       t0Set = true;
-      if (altG.data.datasets[0].data.length === 0)
-        altG.data.datasets[0].data = [{ x: 0, y: null }];
-      if (spdG.data.datasets[0].data.length === 0)
-        spdG.data.datasets[0].data = [{ x: 0, y: null }];
+      for (let i = 0; i < 3; i++) {
+        if (altG.data.datasets[i].data.length === 0)
+          altG.data.datasets[i].data = [{ x: 0, y: null }];
+        if (spdG.data.datasets[i].data.length === 0)
+          spdG.data.datasets[i].data = [{ x: 0, y: null }];
+      }
 
       setInterval(() => {
         document.getElementById("t-plus-value").textContent = mstohhmmss(
@@ -701,7 +701,7 @@ window.onload = () => {
         updateLatLong,
         updateTemp,
         updateStage,
-        updateCharts,
+        // updateCharts,
         updateMap,
         updateApogee,
       ]);

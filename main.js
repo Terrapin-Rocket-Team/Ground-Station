@@ -32,46 +32,47 @@ let windows = { main: null, video: null },
   };
 
 /*
-Config options:
-scale: 1 is default, scales the application window
-debugScale: 1 is default, scales the debug window
-debug: false is default, whether debug statements will be logged
-noGUI: false is default, loads only the debug window
-video: false is default, whether the ground station launches with video streaming enabled
-tileCache: true by default, whether tiles will be cached - work in progress
-cacheMaxSize: 100000000 (100MB) is default, max tile cache size in bytes
-baudRate: 115200 is default, baudrate to use with the connected serial port
+See default-config.json for default settings
 */
 try {
   //load config
   config = JSON.parse(fs.readFileSync("./config.json"));
-  if (config.noGUI !== undefined || config.version !== app.getVersion())
+  if (
+    config.debugScale !== undefined ||
+    config.noGUI !== undefined ||
+    config.version !== app.getVersion()
+  )
     log.warn(
       "Older config version (likely v1.5) detected, save your settings to remove this warning"
     );
-  log.useDebug = config.debug;
+  log.useDebug = config.debug.value;
   log.debug("Config loaded");
 } catch (err) {
   //load defaults if no config file
-  config = {
-    version: app.getVersion(),
-    scale: 1,
-    debugScale: 1,
-    debug: false,
-    video: false,
-    //tileCache: true, //added tile cache toggling here - work in progress
-    cacheMaxSize: 100000000,
-    baudRate: 115200,
-  };
-  //create new config file
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
-    if (!fs.existsSync("./config.json")) {
-      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
-      log.info("Config file successfully created");
+    config = JSON.parse(fs.readFileSync("./default-config.json"));
+    if (config.version !== app.getVersion()) {
+      log.warn(
+        "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version."
+      );
+      config.version = app.getVersion();
+      fs.writeFileSync(
+        "./default-config.json",
+        JSON.stringify(config, null, "\t")
+      );
+    }
+    //create new config file
+    try {
+      if (!fs.existsSync("./config.json")) {
+        fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+        log.info("Config file successfully created");
+      }
+    } catch (err) {
+      log.err('Failed to create config file: "' + err.message + '"');
     }
   } catch (err) {
-    log.err('Failed to create config file: "' + err.message + '"');
+    log.err('Failed to load default config: "' + err.message + '"');
   }
 }
 
@@ -126,8 +127,8 @@ const createMain = () => {
       ? ".icns"
       : ".png";
   windows.main = new BrowserWindow({
-    width: width * config.scale,
-    height: height * config.scale,
+    width: width * config.scale.value,
+    height: height * config.scale.value,
     resizable: false,
     frame: false,
     autoHideMenuBar: true,
@@ -139,7 +140,8 @@ const createMain = () => {
 
   windows.main.loadFile(path.join(__dirname, "src/index_new.html"));
 
-  if (config.debug) windows.main.webContents.openDevTools({ mode: "detach" });
+  if (config.debug.value)
+    windows.main.webContents.openDevTools({ mode: "detach" });
 
   windows.main.on("enter-full-screen", () => {
     log.debug("Enter main fullscreen");
@@ -173,7 +175,7 @@ const createMain = () => {
     windows.main.webContents.send("video-controls", videoControls);
   });
 
-  if (!config.debug) {
+  if (!config.debug.value) {
     const ts1 = new SerialTelemSource("telem-avionics", {
       parser: (data) => {
         let telem = new APRSTelem(data);
@@ -224,8 +226,8 @@ const createVideo = () => {
       ? ".icns"
       : ".png";
   windows.video = new BrowserWindow({
-    width: width * config.debugScale,
-    height: height * config.debugScale,
+    width: width * config.scale.value,
+    height: height * config.scale.value,
     frame: false,
     autoHideMenuBar: true,
     icon: path.join(iconPath, "logo" + iconSuffix),
@@ -236,7 +238,8 @@ const createVideo = () => {
 
   windows.video.loadFile(path.join(__dirname, "src/video/video.html"));
 
-  if (config.debug) windows.video.webContents.openDevTools({ mode: "detach" });
+  if (config.debug.value)
+    windows.video.webContents.openDevTools({ mode: "detach" });
 
   //reset when the window is closed
   windows.video.once("close", () => {
@@ -264,13 +267,13 @@ const createVideo = () => {
     });
   });
 
-  if (!config.debug) {
+  if (!config.debug.value) {
     const vs1 = new SerialVideoSource("arc-0", {
       resolution: { width: 640, height: 832 },
       framerate: 30,
       rotation: "cw",
       createLog: true,
-      createDecoderLog: config.debug,
+      createDecoderLog: config.debug.value,
     });
 
     const vs2 = new SerialVideoSource("arc-1", {
@@ -278,7 +281,7 @@ const createVideo = () => {
       framerate: 30,
       rotation: "cw",
       createLog: true,
-      createDecoderLog: config.debug,
+      createDecoderLog: config.debug.value,
     });
 
     videoSources.push(vs1);
@@ -296,13 +299,13 @@ app.commandLine.appendSwitch("force-device-scale-factor", 1);
 //when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
   createMain();
-  if (config.video) createVideo();
+  if (config.video.value) createVideo();
 
   //open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMain();
-      if (config.video) createVideo();
+      if (config.video.value) createVideo();
     }
   });
 });
@@ -349,7 +352,7 @@ ipcMain.on("reload", (event, win, keepSettings) => {
     if (windows.main) {
       windows.main.webContents.reloadIgnoringCache();
       //if in video mode send the video controls for the control panel
-      if (config.video && videoControls) {
+      if (config.video.value && videoControls) {
         windows.main.webContents.once("dom-ready", () => {
           windows.main.webContents.send("video-controls", videoControls);
         });
@@ -394,7 +397,10 @@ ipcMain.on("send-command", (event, command) => {
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
   try {
     tilePath = [tilePathNums[0], tilePathNums[1], tilePathNums[2]];
-    while (cacheMeta.runningSize + tile.byteLength > config.cacheMaxSize) {
+    while (
+      cacheMeta.runningSize + tile.byteLength >
+      config.cacheMaxSize.value
+    ) {
       // shift off the fileList and delete file and containing folders if necessary
       let oldTile = cacheMeta.fileList.shift();
       let oldFolders = oldTile.split(path.sep);
@@ -567,6 +573,15 @@ ipcMain.handle("get-settings", (event, args) => {
   return config;
 });
 
+ipcMain.handle("reset-settings", (event) => {
+  try {
+    // don't want to actually reset settings on the backend, just send them to the user
+    return JSON.parse(fs.readFileSync("./default-config.json"));
+  } catch (err) {
+    log.err("Failed getting default settings: " + err.message);
+  }
+});
+
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
@@ -582,7 +597,7 @@ ipcMain.handle("get-video", (event, args) => {
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
     serial
-      .connect(portConfig.path, config.baudRate)
+      .connect(portConfig.path, config.baudRate.value)
       .then((result) => {
         log.info("Successfully connected to port " + portConfig.path);
         res(1);
@@ -603,7 +618,6 @@ ipcMain.handle("set-port", (event, portConfig) => {
 ipcMain.on("update-settings", (event, settings) => {
   if (settings) {
     config = settings;
-    config.version = app.getVersion();
     try {
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
       log.debug("Successfully updated settings");
@@ -624,14 +638,14 @@ serial.on("close", (path) => {
 });
 
 //testing
-if (config.debug) {
+if (config.debug.value) {
   // start after 1 second to give everything time to load
   setTimeout(() => {
+    //set up telemetry sources
     //test to see whether the test csv file exists
-    if (fs.existsSync("./test.csv")) {
+    if (fs.existsSync("./test-0.csv")) {
       try {
-        //set up telemetry sources
-        const ts1D = new FileTelemSource("./test.csv", {
+        const ts1D = new FileTelemSource("./test-0.csv", {
           datarate: 1,
           parser: (data) => {
             if (!closed && windows.main) {
@@ -643,31 +657,60 @@ if (config.debug) {
             }
           },
         });
-        // const ts2D = new FileTelemSource("./test.csv", {
-        //   datarate: 1,
-        //   parser: (data) => {
-        //     if (!closed && windows.main) {
-        //       //make sure we got a valid line
-        //       let aprsMsg = APRSTelem.fromCSV(data);
-        //       windows.main.webContents.send("data", aprsMsg);
-        //       if (windows.video)
-        //         windows.video.webContents.send("data", aprsMsg);
-        //     }
-        //   },
-        // });
-        // const ts3D = new FileTelemSource("./test.csv", {
-        //   datarate: 1,
-        //   parser: (data) => {
-        //     if (!closed && windows.main) {
-        //       //make sure we got a valid line
-        //       let aprsMsg = APRSTelem.fromCSV(data);
-        //       windows.main.webContents.send("data", aprsMsg);
-        //       if (windows.video)
-        //         windows.video.webContents.send("data", aprsMsg);
-        //     }
-        //   },
-        // });
+        telemSources.push(ts1D);
+      } catch (err) {
+        log.err('Failed to read test-0.csv: "' + err.message + '"');
+      }
+    } else {
+      log.warn("Could not find test-0.csv");
+    }
 
+    if (fs.existsSync("./test-1.csv")) {
+      try {
+        const ts2D = new FileTelemSource("./test-1.csv", {
+          datarate: 1,
+          parser: (data) => {
+            if (!closed && windows.main) {
+              //make sure we got a valid line
+              let aprsMsg = APRSTelem.fromCSV(data);
+              windows.main.webContents.send("data", aprsMsg);
+              if (windows.video)
+                windows.video.webContents.send("data", aprsMsg);
+            }
+          },
+        });
+        telemSources.push(ts2D);
+      } catch (err) {
+        log.err('Failed to read test-1.csv: "' + err.message + '"');
+      }
+    } else {
+      log.warn("Could not find test-1.csv");
+    }
+
+    if (fs.existsSync("./test-2.csv")) {
+      try {
+        // const ts3D = new FileTelemSource("./test-2.csv", {
+        //   datarate: 1,
+        //   parser: (data) => {
+        //     if (!closed && windows.main) {
+        //       //make sure we got a valid line
+        //       let aprsMsg = APRSTelem.fromCSV(data);
+        //       windows.main.webContents.send("data", aprsMsg);
+        //       if (windows.video)
+        //         windows.video.webContents.send("data", aprsMsg);
+        //     }
+        //   },
+        // });
+        // telemSources.push(ts3D);
+      } catch (err) {
+        log.err('Failed to read test-2.csv: "' + err.message + '"');
+      }
+    } else {
+      log.warn("Could not find test-2.csv");
+    }
+
+    if (fs.existsSync("./metrics.csv")) {
+      try {
         const metrics = new FileTelemSource("./metrics.csv", {
           datarate: 1,
           parser: (data) => {
@@ -679,22 +722,19 @@ if (config.debug) {
             }
           },
         });
-
-        telemSources.push(ts1D);
-        // telemSources.push(ts2D);
-        // telemSources.push(ts3D);
         telemSources.push(metrics);
-
-        commandSink = new FileCommandSink(path.join(logPath, "commands.txt"), {
-          asString: true,
-        });
       } catch (err) {
-        log.err('Failed to read test.csv: "' + err.message + '"');
+        log.err('Failed to read metrics.csv: "' + err.message + '"');
       }
     } else {
-      log.warn("Could not find test.csv");
+      log.warn("Could not find metrics.csv");
     }
-    if (config.video) {
+
+    commandSink = new FileCommandSink(path.join(logPath, "commands.txt"), {
+      asString: true,
+    });
+
+    if (config.video.value) {
       // test to see if first video exists
       if (fs.existsSync("./video0.av1")) {
         // create new video source from file
@@ -705,7 +745,7 @@ if (config.debug) {
             framerate: 30,
             rotation: "cw",
             createLog: true,
-            createDecoderLog: config.debug,
+            createDecoderLog: config.debug.value,
           },
           "video0"
         );
@@ -723,7 +763,7 @@ if (config.debug) {
             resolution: { width: 640, height: 832 },
             framerate: 30,
             rotation: "cw",
-            createDecoderLog: config.debug,
+            createDecoderLog: config.debug.value,
           },
           "video1"
         );
