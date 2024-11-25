@@ -7,15 +7,19 @@ const { Readable } = require("stream");
 class TextSink extends EventEmitter {
   /**
    * @param {string} name the source name to identify it later
-   * @param {Readable} input the input data stream for the source
+   * @param {Readable} output the output data stream for the sink
    */
   constructor(name, output) {
     super();
     this.name = name;
-    this.o = output; //output
+    this.o = output; // output
     this.lines = [];
   }
 
+  /**
+   * Generic write method, should be overwritten by child class
+   * @param {String} text the text to write to the output
+   */
   write(text) {
     this.o.write(text);
   }

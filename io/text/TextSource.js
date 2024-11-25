@@ -12,7 +12,7 @@ class TextSource extends EventEmitter {
   constructor(name, input) {
     super();
     this.name = name;
-    this.i = input; //input
+    this.i = input; // input
     this.lines = [];
   }
 }

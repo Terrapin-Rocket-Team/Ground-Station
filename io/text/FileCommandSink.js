@@ -8,12 +8,11 @@ const APRSCmd = require("../../coders/APRSCmd");
  */
 class FileCommandSink extends TextSink {
   /**
-   *
-   * @param {String} file
-   * @param {Object} [options]
-   * @param {Boolean} options.asString
-   * @param {Boolean} options.asJSON
-   * @param {String} [name]
+   * @param {String} file the file name to read from
+   * @param {Object} [options] output configuration options (only one should be specified)
+   * @param {Boolean} options.asString write the output as a formatted string
+   * @param {Boolean} options.asJSON write the output as JSON
+   * @param {String} [name] the name to use instead of the file name
    */
   constructor(file, options, name) {
     super(name ? name : file, fs.createWriteStream(file));
@@ -24,11 +23,16 @@ class FileCommandSink extends TextSink {
     this.options = options;
   }
 
+  /**
+   * @param {String} text the command to be written
+   */
   write(text) {
     let outputText;
+    // if no format was written, just write the plain text
     if (!this.options) {
       outputText = text;
     }
+    // if asString was set, write formatted text
     if (this.options.asString) {
       let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
       if (!aprsCmd.loadCmd(text)) {
@@ -37,6 +41,7 @@ class FileCommandSink extends TextSink {
       }
       outputText = aprsCmd.toString();
     }
+    // if asJSON was set, write the command as JSON text
     if (this.options.asJSON) {
       let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
       if (!aprsCmd.loadCmd(text)) {
@@ -45,6 +50,7 @@ class FileCommandSink extends TextSink {
       }
       outputText = JSON.stringify(aprsCmd);
     }
+    // write to the file
     this.o.write(outputText + "\n");
   }
 }

@@ -11,7 +11,7 @@ if [ $# = 0 ] || [ $1 = "help" ] ; then
     echo "The following are valid build arguments:"
     echo "  all     : build all required dependencies and the main application (recommended)"
     echo "  src     : build the main application"
-    echo "  video   : build the video dependencies"
+    echo "  coders  : build the video decoding dependencies"
     echo "  serial  : build the serial driver"
     echo "  icons   : build the icons"
     echo "  help    : display this message and exit"

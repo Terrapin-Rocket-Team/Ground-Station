@@ -2,7 +2,11 @@
  * A class to handling encoding and decoding of Ground Station radio metrics
  */
 class Metrics {
+  /**
+   * @param {object|string} metrics the metrics data
+   */
   constructor(metrics) {
+    // log message time
     this.time = new Date();
 
     if (typeof metrics === "string") {
@@ -14,6 +18,11 @@ class Metrics {
     this.deviceId = metrics.deviceId;
   }
 
+  /**
+   * Creates an Metrics object from a single line of a CSV data file
+   * @param {String} csvData a single line from a CSV file produced by Metrics.toCSV()
+   * @returns {Metrics} the Metrics object corresponding to the input line
+   */
   static fromCSV(csvData) {
     let csvArr = csvData.split(",");
     return new Metrics({
@@ -23,6 +32,10 @@ class Metrics {
     });
   }
 
+  /**
+   * @param {String} [scale] if given, converts the bitrate to the given units (supports: k, M)
+   * @returns {Number} the bitrate in the given units
+   */
   getBitrate(scale) {
     if (!scale) {
       return this.bitrate;
@@ -36,7 +49,7 @@ class Metrics {
   }
 
   /**
-   * @returns {String} High/Medium/Low/None signal strength, rssi range: >-60/-90<x<-60/-120<x<-90/<-120
+   * @returns {String} High/Medium/Low/None signal strength, rssi ranges: >-60 / -90<x<-60 / -120<x<-90 / <-120
    */
   getSignalStrength() {
     return this.rssi > -60
@@ -48,12 +61,15 @@ class Metrics {
       : "None";
   }
 
+  /**
+   * @returns {Number} the current RSSI
+   */
   getRSSI() {
     return this.rssi;
   }
 
   /**
-   * @returns {string} the APRS message object as a string
+   * @returns {String} the Metrics object as a string
    */
   toString() {
     return `Device ${this.deviceId} | ${this.rssi} dBm @ ${this.getBitrate(
@@ -61,7 +77,10 @@ class Metrics {
     )} kbps`;
   }
 
-  //convert lat/long to a better format
+  /**
+   * @param {Boolean} csvCreated whether to write the CSV header
+   * @returns {string} the CSV string
+   */
   toCSV(csvCreated) {
     let csv = "";
     if (!csvCreated) {

@@ -1,13 +1,13 @@
 const { ipcRenderer, contextBridge } = require("electron");
 
-//custom event emitter class so event listeners can be added to the electron api in the renderer
-//all methods must be attributes due to how electron handles objects
+// custom event emitter class so event listeners can be added to the electron api in the renderer
+// all methods must be attributes due to how electron handles objects
 class EventEmitter {
   constructor() {
-    //holds the events registered to the emitter and their listeners
+    // holds the events registered to the emitter and their listeners
     this._events = {};
 
-    //adds a listener to an event
+    // adds a listener to an event
     this.on = (name, listener) => {
       if (!this._events[name]) {
         this._events[name] = [];
@@ -16,7 +16,7 @@ class EventEmitter {
       this._events[name].push(listener);
     };
 
-    //removes a listener for an event
+    // removes a listener for an event
     this.removeListener = (name, listenerToRemove) => {
       if (this._events[name]) {
         const filterListeners = (listener) => listener !== listenerToRemove;
@@ -25,7 +25,7 @@ class EventEmitter {
       }
     };
 
-    //calls all the listeners for an event
+    // calls all the listeners for an event
     this.emit = (name, data) => {
       if (this._events[name]) {
         const fireCallbacks = (callback) => {
@@ -41,7 +41,7 @@ class API extends EventEmitter {
   constructor() {
     super();
 
-    //Electron IPC listeners to pass events to the renderer
+    // Electron IPC listeners to pass events to the renderer
     ipcRenderer.on("print", (event, message, level) => {
       this.emit("print", { message, level });
     });
@@ -78,7 +78,7 @@ class API extends EventEmitter {
       this.emit("close");
     }); // unused
 
-    //app control
+    // app control
     this.close = (win) => ipcRenderer.send("close", win);
     this.minimize = (win) => ipcRenderer.send("minimize", win);
     this.fullscreen = (win, isFullscreen) =>
@@ -86,8 +86,8 @@ class API extends EventEmitter {
     this.reload = (win, keepSettings) =>
       ipcRenderer.send("reload", win, keepSettings);
     this.devTools = () => ipcRenderer.send("dev-tools");
-    this.openDebug = () => ipcRenderer.send("open-debug");
-    this.openGUI = () => ipcRenderer.send("open-gui");
+
+    // backend interfaces
     this.sendCommand = (command) => ipcRenderer.send("send-command", command);
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
@@ -96,14 +96,14 @@ class API extends EventEmitter {
     this.updateVideoControls = (controls) =>
       ipcRenderer.send("video-controls", controls);
 
-    //getters
+    // getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
     this.resetSettings = () => ipcRenderer.invoke("reset-settings");
     this.getVideo = () => ipcRenderer.invoke("get-video");
 
-    //setters
+    // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
   }
@@ -111,5 +111,5 @@ class API extends EventEmitter {
 
 const api = new API();
 
-//expose the api to the renderer
+// expose the api to the renderer
 contextBridge.exposeInMainWorld("api", api);

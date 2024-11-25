@@ -1,5 +1,5 @@
 /**
- * A class to convert APRS message output from the LoRa APRS library to a JSON object
+ * A class to convert APRS message output from the LoRa APRS library to a JSON object (Deprecated)
  */
 class APRSMessage {
   /**
@@ -165,7 +165,11 @@ class APRSMessage {
     }, Type: ${this.type}, Body: ${this.body.toString()}, RSSI: ${this.rssi}`;
   }
 
-  //convert lat/long to a better format
+  /**
+   * Creates a CSV string representing the data
+   * @param {Boolean} csvCreated whether to write the CSV header
+   * @returns {string} the CSV string
+   */
   toCSV(csvCreated) {
     let csv = "";
     if (!csvCreated) {
@@ -298,11 +302,19 @@ class APRSBody {
     )}, T0 was at ${this.t0Date.toLocaleString()}`;
   }
 
+  /**
+   * Converts the body to a CSV string
+   * @returns {string} the body as a CSV
+   */
   toCSV() {
     let ll = this.getLatLongDecimal();
     return `${ll[0]},${ll[1]},${this.heading},${this.speed},${this.alt},${this.stage},${this.t0}`;
   }
 
+  /**
+   * Converts the body to a JSON string
+   * @returns {Object} the object containing the proper body data in JSON format
+   */
   toJSON() {
     // remove t0Date from JSON
     let result = {};

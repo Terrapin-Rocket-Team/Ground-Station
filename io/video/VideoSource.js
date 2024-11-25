@@ -6,7 +6,7 @@ const { Readable } = require("stream");
  */
 class VideoSource extends EventEmitter {
   /**
-   * @param {string} name the source name to identify it later
+   * @param {String} name the source name to identify it later
    * @param {Readable} input the input video stream for the source
    */
   constructor(name, input) {

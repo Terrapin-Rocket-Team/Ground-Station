@@ -2,8 +2,8 @@
 
 CORES=1
 
-mkdir -p video
-cd video
+mkdir -p coders
+cd coders
 if ! [ -d ffmpeg-7.0.1 ] ; then
     curl -LO https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz
     tar -xvf ffmpeg-7.0.1.tar.xz

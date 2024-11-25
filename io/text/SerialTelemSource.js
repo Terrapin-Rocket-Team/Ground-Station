@@ -12,16 +12,17 @@ const APRSTelem = require("../../coders/APRSTelem");
 class SerialTelemSource extends TextSource {
   /**
    *
-   * @param {String} name
-   * @param {Object} options
-   * @param {Function} options.parser
-   * @param {Boolean} [options.isMetrics]
-   * @param {Boolean} [options.createLog]
-   * @param {SerialDevice} [sd]
+   * @param {String} name the name of the stream to create
+   * @param {Object} options data handling configuration
+   * @param {Function} options.parser called for each message received, this is how data is output
+   * @param {Boolean} [options.isMetrics] whether this is a Metrics stream (otherwise it's a APRSTelem stream), needs a better solution
+   * @param {Boolean} [options.createLog] whether to create a log of the telemetry
+   * @param {SerialDevice} [sd] the serial device to read from, if not the default
    */
   constructor(options, sd, name) {
     super(name, sd ? sd : serial);
 
+    // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
     this.sd.addOutputStream(this.name);
@@ -32,6 +33,7 @@ class SerialTelemSource extends TextSource {
     this.dataFile = null;
     this.firstLine = true;
 
+    // create telemtry log file if necessary
     if (this.options.createLog) {
       const logName = path.join(
         "data",
@@ -47,6 +49,7 @@ class SerialTelemSource extends TextSource {
       if (this.options.createLog && this.dataFile) {
         // write CSV of data to file
         let obj;
+        // not ideal, but good enough for now, ideally we're coder agnostic here
         if (options.isMetrics) obj = new Metrics(data);
         if (!options.isMetrics) obj = new APRSTelem(data);
 
