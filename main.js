@@ -151,7 +151,7 @@ const createMain = () => {
     },
   });
 
-  windows.main.loadFile(path.join(__dirname, "src/index_new.html"));
+  windows.main.loadFile(path.join(__dirname, "src/index.html"));
 
   // only auto-open the devtools in debug mode
   if (config.debug.value)

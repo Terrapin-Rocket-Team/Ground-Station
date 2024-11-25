@@ -1,3 +1,5 @@
+// TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
+
 window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
@@ -9,6 +11,19 @@ window.onload = () => {
 
   const video0 = document.getElementById("video-0"),
     video1 = document.getElementById("video-1");
+
+  // get colors from css
+  const t1Color = getComputedStyle(document.body).getPropertyValue(
+      "--t1-color"
+    ),
+    t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
+    t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
+
+  const chartsConfig = [
+    { name: "Avionics Altitude", color: t1Color },
+    { name: "Airbrake Altitude", color: t2Color },
+    { name: "Payload Altitude", color: t3Color },
+  ];
 
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
@@ -55,16 +70,8 @@ window.onload = () => {
     none0 = document.getElementById("none-0"),
     none1 = document.getElementById("none-1");
 
-  let altG = createChart("alt-graph", "min", "ft", 1, 1, [
-      { name: "Avionics Altitude", color: "#ca0000cc" },
-      { name: "Airbrake Altitude", color: "#caffef00" },
-      { name: "Payload Altitude", color: "#ca313131" },
-    ]),
-    spdG = createChart("spd-graph", "min", "ft/s", 1, 1, [
-      { name: "Avionics Speed", color: "#ca0000cc" },
-      { name: "Airbrake Speed", color: "#caffef00" },
-      { name: "Payload Speed", color: "#ca313131" },
-    ]),
+  let altG = createChart("alt-graph", "min", "ft", 1, 1, chartsConfig),
+    spdG = createChart("spd-graph", "min", "ft/s", 1, 1, chartsConfig),
     altwr = document.getElementById("alt-wrapper"),
     spdwr = document.getElementById("spd-wrapper");
 
@@ -161,17 +168,30 @@ window.onload = () => {
   let maxAlt = 0,
     maxSpd = 0,
     lastStage = 0,
-    tPlusSet = false,
+    t0Set = false,
     chartState = "seconds";
 
   // load previous data if it exists
   {
-    altG.data.datasets[0].data = sessionStorage.getItem("altData")
-      ? JSON.parse(sessionStorage.getItem("altData"))
-      : [];
-    spdG.data.datasets[0].data = sessionStorage.getItem("spdData")
-      ? JSON.parse(sessionStorage.getItem("spdData"))
-      : [];
+    let chartDataIds = ["t1", "t2", "t3"];
+    // get chart data for each stream
+    chartDataIds.forEach((idPrefix) => {
+      let index = parseInt(idPrefix.split("t")[1]) - 1;
+
+      altG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-altData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
+        : [];
+      spdG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-spdData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
+        : [];
+    });
+
+    altG.update();
+    spdG.update();
 
     if (
       sessionStorage.getItem("max-alt") &&
@@ -188,119 +208,137 @@ window.onload = () => {
         parseInt(sessionStorage.getItem("max-spd")) + " ft/s";
   }
 
+  const updateT0 = (idPrefix, msg) => {
+    // wait until the flight computer reports the stage is >0 (out of preflight)
+    if (msg.getStageNumber() > 0 && !t0Set) {
+      // get the t0
+      t0 = Date.now();
+      // save the t0 for later
+      sessionStorage.setItem("t0", t0);
+      t0Set = true;
+      // need to add empty element so the chart scale doesn't look weird
+      // hardcoded for 3 streams for now
+      for (let i = 0; i < 3; i++) {
+        if (altG.data.datasets[i].data.length === 0)
+          altG.data.datasets[i].data = [{ x: 0, y: null }];
+        if (spdG.data.datasets[i].data.length === 0)
+          spdG.data.datasets[i].data = [{ x: 0, y: null }];
+      }
+    }
+  };
+  const updateCharts = (idPrefix, msg) => {
+    // get the index in the charts dataset
+    let index = parseInt(idPrefix.split("t")[1]) - 1;
+    // wait to put data on the chart until t0
+    if (t0Set) {
+      //update charts
+      let time = Date.now() - t0;
+      let ts = time / 1000;
+
+      // if more than 120 seconds have passed, change the chart scale to minutes
+      if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
+        let altLabels = altG.data.labels;
+        let spdLabels = spdG.data.labels;
+
+        altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
+        spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
+
+        altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, chartsConfig);
+        spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, chartsConfig);
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
+        altG.data.labels = altLabels;
+        spdG.data.labels = spdLabels;
+        chartState = "minutes";
+
+        // if more than 120 minutes have passed, change the chart scale to hours
+      } else if (ts > 120 * 60 && chartState != "hours") {
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
+        let altLabels = altG.data.labels;
+        let spdLabels = spdG.data.labels;
+
+        altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
+        spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
+
+        altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, chartsConfig);
+        spdG = createChart(
+          "spd-graph",
+          "hr",
+          "ft/s",
+          1 / 3600,
+          1,
+          chartsConfig
+        );
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
+        altG.data.labels = altLabels;
+        spdG.data.labels = spdLabels;
+        chartState = "hours";
+      }
+
+      // time is store in seconds, so need to multiply by a factor based on the scale
+      let factor =
+        chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
+
+      // interval between grid lines
+      let interval = parseInt(
+        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
+      );
+
+      // get each grid line
+      let arrL = [];
+      for (let i = 0; i < 5; i++) {
+        arrL[i] =
+          Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
+      }
+
+      // set min and max for x scale
+      altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
+      spdG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
+      altG.options.scales.x.suggestedMax = ts + 10 * factor;
+      spdG.options.scales.x.suggestedMax = ts + 10 * factor;
+
+      // set labels of x axis (grid lines)
+      altG.data.labels = JSON.parse(JSON.stringify(arrL));
+      spdG.data.labels = JSON.parse(JSON.stringify(arrL));
+
+      // add new data to the graph
+      altG.data.datasets[index].data.push({
+        x: ts,
+        y: msg.getAlt() ? msg.getAlt() : 0,
+      });
+      spdG.data.datasets[index].data.push({
+        x: ts,
+        y: msg.getSpeed() ? msg.getSpeed() : 0,
+      });
+
+      // store new data to be retreived later
+      sessionStorage.setItem(
+        idPrefix + "-altData",
+        JSON.stringify(altG.data.datasets[index].data)
+      );
+      sessionStorage.setItem(
+        idPrefix + "-spdData",
+        JSON.stringify(spdG.data.datasets[index].data)
+      );
+
+      // force update of the charts
+      altG.update();
+      spdG.update();
+    }
+  };
+
   api.on("data", (data) => {
     let msg = new APRSTelem(data);
 
     if (msg.stream === "telem-avionics") {
       //set T+
       //TODO: display T+?
-      if (!tPlusSet && msg.getStageNumber() > 0) {
-        let time = Date.now() - msg.time;
-
-        tPlusSet = true;
-        let ts = time / 1000;
-
-        if (altG.data.datasets[0].data.length === 0)
-          altG.data.datasets[0].data = [{ x: ts, y: null }];
-        if (spdG.data.datasets[0].data.length === 0)
-          spdG.data.datasets[0].data = [{ x: ts, y: null }];
-      }
-      if (tPlusSet) {
-        //update charts
-        let time = Date.now() - msg.time;
-        let ts = time / 1000;
-
-        if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
-          let altData = altG.data.datasets[0].data;
-          let spdData = spdG.data.datasets[0].data;
-          let altLabels = altG.data.labels;
-          let spdLabels = spdG.data.labels;
-
-          altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
-          spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
-
-          altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, [
-            { name: "Avionics Altitude", color: "#ca0000cc" },
-            { name: "Airbrake Altitude", color: "#caffef00" },
-            { name: "Payload Altitude", color: "#ca313131" },
-          ]);
-          spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, [
-            { name: "Avionics Speed", color: "#ca0000cc" },
-            { name: "Airbrake Speed", color: "#caffef00" },
-            { name: "Payload Speed", color: "#ca313131" },
-          ]);
-          altG.data.datasets[0].data = altData;
-          spdG.data.datasets[0].data = spdData;
-          altG.data.labels = altLabels;
-          spdG.data.labels = spdLabels;
-          chartState = "minutes";
-        } else if (ts > 120 * 60 && chartState != "hours") {
-          let altData = altG.data.datasets[0].data;
-          let spdData = spdG.data.datasets[0].data;
-          let altLabels = altG.data.labels;
-          let spdLabels = spdG.data.labels;
-
-          altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
-          spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
-
-          altG = createChart("alt-graph", "min", "ft", 1 / 3600, 1, [
-            { name: "Avionics Altitude", color: "#ca0000cc" },
-            { name: "Airbrake Altitude", color: "#caffef00" },
-            { name: "Payload Altitude", color: "#ca313131" },
-          ]);
-          spdG = createChart("spd-graph", "min", "ft/s", 1 / 3600, 1, [
-            { name: "Avionics Speed", color: "#ca0000cc" },
-            { name: "Airbrake Speed", color: "#caffef00" },
-            { name: "Payload Speed", color: "#ca313131" },
-          ]);
-          altG.data.datasets[0].data = altData;
-          spdG.data.datasets[0].data = spdData;
-          altG.data.labels = altLabels;
-          spdG.data.labels = spdLabels;
-          chartState = "hours";
-        }
-
-        let factor =
-          chartState == "minutes" ? 30 : chartState == "hours" ? 320 : 1;
-
-        let interval = parseInt(
-          (ts - altG.data.datasets[0].data[0].x + 5 * factor) / 4
-        );
-
-        let arrL = [];
-        for (let i = 0; i < 5; i++) {
-          arrL[i] = Math.floor(altG.data.datasets[0].data[0].x) + i * interval;
-        }
-
-        altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
-        spdG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
-        altG.options.scales.x.suggestedMax = ts + 10 * factor;
-        spdG.options.scales.x.suggestedMax = ts + 10 * factor;
-
-        altG.data.labels = JSON.parse(JSON.stringify(arrL));
-        spdG.data.labels = JSON.parse(JSON.stringify(arrL));
-
-        altG.data.datasets[0].data.push({
-          x: ts,
-          y: msg.getAlt() ? msg.getAlt() : 0,
-        });
-        spdG.data.datasets[0].data.push({
-          x: ts,
-          y: msg.getSpeed() ? msg.getSpeed() : 0,
-        });
-
-        sessionStorage.setItem(
-          "altData",
-          JSON.stringify(altG.data.datasets[0].data)
-        );
-        sessionStorage.setItem(
-          "spdData",
-          JSON.stringify(spdG.data.datasets[0].data)
-        );
-
-        altG.update();
-        spdG.update();
-      }
+      updateT0("t1", msg);
+      updateCharts("t1", msg);
 
       //update gauges
       if (msg.getAlt() || msg.getAlt() === 0) {
@@ -374,6 +412,12 @@ window.onload = () => {
           lastStage = sn;
         }
       }
+    }
+    if (msg.stream === "telem-airbrake") {
+      updateCharts("t2", msg);
+    }
+    if (msg.stream === "telem-payload") {
+      updateCharts("t3", msg);
     }
   });
 
