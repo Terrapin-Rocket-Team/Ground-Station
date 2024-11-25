@@ -13,6 +13,7 @@ const serialDriverPath = path.join(__dirname, "..", "build", "serial");
  */
 class SerialDevice extends EventEmitter {
   /**
+   * Create a new Serial Device
    */
   constructor() {
     super();
@@ -53,27 +54,39 @@ class SerialDevice extends EventEmitter {
     });
   }
 
+  /**
+   * Adds a stream to the list of streams created when calling connect()
+   * @param {String} name the name of the input stream to add
+   */
   addInputStream(name) {
     this.inputStreamNames.push(name);
   }
 
+  /**
+   * Adds a stream to the list of streams created when calling connect()
+   * @param {String} name the name of the output stream to add
+   */
   addOutputStream(name) {
     this.outputStreamNames.push(name);
   }
 
   /**
-   *
-   * @param {String} name
-   * @param {Writable} outStream
+   * Wrapper to pipe an output PipeStream to another stream
+   * @param {String} name the name of the output PipeStream
+   * @param {Writable} outStream the stream to pipe to
    */
   pipe(name, outStream) {
     this.deviceOutput.find((o) => o.name === name).pipe(outStream);
   }
 
+  /**
+   * Internal method for setting up the driver program
+   */
   setupDriver() {
-    //logic for starting the driver program
+    // logic for starting the driver program
+    // TODO: debug mode?
     if (os.platform() === "win32") {
-      // this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
+      // this.driver = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
       this.driver = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
     } else if (os.platform() === "linux") {
       this.driver = spawn(path.join(serialDriverPath, "DemuxLinux"));
@@ -84,17 +97,20 @@ class SerialDevice extends EventEmitter {
       );
     }
 
+    // other listeners
     this.driver.on("error", (err) => {
-      // attempt to restart?
+      // TODO: attempt to restart?
       log.err(err.message);
     });
     this.driver.once("exit", (code) => {
       log.info("Driver exited with code: " + code);
     });
 
+    // wait for output on stdout
     this.driver.stdout.once("data", (data) => {
       let dataStr = data.toString().replace("\r", "").split("\n");
 
+      // wait for the "driver ready" output from the driver, must be the first output
       dataStr.forEach((str) => {
         if (str === "driver ready") {
           // create a stream to control the serial driver
@@ -102,6 +118,8 @@ class SerialDevice extends EventEmitter {
 
           // create a stream to receive status from the driver
           this.status = new PipeStream("status");
+
+          // above streams allow us much more flexibility on stdout
 
           this.waitReady([this.control, this.status], () => {
             log.info("Serial driver ready");
@@ -112,6 +130,7 @@ class SerialDevice extends EventEmitter {
       });
     });
 
+    // setup debug output of all serial driver stdout data
     this.driver.stdout.on("data", (data) => {
       log.debug(`demux stdout: ${data}`);
     });
@@ -121,6 +140,7 @@ class SerialDevice extends EventEmitter {
    * @returns {Promise<[]|Error>} array of available ports, rejects with the error if one occurs
    */
   getAvailablePorts() {
+    // TODO: remove SerialPort dependency
     return new Promise((res, rej) => {
       SerialPort.list()
         .then((list) => {
@@ -139,7 +159,9 @@ class SerialDevice extends EventEmitter {
    */
   connect(port, baudRate) {
     return new Promise((res, rej) => {
+      // serial driver must be ready to connect
       if (this.ready) {
+        // remove all existing streams
         let stream;
         while ((stream = this.deviceInput.pop())) {
           stream.close();
@@ -148,35 +170,28 @@ class SerialDevice extends EventEmitter {
           stream.close();
         }
 
-        // setup the driver
+        // setup the driver with serial settings
         this.control.stream.write("reset\n");
         this.control.stream.write(port + "\n");
         this.control.stream.write(baudRate.toString() + "\n");
 
+        // request whether the driver successfully connected
         this.control.stream.write("connected\n");
 
         // check for successful connection
         this.status.stream.once("data", (data) => {
           if (data.toString() === "connected") {
-            // setup data streams
-            // let telemetryStreams = [
-            //   "telemetry-avionics",
-            //   "telemetry-airbrake",
-            //   "telemetry-payload",
-            //   "video0",
-            //   "video1",
-            // ];
-            // let commandStreams = ["command"];
-
             // get driver ready to accept pipe names
             this.control.stream.write("data pipes\n");
 
-            // write the number of pipes
+            // write the total number of pipes
             this.control.stream.write(
               this.outputStreamNames.length +
                 this.inputStreamNames.length +
                 "\n"
             );
+
+            // TODO: need to figure out how to tell the driver how to hook up all these pipes to radios
 
             // write the names of all the command pipes
             for (let i = 0; i < this.inputStreamNames.length; i++) {
@@ -197,6 +212,7 @@ class SerialDevice extends EventEmitter {
 
             // wait for all the pipes to successfully be created
             this.status.stream.once("data", (data) => {
+              // check if the pipes were succcessfully created
               let success = data.toString() === "pipe creation successful";
 
               if (success) {
@@ -211,6 +227,7 @@ class SerialDevice extends EventEmitter {
                   let newStream = new PipeStream(name);
                   newStream.on("data", (data) => {
                     try {
+                      // anyone who wants data from this pipe will listen for this event
                       this.emit(name + "-data", JSON.parse(data));
                     } catch (err) {
                       this.emit(
@@ -223,7 +240,9 @@ class SerialDevice extends EventEmitter {
                   this.deviceOutput.push(newStream);
                 });
 
+                // check if we actually created any pipes
                 if (this.deviceInput.length + this.deviceOutput.length > 0) {
+                  // wait for all pipes to be ready
                   this.waitReady(
                     this.deviceInput.concat(this.deviceOutput),
                     () => {
@@ -234,7 +253,7 @@ class SerialDevice extends EventEmitter {
                     }
                   );
                 } else {
-                  // resolve the promise
+                  // otherwise resolve the promise
                   this.emit("connected");
                   this.connected = true;
                   res(1);
@@ -244,6 +263,7 @@ class SerialDevice extends EventEmitter {
               }
             });
           } else {
+            // recevied data will be the error
             rej({ message: data.toString() });
           }
         });
@@ -253,6 +273,11 @@ class SerialDevice extends EventEmitter {
     });
   }
 
+  /**
+   * Writes data to an input pipe
+   * @param {String} name the name of the input pipe to write to
+   * @param {String} data the data to write to the pipe
+   */
   write(name, data) {
     if (this.ready) {
       let stream = this.deviceInput.find((o) => o.name === name);
@@ -262,6 +287,10 @@ class SerialDevice extends EventEmitter {
     }
   }
 
+  /**
+   * Check if the serial driver is connected to the requested serial port
+   * @returns {Promise<Number|Error>} whether the serial driver is connected, reject with error if one occurs
+   */
   isConnected() {
     return new Promise((res, rej) => {
       if (this.ready) {
@@ -279,10 +308,16 @@ class SerialDevice extends EventEmitter {
     });
   }
 
+  /**
+   * Reset the serial driver and close its Serial connection
+   */
   reset() {
     if (this.ready) this.control.stream.write("close\n");
   }
 
+  /**
+   * Completely close the serial driver
+   */
   close() {
     this.ready = false;
     this.connected = false;
@@ -291,6 +326,9 @@ class SerialDevice extends EventEmitter {
     else if (this.driver) this.driver.kill();
   }
 
+  /**
+   * Completely close and then relaunch the serial driver
+   */
   reload() {
     this.ready = false;
     this.connected = false;
@@ -306,6 +344,7 @@ class SerialDevice extends EventEmitter {
   }
 }
 
+// create a default SerialDevice
 const serial = new SerialDevice();
 
 module.exports = {

@@ -47,6 +47,7 @@ try {
     log.warn(
       "Older config version (likely v1.5) detected, save your settings to remove this warning"
     );
+  // setup logger
   log.useDebug = config.debug.value;
   log.debug("Config loaded");
 } catch (err) {
@@ -58,6 +59,7 @@ try {
       log.warn(
         "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version."
       );
+      // update config file version if app version has changed
       config.version = app.getVersion();
       fs.writeFileSync(
         "./default-config.json",
@@ -96,8 +98,10 @@ try {
   );
   // create new metadata file
   try {
+    // make the folder if it doesn't exist
     if (!fs.existsSync(path.join(__dirname, "src", "cachedtiles")))
       fs.mkdirSync(path.join(__dirname, "src", "cachedtiles"));
+    // write the file if it doesn't exist
     if (
       !fs.existsSync(
         path.join(__dirname, "src", "cachedtiles", "metadata.json")
@@ -115,23 +119,26 @@ try {
 }
 
 try {
+  // create output folders for log files and data files
   if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath);
   if (!fs.existsSync(logPath)) fs.mkdirSync(logPath);
 } catch (err) {
   log.err("Failed to create output folders: " + err.message);
 }
 
-//creates the main electron window
+// creates the main electron window
 const createMain = () => {
   const width = 1200,
     height = 800;
 
+  // get the correct icon
   const iconSuffix =
     process.platform === "win32"
       ? ".ico"
       : process.platform === "darwin"
       ? ".icns"
       : ".png";
+
   windows.main = new BrowserWindow({
     width: width * config.scale.value,
     height: height * config.scale.value,
@@ -146,9 +153,11 @@ const createMain = () => {
 
   windows.main.loadFile(path.join(__dirname, "src/index_new.html"));
 
+  // only auto-open the devtools in debug mode
   if (config.debug.value)
     windows.main.webContents.openDevTools({ mode: "detach" });
 
+  // handle switching between fullscreen mode
   windows.main.on("enter-full-screen", () => {
     log.debug("Enter main fullscreen");
     windows.main.webContents.send("fullscreen-change", {
@@ -177,10 +186,13 @@ const createMain = () => {
     windows.main = null;
   });
 
+  // send video controls whether or not we need them so the inputs load properly
   windows.main.webContents.once("dom-ready", () => {
     windows.main.webContents.send("video-controls", videoControls);
   });
 
+  // only create serial streams if not in debug mode
+  // may want to change how this works so we can use debug statements and still test serial connection things
   if (!config.debug.value) {
     const ts1 = new SerialTelemSource("telem-avionics", {
       parser: (data) => {
@@ -214,7 +226,7 @@ const createMain = () => {
 
     const metrics = new SerialTelemSource("metrics", {
       parser: (data) => {
-        let telem = new APRSTelem(data);
+        let telem = new Metrics(data);
         log.info(telem);
         if (windows.main) windows.main.webContents.send("data", telem);
         if (windows.video) windows.video.webContents.send("data", telem);
@@ -223,6 +235,7 @@ const createMain = () => {
       createLog: true,
     });
 
+    // add everything to an array for later
     telemSources.push(ts1);
     telemSources.push(ts2);
     telemSources.push(ts3);
@@ -234,15 +247,19 @@ const createMain = () => {
   log.debug("Main window created");
 };
 
+// creates the video electron window
 const createVideo = () => {
   const width = 1280,
     height = 720;
+
+  // get the correct icon
   const iconSuffix =
     process.platform === "win32"
       ? ".ico"
       : process.platform === "darwin"
       ? ".icns"
       : ".png";
+
   windows.video = new BrowserWindow({
     width: width * config.scale.value,
     height: height * config.scale.value,
@@ -256,10 +273,11 @@ const createVideo = () => {
 
   windows.video.loadFile(path.join(__dirname, "src/video/video.html"));
 
+  // only auto-open the devtools in debug mode
   if (config.debug.value)
     windows.video.webContents.openDevTools({ mode: "detach" });
 
-  //reset when the window is closed
+  // reset when the window is closed
   windows.video.once("close", () => {
     windows.video.webContents.send("close"); // unused
   });
@@ -268,7 +286,7 @@ const createVideo = () => {
     windows.video = null;
   });
 
-  //handle fullscreen changes
+  // handle fullscreen changes
   windows.video.on("enter-full-screen", () => {
     log.debug("Enter video fullscreen");
     windows.video.webContents.send("fullscreen-change", {
@@ -285,6 +303,7 @@ const createVideo = () => {
     });
   });
 
+  // only create serial video streams if not in debug mode
   if (!config.debug.value) {
     const vs1 = new SerialVideoSource("arc-0", {
       resolution: { width: 640, height: 832 },
@@ -309,17 +328,17 @@ const createVideo = () => {
   log.debug("Live stream window created");
 };
 
-//tells electron to ignore OS level display scaling
+// tells electron to ignore OS level display scaling
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
-//when electron has initialized, create the appropriate window
+// when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
   createMain();
   if (config.video.value) createVideo();
 
-  //open a new window if there are none when the app is opened and is still running (MacOS)
+  // open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMain();
@@ -328,12 +347,12 @@ app.whenReady().then(() => {
   });
 });
 
-//quit the app if all windows are closed on MacOS
+// quit the app if all windows are closed on MacOS
 app.on("window-all-closed", () => {
   app.quit();
 });
 
-//app control
+// app control
 ipcMain.on("close", (event, name) => {
   windows[name].close();
 });
@@ -391,6 +410,7 @@ ipcMain.on("dev-tools", (event, args) => {
   if (windows.video) windows.video.webContents.openDevTools({ mode: "detach" });
 });
 
+// backend interfaces
 ipcMain.on("send-command", (event, command) => {
   for (let i = 0; i < command.length; i++) {
     if (command[i] === "") command[i] = 255;
@@ -533,7 +553,9 @@ ipcMain.on("close-port", (event, args) => {
 
 ipcMain.on("clear-tile-cache", (event, args) => {
   try {
+    // check if the metadata file exists
     if (fs.existsSync(path.join(__dirname, "src", "cachedtiles"))) {
+      // reset the metadata and remove the metadata file
       cacheMeta = {
         tiles: {},
         fileList: [],
@@ -564,7 +586,7 @@ ipcMain.on("video-controls", (event, controls) => {
   } else log.warn("Failed setting video controls, new controls missing.");
 });
 
-//getters
+// getters
 ipcMain.handle("get-ports", (event, args) => {
   return serial.getAvailablePorts();
 });
@@ -579,7 +601,8 @@ ipcMain.handle("get-settings", (event, args) => {
 
 ipcMain.handle("reset-settings", (event) => {
   try {
-    // don't want to actually reset settings on the backend, just send them to the user
+    // don't want to actually reset settings on the backend, just send them to the settings page
+    // which will send the final state of the settings page back to us later
     return JSON.parse(fs.readFileSync("./default-config.json"));
   } catch (err) {
     log.err("Failed getting default settings: " + err.message);
@@ -590,16 +613,17 @@ ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
     if (stream.hasFrame())
-      //must use readFrame() to get rid of old frame
+      // must use readFrame() to get rid of old frame
       videoData.push({ name: stream.name, data: stream.readFrame() });
     else videoData.push(null); // TODO: this seems a bit odd
   });
   return videoData;
 });
 
-//setters
+// setters
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
+    // try to connect to the given port, log any errors
     serial
       .connect(portConfig.path, config.baudRate.value)
       .then((result) => {
@@ -620,9 +644,11 @@ ipcMain.handle("set-port", (event, portConfig) => {
 });
 
 ipcMain.on("update-settings", (event, settings) => {
+  // make sure we were actually given a settings object
   if (settings) {
     config = settings;
     try {
+      // write the new settings to the file
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
       log.debug("Successfully updated settings");
     } catch (err) {
@@ -631,6 +657,7 @@ ipcMain.on("update-settings", (event, settings) => {
   }
 });
 
+// serial state handling
 serial.on("error", (message) => {
   log.err("Serial driver error: " + message);
 });
@@ -641,19 +668,19 @@ serial.on("close", (path) => {
     windows.main.webContents.send("serial-close", path);
 });
 
-//testing
+// testing
 if (config.debug.value) {
   // start after 1 second to give everything time to load
   setTimeout(() => {
-    //set up telemetry sources
-    //test to see whether the test csv file exists
+    // set up telemetry sources
+    // test to see whether the first telemetry stream data file exists
     if (fs.existsSync("./test-0.csv")) {
       try {
         const ts1D = new FileTelemSource("./test-0.csv", {
           datarate: 1,
           parser: (data) => {
+            // make sure we got a valid line
             if (!closed && windows.main) {
-              //make sure we got a valid line
               let aprsMsg = APRSTelem.fromCSV(data);
               windows.main.webContents.send("data", aprsMsg);
               if (windows.video)
@@ -669,13 +696,14 @@ if (config.debug.value) {
       log.warn("Could not find test-0.csv");
     }
 
+    // test to see whether the second telemetry stream data file exists
     if (fs.existsSync("./test-1.csv")) {
       try {
         const ts2D = new FileTelemSource("./test-1.csv", {
           datarate: 1,
           parser: (data) => {
+            // make sure we got a valid line
             if (!closed && windows.main) {
-              //make sure we got a valid line
               let aprsMsg = APRSTelem.fromCSV(data);
               windows.main.webContents.send("data", aprsMsg);
               if (windows.video)
@@ -691,21 +719,22 @@ if (config.debug.value) {
       log.warn("Could not find test-1.csv");
     }
 
+    // test to see whether the third telemetry stream data file exists
     if (fs.existsSync("./test-2.csv")) {
       try {
-        // const ts3D = new FileTelemSource("./test-2.csv", {
-        //   datarate: 1,
-        //   parser: (data) => {
-        //     if (!closed && windows.main) {
-        //       //make sure we got a valid line
-        //       let aprsMsg = APRSTelem.fromCSV(data);
-        //       windows.main.webContents.send("data", aprsMsg);
-        //       if (windows.video)
-        //         windows.video.webContents.send("data", aprsMsg);
-        //     }
-        //   },
-        // });
-        // telemSources.push(ts3D);
+        const ts3D = new FileTelemSource("./test-2.csv", {
+          datarate: 1,
+          parser: (data) => {
+            // make sure we got a valid line
+            if (!closed && windows.main) {
+              let aprsMsg = APRSTelem.fromCSV(data);
+              windows.main.webContents.send("data", aprsMsg);
+              if (windows.video)
+                windows.video.webContents.send("data", aprsMsg);
+            }
+          },
+        });
+        telemSources.push(ts3D);
       } catch (err) {
         log.err('Failed to read test-2.csv: "' + err.message + '"');
       }
@@ -713,13 +742,14 @@ if (config.debug.value) {
       log.warn("Could not find test-2.csv");
     }
 
+    // test to see whether the telmetry stream metrics data file exists
     if (fs.existsSync("./metrics.csv")) {
       try {
         const metrics = new FileTelemSource("./metrics.csv", {
           datarate: 1,
           parser: (data) => {
+            // make sure we got a valid line
             if (!closed && windows.main) {
-              //make sure we got a valid line
               let m = Metrics.fromCSV(data);
               windows.main.webContents.send("metrics", m);
               if (windows.video) windows.video.webContents.send("metrics", m);
@@ -734,6 +764,7 @@ if (config.debug.value) {
       log.warn("Could not find metrics.csv");
     }
 
+    // create the command sink
     commandSink = new FileCommandSink(path.join(logPath, "commands.txt"), {
       asString: true,
     });

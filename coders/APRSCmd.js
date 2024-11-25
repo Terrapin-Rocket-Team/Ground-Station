@@ -1,9 +1,5 @@
-/**
- * A class to handling encoding and decoding of APRS messages
- */
-
 /*
-{
+format from the Message library
 {
     "type": "APRSCmd",
     "deviceId": 3
@@ -11,14 +7,18 @@
         "cmd": 0,
         "args": 0
     }
-},
 }
 */
+
+/**
+ * A class to handling encoding and decoding of APRS messages
+ */
 class APRSCmd {
   /**
    * @param {string|object} command the APRS command
    */
   constructor(command) {
+    // log message time
     this.time = new Date();
 
     // allow the user to load command data in later using loadCmd()
@@ -31,7 +31,7 @@ class APRSCmd {
     this.args = parseInt(command.data.args);
   }
 
-  // list of commands and translations stored here for now
+  // list of commands, translations, and parsing functions, stored here for now
   static commandList = [
     {
       name: "Pi Power On",
@@ -196,14 +196,17 @@ class APRSCmd {
     },
   ];
 
+  /**
+   * @returns {Array} the list of available commands
+   */
   static getCommandList() {
     return APRSCmd.commandList;
   }
 
   /**
-   * Creates an APRS telemetry message from a single line of a CSV data file
-   * @param {string} csvData a single line from a CSV file produced by APRSTelem.toCSV()
-   * @returns {APRSTelem} the APRS telemetry corresponding to the input line
+   * Creates an APRS command message from a single line of a CSV data file
+   * @param {String} csvData a single line from a CSV file produced by APRSCmd.toCSV()
+   * @returns {APRSCmd} the APRS command corresponding to the input line
    */
   static fromCSV(csvData) {
     let csvArr = csvData.split(",");
@@ -216,6 +219,11 @@ class APRSCmd {
     });
   }
 
+  /**
+   * Parses a command from a string and loads it into the object's cmd and args attributes
+   * @param {String} str the command as a shortened string
+   * @returns whether the command was successfully parsed
+   */
   loadCmd(str) {
     let cmdAbbrv = str.trim().split(" ")[0];
     for (let i = 0; i < APRSCmd.commandList.length; i++) {
@@ -232,6 +240,9 @@ class APRSCmd {
     }
   }
 
+  /**
+   * @returns {Object} the command object in the Message library format
+   */
   toJSON() {
     return {
       deviceId: this.deviceId,
@@ -243,7 +254,7 @@ class APRSCmd {
   }
 
   /**
-   * @returns {string} the APRS message object as a string
+   * @returns {String} the command object as a string
    */
   toString() {
     let c = APRSCmd.commandList.find((command) => {
@@ -252,7 +263,10 @@ class APRSCmd {
     return `Device ${this.deviceId} | ${c.name}: ${this.args.toString(16)}`;
   }
 
-  //convert lat/long to a better format
+  /**
+   * @param {Boolean} csvCreated whether to write the CSV header
+   * @returns {string} the CSV string
+   */
   toCSV(csvCreated) {
     let csv = "";
     if (!csvCreated) {

@@ -20,22 +20,23 @@ const ffmpegPath = path.join(
  */
 class SerialVideoSource extends VideoSource {
   /**
-   * @param {String} file
-   * @param {Object} options
-   * @param {Object} options.resolution
-   * @param {Number} options.resolution.width
-   * @param {Number} options.resolution.height
-   * @param {Number} options.framerate
-   * @param {String} [options.rotation]
-   * @param {Boolean} [options.createLog]
-   * @param {Boolean} [options.createDecoderLog]
-   * @param {SerialDevice} [sd]
-   * @param {String} [name]
+   * @param {String} file the file name to read from
+   * @param {Object} options the video format configuration
+   * @param {Object} options.resolution the video resolution
+   * @param {Number} options.resolution.width the width of the video
+   * @param {Number} options.resolution.height the height of the video
+   * @param {Number} options.framerate the framerate of the video
+   * @param {String} [options.rotation] how to rotate the video, if given
+   * @param {Boolean} [options.createLog] whether to create a log of the video itself
+   * @param {Boolean} [options.createDecoderLog] whether to create a log of ffmpeg's output
+   * @param {SerialDevice} [sd] the serial device to read from, if not the default
+   * @param {String} [name] the name to use instead of the file name
    */
   constructor(file, options, sd, name) {
-    //call the VideoSource constructor with the name as the file name if "name" is not given
+    // call the VideoSource constructor with the name as the file name if "name" is not given
     super(name ? name : file, sd ? sd : serial);
 
+    // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
     this.sd.addOutputStream(this.name);
@@ -45,14 +46,15 @@ class SerialVideoSource extends VideoSource {
     this.file = file;
     this.options = options;
     this.ffmpeg = null;
+    // allocate a Buffer for frame data
     this.data = Buffer.alloc(
       this.options.resolution.width * this.options.resolution.height * 2
     );
     this.dataLen = 0;
 
-    //check if rotation should be used
+    // check if rotation should be used
     if (this.options.rotation === undefined) {
-      //set up ffmpeg instance
+      // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
@@ -70,13 +72,13 @@ class SerialVideoSource extends VideoSource {
         "-",
       ]);
     } else {
-      //find proper rotation for ffmpeg
+      // find proper rotation for ffmpeg
       let r = 0;
       if (this.options.rotation === "ccw") r = 0;
       else if (this.options.rotation === "cw") r = 1;
       else throw new Error("Invalid rotation");
 
-      //set up ffmpeg instance
+      // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
@@ -97,6 +99,7 @@ class SerialVideoSource extends VideoSource {
       ]);
     }
 
+    // create video log file if necessary
     if (this.options.createLog) {
       const logName = path.join(
         "data",
@@ -125,6 +128,8 @@ class SerialVideoSource extends VideoSource {
     //connect pipes
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.name, this.ffmpeg.stdin);
+    // connect video log pipe if necessary
+    if (this.options.createLog && this.dataFile) this.i.pipe(this.dataFile);
 
     //handle data output from ffmpeg
     this.o.on("data", (chunks) => {
@@ -159,7 +164,7 @@ class SerialVideoSource extends VideoSource {
       }
     });
 
-    //other event handlers
+    // other event handlers
     this.o.on("close", () => {
       this.emit("close");
     });

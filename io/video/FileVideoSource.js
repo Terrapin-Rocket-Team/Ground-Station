@@ -20,19 +20,19 @@ const ffmpegPath = path.join(
  */
 class FileVideoSource extends VideoSource {
   /**
-   * @param {String} file
-   * @param {Object} options
-   * @param {Object} options.resolution
-   * @param {Number} options.resolution.width
-   * @param {Number} options.resolution.height
-   * @param {Number} options.framerate
-   * @param {String} [options.rotation]
-   * @param {Boolean} [options.createLog]
-   * @param {Boolean} [options.createDecoderLog]
-   * @param {String} [name]
+   * @param {String} file the file name to read from
+   * @param {Object} options the video format configuration
+   * @param {Object} options.resolution the video resolution
+   * @param {Number} options.resolution.width the width of the video
+   * @param {Number} options.resolution.height the height of the video
+   * @param {Number} options.framerate the framerate of the video
+   * @param {String} [options.rotation] how to rotate the video, if given
+   * @param {Boolean} [options.createLog] whether to create a log of the video itself
+   * @param {Boolean} [options.createDecoderLog] whether to create a log of ffmpeg's output
+   * @param {String} [name] the name to use instead of the file name
    */
   constructor(file, options, name) {
-    //call the VideoSource constructor with the name as the file name
+    // call the VideoSource constructor with the name as the file name if "name" is not given
     super(name ? name : file, fs.createReadStream(file));
 
     log.debug("Creating file video source for: " + file);
@@ -41,14 +41,15 @@ class FileVideoSource extends VideoSource {
     this.options = options;
     this.ffmpeg = null;
     this.logFile = null;
+    // allocate a Buffer for frame data
     this.data = Buffer.alloc(
       this.options.resolution.width * this.options.resolution.height * 2
     );
     this.dataLen = 0;
 
-    //check if rotation should be used
+    // check if rotation should be used
     if (this.options.rotation === undefined) {
-      //set up ffmpeg instance
+      // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
@@ -66,13 +67,13 @@ class FileVideoSource extends VideoSource {
         "-",
       ]);
     } else {
-      //find proper rotation for ffmpeg
+      // find proper rotation for ffmpeg
       let r = 0;
       if (this.options.rotation === "ccw") r = 0;
       else if (this.options.rotation === "cw") r = 1;
       else throw new Error("Invalid rotation");
 
-      //set up ffmpeg instance
+      // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
         "-re",
         "-framerate",
@@ -93,6 +94,7 @@ class FileVideoSource extends VideoSource {
       ]);
     }
 
+    // create video log file if necessary
     if (this.options.createLog) {
       const logName = path.join(
         "data",
@@ -103,7 +105,7 @@ class FileVideoSource extends VideoSource {
       log.debug("Log file created for " + this.name + ": " + logName);
     }
 
-    //if ffmpeg was properly initialized, set up a write stream for the log file if necessary
+    // if ffmpeg was properly initialized, set up a write stream for its log file if necessary
     if (this.ffmpeg !== null && this.options.createDecoderLog) {
       const logName = path.join("log", "ffmpeg-" + this.name + ".log");
       const logFile = fs.createWriteStream(logName);
@@ -118,14 +120,15 @@ class FileVideoSource extends VideoSource {
    * @returns {Readable} the output stream
    */
   startOutput() {
-    //connect pipes
+    // connect pipes
     this.o = this.ffmpeg.stdout;
     this.i.pipe(this.ffmpeg.stdin);
-    if (this.options.createLog) this.i.pipe(this.dataFile);
+    // connect video log pipe if necessary
+    if (this.options.createLog && this.dataFile) this.i.pipe(this.dataFile);
 
-    //handle data output from ffmpeg
+    // handle data output from ffmpeg
     this.o.on("data", (chunks) => {
-      //this needs to be efficient or ffmpeg runs too slow
+      // this needs to be efficient or ffmpeg runs too slow
       chunks.copy(this.data, this.dataLen, 0, chunks.length);
       this.dataLen += chunks.length;
       if (
@@ -156,7 +159,7 @@ class FileVideoSource extends VideoSource {
       }
     });
 
-    //other event handlers
+    // other event handlers
     this.o.on("close", () => {
       this.emit("close");
     });

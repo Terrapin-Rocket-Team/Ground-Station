@@ -1,3 +1,5 @@
+/* Converts a Ground Station data csv from pre v2.0.0 to the data csv version */
+
 const { APRSMessage } = require("../coders/APRS");
 const APRSTelem = require("../coders/APRSTelem");
 const readline = require("readline");
@@ -15,7 +17,7 @@ let firstLineWritten = false;
 
 const wr = fs.createWriteStream(newCSVPath);
 
-// Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags,T0,RSSI
+// Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags
 rl.on("line", (line) => {
   if (firstLine) {
     firstLine = false;

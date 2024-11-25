@@ -1,3 +1,5 @@
+/* Extracts metrics (RSSI, bitrate) from a pre v2.0.0 Ground Station data csv */
+
 const { APRSMessage } = require("../coders/APRS");
 const Metrics = require("../coders/Metrics");
 const readline = require("readline");

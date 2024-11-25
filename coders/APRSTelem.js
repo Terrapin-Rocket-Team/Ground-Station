@@ -1,8 +1,5 @@
-/**
- * A class to handling encoding and decoding of APRS messages
- */
-
 /*
+format from the Message library
 {
     "type": "APRSTelem",
     "deviceId": 3,
@@ -20,14 +17,21 @@
     }
 }
 */
+
+/**
+ * A class to handling encoding and decoding of APRS messages
+ */
 class APRSTelem {
   /**
    * @param {string|object} message the APRS message
-   * @param {string} [stream]
+   * @param {string} [stream] the name of the stream
    */
   constructor(message, stream) {
+    // log message time
     this.time = new Date();
+    // check if stream was specified
     if (stream) {
+      // assume the message is in the Message library format
       this.stream = stream;
 
       if (typeof message === "string") {
@@ -47,6 +51,7 @@ class APRSTelem {
       ];
       this.stateFlags = parseInt(message.data.stateFlags);
     } else {
+      // assume the message is in this object's format
       this.stream = message.stream;
 
       this.deviceId = message.deviceId;
@@ -66,7 +71,7 @@ class APRSTelem {
 
   /**
    * Creates an APRS telemetry message from a single line of a CSV data file
-   * @param {string} csvData a single line from a CSV file produced by APRSTelem.toCSV()
+   * @param {String} csvData a single line from a CSV file produced by APRSTelem.toCSV()
    * @returns {APRSTelem} the APRS telemetry corresponding to the input line
    */
   static fromCSV(csvData) {
@@ -89,42 +94,42 @@ class APRSTelem {
   }
 
   /**
-   * @returns {number} the orientation of the device as degrees about the Z axis
+   * @returns {Number} the orientation of the device as degrees about the Z axis
    */
   getOrientationZ() {
     return this.orientation[2];
   }
 
   /**
-   * @returns {number} the orientation of the device as degrees about the Y axis
+   * @returns {Number} the orientation of the device as degrees about the Y axis
    * */
   getOrientationY() {
     return this.orientation[1];
   }
 
   /**
-   * @returns {number} the orientation of the device as degrees about the X axis
+   * @returns {Number} the orientation of the device as degrees about the X axis
    * */
   getOrientationX() {
     return this.orientation[0];
   }
 
   /**
-   * @returns {string} the flags of the device
+   * @returns {Number} the flags of the device
    * */
   getFlags() {
     return this.stateFlags;
   }
 
   /**
-   * @returns {number[]} [latitude, longitude]
+   * @returns {Number[]} [latitude, longitude]
    */
   getLatLong() {
     return [this.latitude, this.longitude];
   }
 
   /**
-   * @returns {string} the latitude and longitude in decimal form formatted as a string
+   * @returns {String} the latitude and longitude in decimal form formatted as a string
    */
   getLatLongDecimal(br) {
     return (
@@ -140,19 +145,22 @@ class APRSTelem {
   }
 
   /**
-   * @returns {string} the latitude and longitude in degress, minutes, seconds form as a string
+   * @returns {String} the latitude and longitude in degress, minutes, seconds form as a string
    */
   getLatLongDMS() {
+    // convert latitude to DMS
     let latDegrees = Math.floor(this.latitude),
       latMinutes = Math.floor(60 * (this.latitude - latDegrees)),
       latSeconds = Math.floor(
         60 * (60 * (this.latitude - latDegrees) - latMinutes)
       );
+    // convert longitude to DMS
     let longDegrees = Math.floor(this.longitude),
       longMinutes = Math.floor(60 * (this.longitude - longDegrees)),
       longSeconds = Math.floor(
         60 * (60 * (this.longitude - longDegrees) - longMinutes)
       );
+    // put it together
     return (
       Math.abs(latDegrees) +
       "\u00b0" +
@@ -173,21 +181,21 @@ class APRSTelem {
   }
 
   /**
-   * @returns {float} last updated altitude
+   * @returns {Number} the current altitude
    */
   getAlt() {
     return this.altitude;
   }
 
   /**
-   * @returns {Number} last updated heading
+   * @returns {Number} the current heading
    */
   getHeading() {
     return this.heading;
   }
 
   /**
-   * @returns {Number} last updated speed
+   * @returns {Number} the current speed
    */
   getSpeed() {
     return this.speed;
@@ -209,44 +217,7 @@ class APRSTelem {
   }
 
   /**
-   * @returns {Date} a Date object containing the date of T0
-   */
-  // getT0() {
-  //   return this.t0Date;
-  // }
-
-  /**
-   * @returns {Number} the T0 time in milliseconds
-   */
-  // getT0ms() {
-  //   return this.t0Date.getTime();
-  // }
-
-  /**
-   * Creates a Date object from a t0 time in UTC
-   * @returns {Date} the Date object
-   */
-  // dateFromT0(time0) {
-  //   return new Date( // 2
-  //     new Date()
-  //       .toString()
-  //       .match(
-  //         /[A-Z][a-z][a-z] [A-Z][a-z][a-z] [0-9][0-9] [0-9][0-9][0-9][0-9] /g
-  //       )[0] +
-  //       new Date( // 1
-  //         new Date()
-  //           .toISOString()
-  //           .match(
-  //             /^([+-][0-9][0-9])?[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/g
-  //           )[0] +
-  //           time0 +
-  //           "Z"
-  //       ).toTimeString() // 1 - get local t0
-  //   ); // 2 get local date and combine with local t0
-  // }
-
-  /**
-   * @returns {string} the APRS message object as a string
+   * @returns {String} the APRS message object as a string
    */
   toString() {
     return `${this.time.toISOString().split("T")[1]} ${this.stream}@${
@@ -260,7 +231,10 @@ class APRSTelem {
     }`;
   }
 
-  //convert lat/long to a better format
+  /**
+   * @param {Boolean} csvCreated whether to write the CSV header
+   * @returns {string} the CSV string
+   */
   toCSV(csvCreated) {
     let csv = "";
     if (!csvCreated) {
