@@ -24,6 +24,8 @@ class SerialDevice extends EventEmitter {
     this.deviceInput = [];
     this.deviceOutput = [];
 
+    this.port = "";
+
     this.driver = {};
     this.control = {};
     this.status = {};
@@ -102,8 +104,9 @@ class SerialDevice extends EventEmitter {
       // TODO: attempt to restart?
       log.err(err.message);
     });
-    this.driver.once("exit", (code) => {
-      log.info("Driver exited with code: " + code);
+    this.driver.once("exit", (code, signal) => {
+      if (code) log.info("Driver exited with code: " + code);
+      if (signal) log.info("Driver exited with signal: " + signal);
     });
 
     // wait for output on stdout
@@ -181,6 +184,7 @@ class SerialDevice extends EventEmitter {
         // check for successful connection
         this.status.stream.once("data", (data) => {
           if (data.toString() === "connected") {
+            this.port = port;
             // get driver ready to accept pipe names
             this.control.stream.write("data pipes\n");
 
@@ -289,18 +293,15 @@ class SerialDevice extends EventEmitter {
 
   /**
    * Check if the serial driver is connected to the requested serial port
-   * @returns {Promise<Number|Error>} whether the serial driver is connected, reject with error if one occurs
+   * @returns {Promise<Object|Error>} whether the serial driver is connected, reject with error if one occurs
    */
   isConnected() {
     return new Promise((res, rej) => {
       if (this.ready) {
         this.control.stream.write("connected\n");
         this.status.stream.once("data", (data) => {
-          if (data.toString() === "connected") {
-            res(1);
-          } else {
-            res(0);
-          }
+          this.connected = data.toString() === "connected";
+          res({ path: this.port, connected: this.connected });
         });
       } else {
         rej("serial driver has not started");
@@ -312,7 +313,10 @@ class SerialDevice extends EventEmitter {
    * Reset the serial driver and close its Serial connection
    */
   reset() {
-    if (this.ready) this.control.stream.write("close\n");
+    if (this.ready) {
+      this.control.stream.write("close\n");
+      this.port = "";
+    }
   }
 
   /**
@@ -321,6 +325,7 @@ class SerialDevice extends EventEmitter {
   close() {
     this.ready = false;
     this.connected = false;
+    this.port = "";
     this.emit("close");
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
@@ -332,6 +337,7 @@ class SerialDevice extends EventEmitter {
   reload() {
     this.ready = false;
     this.connected = false;
+    this.port = "";
     this.emit("close");
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();

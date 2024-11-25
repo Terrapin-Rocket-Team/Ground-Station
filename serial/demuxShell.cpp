@@ -124,7 +124,7 @@ int main(int argc, char **argv)
                 while (!timeout && !(teensy->isConnected()))
                 {
                     time_t end = time(0);
-                    if (difftime(end, start) > 1)
+                    if (difftime(end, start) > 2)
                         timeout = true;
                 }
             }
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
             }
             if (strcmp(controlStr, "connected") == 0)
             {
-                if ((teensy != nullptr && teensy->isConnected()) || true)
+                if ((teensy != nullptr && teensy->isConnected()))
                 {
                     pipeStatus->writeStr("connected");
                 }
@@ -412,7 +412,8 @@ int main(int argc, char **argv)
     //     }
     //     std::cout << totalCount << std::endl;
 
-    //     teensy->closeSerial();
+    if (teensy != nullptr)
+        teensy->closeSerial();
     std::cout << "Exit" << std::endl;
     delete pipeControl;
     delete pipeStatus;
