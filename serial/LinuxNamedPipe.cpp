@@ -20,7 +20,7 @@ LinuxNamedPipe::LinuxNamedPipe(const char* name, bool create) : NamedPipe(name) 
         }
     }
 
-    handle = open(name, O_RDWR);
+    handle = open(name, O_RDWR | O_NONBLOCK);
     if(handle == -1) {
         std::cerr << "Error opening named pipe: " << name << std::endl;
     }
