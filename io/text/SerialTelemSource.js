@@ -19,7 +19,7 @@ class SerialTelemSource extends TextSource {
    * @param {Boolean} [options.createLog] whether to create a log of the telemetry
    * @param {SerialDevice} [sd] the serial device to read from, if not the default
    */
-  constructor(options, sd, name) {
+  constructor(name, options, sd) {
     super(name, sd ? sd : serial);
 
     // setup serial interface for this stream

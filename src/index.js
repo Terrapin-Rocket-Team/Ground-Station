@@ -2,7 +2,7 @@ window.onload = () => {
   // "global" vars
   let fullscreened = false;
   let videoControls = {};
-  let portInUse;
+  let portInUse = { path: null, idPrefix: null };
 
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
@@ -91,7 +91,7 @@ window.onload = () => {
         // otherwise, for each port
         ports.forEach((port) => {
           // if the port is not currently in use
-          if (portInUse !== port.path) {
+          if (portInUse.path !== port.path) {
             // create a new option in the dropdown for this port
             const span = document.createElement("SPAN");
             span.className = "serial";
@@ -113,6 +113,8 @@ window.onload = () => {
                   img.setAttribute("src", "./images/serial_connected.svg");
                   img.setAttribute("title", "Serial Connected");
                 } else {
+                  portInUse.path = null;
+                  portInUse.idPrefix = null;
                   selected.textContent = "Select Port";
                   img.setAttribute("src", "./images/serial_disconnected.svg");
                   img.setAttribute("title", "Connection Error");
@@ -128,6 +130,22 @@ window.onload = () => {
 
   // setup the serial port dropdown
   setupDropdown("serial", getAvailPorts, true);
+  api
+    .getPortStatus()
+    .then((status) => {
+      if (status.connected) {
+        portInUse.path = status.path;
+        portInUse.idPrefix = "serial";
+        const selected = document.getElementById("serial-selected");
+        const img = document.getElementById("serial-connection");
+        selected.textContent = status.path;
+        img.setAttribute("src", "./images/serial_connected.svg");
+        img.setAttribute("title", "Serial Connected");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 
   /// sidebar
 

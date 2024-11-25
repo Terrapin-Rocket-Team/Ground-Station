@@ -9,8 +9,9 @@ const path = require("path");
 const ffmpegPath = path.join(
   __dirname,
   "..",
+  "..",
   "build",
-  "video",
+  "coders",
   "ffmpeg-7.0.1",
   "ffmpeg.exe"
 );

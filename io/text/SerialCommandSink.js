@@ -1,6 +1,7 @@
 const TextSink = require("./TextSink");
 const { log } = require("../../debug");
 const fs = require("fs");
+const path = require("path");
 const { serial, SerialDevice } = require("../../serial/SerialDevice");
 const APRSCmd = require("../../coders/APRSCmd");
 
