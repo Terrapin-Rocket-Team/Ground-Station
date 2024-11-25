@@ -10,15 +10,15 @@
 LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   portHandle = open(portName, O_RDWR);
   if (portHandle < 0) {
-    std::cerr << "ERROR: Failed to open serial port at " << portName << "\n";
-    std::cerr << strerror(errno) << "\n";
+    std::cout << "ERROR: Failed to open serial port at " << portName << "\n";
+    std::cout << strerror(errno) << "\n";
     return;
   }
 
   struct termios2 tty;
 
   if (ioctl(portHandle, TCGETS, &tty) != 0) {
-    std::cerr << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
+    std::cout << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
               << "\n";
     connected = false;
     return;
@@ -61,8 +61,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   tty.c_ospeed = 600000;
 
   // Save tty settings, also checking for error
-  if (ioctl(portHandle, TCSANOW, &tty) != 0) {
-    std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
+  if (ioctl(portHandle, TCSETSW, &tty) != 0) {
+    std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
               << "\n";
     connected = false;
   }
@@ -86,8 +86,8 @@ void LinuxSerialPort::closeSerial() {
   if (connected) {
     // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-    if (ioctl(portHandle, TCSANOW, &backup) != 0) {
-      std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
+    if (ioctl(portHandle, TCSETSW, &backup) != 0) {
+      std::cout << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
                 << "\n";
       connected = false;
     }

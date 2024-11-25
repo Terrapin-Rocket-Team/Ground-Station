@@ -34,6 +34,14 @@ class Radio extends EventEmitter {
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
     });
+
+    this.cppApp.on("error", (err) => {
+      console.log("demux err: " + err)
+    })
+
+    this.cppApp.once("exit", (code, signal) => {
+      console.log("exit: " + code + ": Signal: " + signal)
+    })
   }
 
   /**
@@ -57,7 +65,8 @@ class Radio extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
-    const pipePath = path.join(".", "pipe", "terpFcCommands");
+    console.log("DIR: " + __dirname)
+    const pipePath = path.join(".", "build", "serial", "pipes", "terpFcCommands");
     this.commandStream = fs.createWriteStream(pipePath, { encoding: "binary" });
 
     this.commandStream.on("error", (err) => {
@@ -66,7 +75,7 @@ class Radio extends EventEmitter {
     this.commandStream.write(port);
 
     // handle telemetry data
-    const telemetyPipePath = path.join(".", "pipe", "terpTelemetry");
+    const telemetyPipePath = path.join(".", "build", "serial", "pipes", "terpTelemetry");
     const pipeStream = fs.createReadStream(telemetyPipePath);
 
     pipeStream.on("data", (data) => {

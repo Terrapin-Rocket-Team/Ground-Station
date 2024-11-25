@@ -783,7 +783,8 @@ if (config.debug) {
     if (config.video) {
       //test to see if first video exists
       //create new video source from file
-      let vs1 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoOne", true, {
+      //TODO: change paths to be cross platform
+      let vs1 = new FileStreamSource("./build/serial/pipes/ffmpegVideoOne", true, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
@@ -795,7 +796,7 @@ if (config.debug) {
       vs1.startOutput();
       //test to see if second video exists
       //create new video source from file
-      let vs2 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoTwo", false, {
+      let vs2 = new FileStreamSource("./build/serial/pipes/ffmpegVideoTwo", false, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",

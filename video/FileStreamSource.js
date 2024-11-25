@@ -5,13 +5,11 @@ const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
 
+//TODO: Fix this to be multiplatform
 const ffmpegPath = path.join(
-  __dirname,
-  "..",
-  "build",
-  "video",
-  "ffmpeg-7.0.1",
-  "ffmpeg.exe"
+    "/usr",
+    "bin",
+    "ffmpeg"
 );
 
 /**
