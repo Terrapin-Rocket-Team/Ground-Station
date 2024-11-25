@@ -5,9 +5,9 @@ const markers = new L.featureGroup();
  * @param {string} id the id of the HTML element for the map
  */
 const buildMap = (id) => {
-  //create the map and set defaults
+  // create the map and set defaults
   map = new L.Map(id, {
-    //38.987810, -76.942406
+    // UMD: 38.987810, -76.942406
     center: new L.LatLng(38.98781, -76.942406),
     maxZoom: 15,
     zoom: 5,
@@ -24,6 +24,7 @@ const buildMap = (id) => {
   map.setZoom(12);
   markers.clearLayers();
 
+  // create home button
   L.easyButton(
     '<img src="../src/images/home_map.svg" style="width:100%;height;100%;">',
     (btn, map) => {
@@ -39,7 +40,9 @@ const buildMap = (id) => {
  * @param {HTMLElement} html the html for the popup
  */
 const updateMarker = (lat, lng, html) => {
+  // remove old marker
   markers.clearLayers();
+  // create new marker
   let marker = L.popup({
     closeButton: false,
     autoClose: false,
@@ -49,6 +52,7 @@ const updateMarker = (lat, lng, html) => {
     .setLatLng([lat, lng])
     .setContent(html)
     .addTo(map);
+  // move map to marker
   marker.addTo(markers);
   map.fitBounds(markers.getBounds());
 };

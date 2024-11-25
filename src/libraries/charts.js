@@ -1,5 +1,5 @@
 /**
- *
+ * Creates a new Chart.js chart
  * @param {string} id the id of the HTML element for the chart
  * @param {string} name the name of the chart
  * @param {string} xUnits the units for the x axis
@@ -54,10 +54,6 @@ const createChart = (id, xUnits, yUnits, xConvert, yConvert, lines) => {
           point: {
             radius: 0,
           },
-          // line: {
-          //   backgroundColor: "#ca0000cc",
-          //   borderColor: "#ca0000cc",
-          // },
         },
       },
     })

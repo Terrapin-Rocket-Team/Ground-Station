@@ -14,7 +14,6 @@
     <title>Settings</title>
   </head>
   <body>
-    <!--TODO: add tooltips-->
     <!--Application top bar-->
     <div id="top-bar">
       <!--Name and logo-->
@@ -24,12 +23,12 @@
       </div>
       <!--Buttons and application control-->
       <div id="top-right">
-        <button id="debug" class="top-button" title="Debug Window">
-          <img src="../images/debug.svg" alt="Debug" />
-        </button>
-        <a href="../index_new.html" id="home" class="top-button"
+        <a href="../index.html" id="home" class="top-button"
           ><img src="../images/home.svg" alt="Home"
         /></a>
+        <button id="fullscreen" class="top-button" title="Fullscreen">
+          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+        </button>
         <button id="reload" class="top-button" title="Reload">
           <img src="../images/reload.svg" alt="Reload" />
         </button>
@@ -43,105 +42,8 @@
     </div>
     <!--Contains all elements besides the top bar-->
     <div id="main">
-      <!--dropdown for scale-->
-      <div
-        id="scale-box"
-        class="settings-box"
-        title="Changes the scale of the main window for different sized screens"
-      >
-        <span id="scale-label">Main Window Scale:</span>
-        <div class="dropdown inactive settings-selector" id="scale-drop">
-          <span id="scale-selected">Loading...</span>
-          <img src="../images/arrow_right.svg" alt=">" id="scale-arrow" />
-          <div class="options" id="scale-options">
-            <span class="scale">0.50</span>
-            <span class="scale">0.75</span>
-            <span class="scale">1.00</span>
-            <span class="scale">1.25</span>
-            <span class="scale">1.50</span>
-            <span class="scale">1.75</span>
-            <span class="scale">2.00</span>
-          </div>
-        </div>
-      </div>
-      <!--dropdown for debugScale-->
-      <div
-        id="debug-scale-box"
-        class="settings-box"
-        title="Changes the scale of the debug window for different sized screens"
-      >
-        <span id="debug-scale-label">Debug Window Scale:</span>
-        <div class="dropdown inactive settings-selector" id="debug-scale-drop">
-          <span id="debug-scale-selected">Loading...</span>
-          <img src="../images/arrow_right.svg" alt=">" id="debug-scale-arrow" />
-          <div class="options" id="debug-scale-options">
-            <span class="debug-scale">0.50</span>
-            <span class="debug-scale">0.75</span>
-            <span class="debug-scale">1.00</span>
-            <span class="debug-scale">1.25</span>
-            <span class="debug-scale">1.50</span>
-            <span class="debug-scale">1.75</span>
-            <span class="debug-scale">2.00</span>
-          </div>
-        </div>
-      </div>
-      <!--toggle for debug mode-->
-      <div
-        id="debug-box"
-        class="settings-box"
-        title="Turn on debug mode to log debug statements and open the devtools with each window"
-      >
-        <span id="debug-label">Debug Mode:</span>
-        <div id="debug-toggle" class="toggle settings-selector"></div>
-      </div>
-      <!--toggle for noGUI-->
-      <div
-        id="noGUI-box"
-        class="settings-box"
-        title="If turned on, only shows the debug window when the app launches"
-      >
-        <span id="noGUI-label">Disable GUI:</span>
-        <div id="noGUI-toggle" class="toggle settings-selector"></div>
-      </div>
-      <!--toggle for video-->
-      <div
-        id="video-box"
-        class="settings-box"
-        title="Turn on to switch the ground station to video streaming mode"
-      >
-        <span id="video-label">Video Mode:</span>
-        <div id="video-toggle" class="toggle settings-selector"></div>
-      </div>
-      <!--number input for cacheMaxSize-->
-      <div
-        id="cacheMaxSize-box"
-        class="settings-box"
-        title="The maximum size of the cache for loading tiles offline"
-      >
-        <span id="cacheMaxSize-label">Map Cache Size (bytes):</span>
-        <input
-          type="number"
-          name="cacheMaxSize"
-          id="cacheMaxSize-input"
-          min="0"
-          class="settings-selector"
-        />
-      </div>
-      <!--number input for baudRate-->
-      <div
-        id="baudRate-box"
-        class="settings-box"
-        title="The baud rate used when connecting to the radio receiver over serial"
-      >
-        <span id="baudRate-label">Serial Port Baud Rate:</span>
-        <input
-          type="number"
-          name="baudRate"
-          id="baudRate-input"
-          min="0"
-          class="settings-selector"
-        />
-      </div>
+      <!-- Contains all the settings inputs -->
+      <div id="main-settings"></div>
       <!--reset to defaults-->
       <div id="reset-box" class="settings-box">
         <button id="reset-settings" title="Reset all settings to defaults">
