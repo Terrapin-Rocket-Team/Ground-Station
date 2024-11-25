@@ -23,10 +23,10 @@ int main(int argc, char **argv)
     NamedPipe *hPipe3;
 
 #ifdef WINDOWS
-    hPipeIn = new WinNamedPipe("..\\serial\\pipes\\terpFcCommands", true);
-    hPipe1 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoOne", true);
-    hPipe2 = new WinNamedPipe("..\\serial\\pipes\\ffmpegVideoTwo", true);
-    hPipe3 = new WinNamedPipe("..\\serial\\pipes\\terpTelemetry", true);
+    hPipeIn = new WinNamedPipe("\\\\.\\pipe\\terpFcCommands", true);
+    hPipe1 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoOne", true);
+    hPipe2 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoTwo", true);
+    hPipe3 = new WinNamedPipe("\\\\.\\pipe\\terpTelemetry", true);
 #elif LINUX
     hPipeIn = new LinuxNamedPipe("./build/serial/pipes/terpFcCommands", true);
     hPipe1 = new LinuxNamedPipe("./build/serial/pipes/ffmpegVideoOne", true);
@@ -81,9 +81,11 @@ int main(int argc, char **argv)
 
     time_t start = time(NULL);
     bool timeout = false;
-    while(!timeout && !(teensy->isConnected())) {
+    while (!timeout && !(teensy->isConnected()))
+    {
         time_t end = time(NULL);
-        if(difftime(end, start) > 2) {
+        if (difftime(end, start) > 2)
+        {
             timeout = true;
         }
     }
@@ -110,7 +112,7 @@ int main(int argc, char **argv)
         // implement demuxer on data
         dataidx = 0; // index of the next byte to read from data (so we don't need
         // to always resize it)
-        char strData[MAX_DATA_LENGTH+1] = {'\0'};
+        char strData[MAX_DATA_LENGTH + 1] = {'\0'};
         memcpy(strData, data, MAX_DATA_LENGTH);
 
         std::cout << "Bytes Read From Serial: " << x << std::endl;
@@ -291,7 +293,7 @@ int main(int argc, char **argv)
         }
 
         // check to see if we received a command from the GUI
-        if (hPipeIn->read(chunkIn, 7))
+        if (hPipeIn->read(chunkIn, 7) > 0)
         {
             teensy->writeSerialPort(chunkIn, 7);
         }

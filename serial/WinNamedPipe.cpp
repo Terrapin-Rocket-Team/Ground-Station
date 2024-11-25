@@ -12,7 +12,7 @@ WinNamedPipe::WinNamedPipe(const char *name, bool create) : NamedPipe(name)
     if (create)
     {
         hPipe = CreateNamedPipe(TEXT(name), PIPE_ACCESS_DUPLEX,
-                                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,
+                                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_NOWAIT, 1,
                                 1024 * 16, 1024 * 16, NMPWAIT_USE_DEFAULT_WAIT, NULL);
     }
     else
