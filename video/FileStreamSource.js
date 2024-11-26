@@ -6,11 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 //TODO: Fix this to be multiplatform
-const ffmpegPath = path.join(
-    "/usr",
-    "bin",
-    "ffmpeg"
-);
+const ffmpegPath = path.join("build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe");
 
 /**
  * A class to play a local file as a video source
