@@ -4,9 +4,11 @@ const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
+const os = require("node:os");
 
-//TODO: Fix this to be multiplatform
-const ffmpegPath = path.join("build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe");
+const ffmpegPath = (os.platform() == "win32") ?
+    path.join("build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe") :
+    path.join("/usr", "bin", "ffmpeg")
 
 /**
  * A class to play a local file as a video source
