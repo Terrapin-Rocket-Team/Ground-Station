@@ -32,7 +32,7 @@ class Radio extends EventEmitter {
     }
 
     this.cppApp.stdout.on("data", (data) => {
-      // console.log(`demux stdout: ${data}`);
+      console.log(`demux stdout: ${data}`);
     });
 
     this.cppApp.on("error", (err) => {
@@ -65,9 +65,10 @@ class Radio extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
-    console.log("DIR: " + __dirname);
-    const pipePath = "\\\\.\\pipe\\terpFcCommands";
-    this.commandStream = fs.createWriteStream(pipePath, { encoding: "binary" });
+    const commandPipePath = (os.platform() == "win32") ?
+        "\\\\.\\pipe\\terpFcCommands" :
+        "./build/serial/pipes/terpFcCommands";
+    this.commandStream = fs.createWriteStream(commandPipePath, { encoding: "binary" });
 
     this.commandStream.on("error", (err) => {
       console.error("error writing command to named pipe", err.message);
@@ -75,7 +76,9 @@ class Radio extends EventEmitter {
     this.commandStream.write(port);
 
     // handle telemetry data
-    const telemetyPipePath = "\\\\.\\pipe\\terpTelemetry";
+    const telemetyPipePath = (os.platform() == "win32") ?
+        "\\\\.\\pipe\\terpTelemetry" :
+        "./build/serial/pipes/terpTelemetry";
     const pipeStream = fs.createReadStream(telemetyPipePath);
 
     pipeStream.on("data", (data) => {
