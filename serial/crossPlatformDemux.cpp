@@ -291,6 +291,7 @@ int main(int argc, char **argv)
         }
 
         // check to see if we received a command from the GUI
+        //TODO: there might be an issue on windows
         if (hPipeIn->read(chunkIn, 7) > 0)
         {
             teensy->writeSerialPort(chunkIn, 7);
