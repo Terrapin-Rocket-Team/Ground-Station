@@ -9,6 +9,7 @@ const { log } = require("./debug");
 const { radio } = require("./serial/serialPipe");
 const { APRSMessage } = require("./serial/APRS");
 const { FileStreamSource } = require("./video/video-source");
+const os = require("os")
 
 const iconPath = "build/icons";
 
@@ -783,7 +784,10 @@ if (config.debug) {
     if (config.video) {
       //test to see if first video exists
       //create new video source from file
-      let vs1 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoOne", true, {
+
+      const pipePath = (os.platform() == "win32") ? "\\\\.\\pipe\\" : "./build/serial/pipes/"
+
+      let vs1 = new FileStreamSource(pipePath + "ffmpegVideoOne", true, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
@@ -795,7 +799,7 @@ if (config.debug) {
       vs1.startOutput();
       //test to see if second video exists
       //create new video source from file
-      let vs2 = new FileStreamSource("\\\\.\\pipe\\ffmpegVideoTwo", false, {
+      let vs2 = new FileStreamSource(pipePath + "ffmpegVideoTwo", false, {
         resolution: { width: 640, height: 832 },
         framerate: 30,
         rotation: "cw",
