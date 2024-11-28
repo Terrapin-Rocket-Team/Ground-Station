@@ -15,7 +15,8 @@
 
 int main(int argc, char **argv)
 {
-    unsigned char data[MAX_DATA_LENGTH];
+    std::cout << "Hello from demux!" << std::endl;
+    unsigned char data[MAX_DATA_LENGTH] = {'\0'};
     NamedPipe *hPipeIn;
     NamedPipe *hPipe1;
     NamedPipe *hPipe2;
@@ -27,11 +28,10 @@ int main(int argc, char **argv)
     hPipe2 = new WinNamedPipe("\\\\.\\pipe\\ffmpegVideoTwo", true);
     hPipe3 = new WinNamedPipe("\\\\.\\pipe\\terpTelemetry", true);
 #elif LINUX
-    // THESE PATHS MIGHT BE WRONG!
-    hPipeIn = new LinuxNamedPipe("./pipe/terpFcCommands", true);
-    hPipe1 = new LinuxNamedPipe("./pipe/ffmpegVideoOne", true);
-    hPipe2 = new LinuxNamedPipe("./pipe/ffmpegVideoTwo", true);
-    hPipe3 = new LinuxNamedPipe("./pipe/terpTelemetry", true);
+    hPipeIn = new LinuxNamedPipe("./build/serial/pipes/terpFcCommands", true);
+    hPipe1 = new LinuxNamedPipe("./build/serial/pipes/ffmpegVideoOne", true);
+    hPipe2 = new LinuxNamedPipe("./build/serial/pipes/ffmpegVideoTwo", true);
+    hPipe3 = new LinuxNamedPipe("./build/serial/pipes/terpTelemetry", true);
 #endif
 
     size_t x;
@@ -55,13 +55,15 @@ int main(int argc, char **argv)
     size_t chunks3bot = 0;
 
     bool receivedPort = false;
-    char portBuf[1024];
+    char portBuf[1024] = {'\0'};
 
     while (!receivedPort)
     {
-        std::cout << "Awaiting port...\n";
+        // std::cout << "Awaiting port...\n";
         memset(portBuf, '\0', sizeof(portBuf));
-        if (hPipeIn->read(portBuf, sizeof(portBuf)))
+        int pipeInRead = hPipeIn->read(portBuf, sizeof(portBuf));
+        std::cout << "pipeInRead = " << pipeInRead << std::endl;
+        if (pipeInRead > 0)
         {
             portBuf[sizeof(portBuf) - 1] = '\0';
             std::cout << "Received port: " << portBuf << std::endl;
@@ -74,8 +76,19 @@ int main(int argc, char **argv)
 #ifdef WINDOWS
     teensy = new WinSerialPort(portBuf);
 #elif LINUX
-    teensy = new LinuxSerialPort(strcat("./", portBuf));
+    teensy = new LinuxSerialPort(portBuf);
 #endif
+
+    time_t start = time(NULL);
+    bool timeout = false;
+    while (!timeout && !(teensy->isConnected()))
+    {
+        time_t end = time(NULL);
+        if (difftime(end, start) > 2)
+        {
+            timeout = true;
+        }
+    }
 
     if (teensy->isConnected())
     {
@@ -90,6 +103,7 @@ int main(int argc, char **argv)
 
     while (teensy->isConnected())
     {
+        std::cout << "Before reading from serial" << std::endl;
         x = teensy->readSerialPort(data, MAX_DATA_LENGTH);
         // Sleep(500);
         // std::cout << data;
@@ -98,6 +112,10 @@ int main(int argc, char **argv)
         // implement demuxer on data
         dataidx = 0; // index of the next byte to read from data (so we don't need
         // to always resize it)
+        char strData[MAX_DATA_LENGTH + 1] = {'\0'};
+        memcpy(strData, data, MAX_DATA_LENGTH);
+
+        std::cout << "Bytes Read From Serial: " << x << std::endl;
 
         // repeat until we have processed all data
         while (dataidx < x)
@@ -106,8 +124,8 @@ int main(int argc, char **argv)
             if (source == 0)
             {
                 std::cout << "source == 0 at " << totalCount << std::endl;
-                std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-                          << " | ";
+                // std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
+                //           << " | ";
                 if (data[dataidx] == 0x01)
                     source = 1;
                 else if (data[dataidx] == 0x02)
@@ -124,8 +142,8 @@ int main(int argc, char **argv)
             if (packetSize == 0 && packetSizeFound == false && dataidx < x &&
                 source != 0)
             {
-                std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-                          << " | ";
+                // std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
+                //           << " | ";
                 packetSize = data[dataidx] * 256;
                 packetSizeFound = false;
                 dataidx++;
@@ -134,8 +152,8 @@ int main(int argc, char **argv)
             // find the second byte of the packetsize
             if (packetSizeFound == false && dataidx < x && source != 0)
             {
-                std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-                          << " | ";
+                // std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
+                //           << " | ";
                 packetSize += data[dataidx];
                 packetSizeFound = true;
                 packetidx = 0;
@@ -148,8 +166,8 @@ int main(int argc, char **argv)
                 // copy data to the circular buffer
                 while (dataidx < x && packetidx < packetSize)
                 {
-                    std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-                              << " | ";
+                    // std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
+                    //           << " | ";
                     chunks1[chunks1top] = data[dataidx];
                     chunks1top = (chunks1top + 1) % maxChunkSize;
                     packetidx++;
@@ -191,8 +209,8 @@ int main(int argc, char **argv)
                 // copy data to the circular buffer
                 while (dataidx < x && packetidx < packetSize)
                 {
-                    std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-                              << " | ";
+                    // std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
+                    //           << " | ";
                     chunks2[chunks2top] = data[dataidx];
                     chunks2top = (chunks2top + 1) % maxChunkSize;
                     packetidx++;
@@ -275,7 +293,8 @@ int main(int argc, char **argv)
         }
 
         // check to see if we received a command from the GUI
-        if (hPipeIn->read(chunkIn, 7))
+        //TODO: there might be an issue on windows
+        if (hPipeIn->read(chunkIn, 7) > 0)
         {
             teensy->writeSerialPort(chunkIn, 7);
         }

@@ -4,38 +4,26 @@
 #include <cstring>
 #include <fcntl.h> // Contains file controls like O_RDWR
 #include <iostream>
-#include <termios.h> // Contains POSIX terminal control definitions
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   portHandle = open(portName, O_RDWR);
   if (portHandle < 0) {
-    std::cerr << "ERROR: Failed to open serial port at " << portName << "\n";
-    std::cerr << strerror(errno) << "\n";
+    std::cout << "ERROR: Failed to open serial port at " << portName << "\n";
+    std::cout << strerror(errno) << "\n";
     return;
   }
 
-  struct termios tty;
+  struct termios2 tty;
 
-  if (tcgetattr(portHandle, &tty) != 0) {
-    std::cerr << "Error " << errno << " from tcgetattr " << strerror(errno)
+  if (ioctl(portHandle, TCGETS, &tty) != 0) {
+    std::cout << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
               << "\n";
     connected = false;
     return;
   }
   backup = tty;
-
-  /* Windows setup:
-      dcbSerialParameters.BaudRate = 600000; // Adjust to match desired bitrate
-      dcbSerialParameters.ByteSize = 8;
-      dcbSerialParameters.StopBits = ONESTOPBIT;
-      dcbSerialParameters.Parity = NOPARITY;
-      dcbSerialParameters.fDtrControl = DTR_CONTROL_ENABLE;
-      dcbSerialParameters.fRtsControl =
-          RTS_CONTROL_HANDSHAKE; // Enable RTS/CTS flow control
-      dcbSerialParameters.fOutxCtsFlow = TRUE;
-      dcbSerialParameters.fOutxDsrFlow = TRUE;
-   */
 
   tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
   tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in
@@ -67,13 +55,14 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
                         // as any data is received.
   tty.c_cc[VMIN] = 0;
 
-  // TODO: need to see how to match this with windows implementation
-  cfsetispeed(&tty, B9600);
-  cfsetospeed(&tty, B9600);
+  tty.c_cflag &= ~CBAUD;
+  tty.c_cflag |= BOTHER;
+  tty.c_ispeed = 600000;
+  tty.c_ospeed = 600000;
 
   // Save tty settings, also checking for error
-  if (tcsetattr(portHandle, TCSANOW, &tty) != 0) {
-    std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
+  if (ioctl(portHandle, TCSETSW, &tty) != 0) {
+    std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
               << "\n";
     connected = false;
   }
@@ -95,10 +84,10 @@ int LinuxSerialPort::readSerialPort(void *buffer, unsigned int buf_size) {
 
 void LinuxSerialPort::closeSerial() {
   if (connected) {
-    // apparently tcsetattr settings persist after the process ends,
+    // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-    if (tcsetattr(portHandle, TCSANOW, &backup) != 0) {
-      std::cerr << "Error " << errno << " from tcsetattr " << strerror(errno)
+    if (ioctl(portHandle, TCSETSW, &backup) != 0) {
+      std::cout << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
                 << "\n";
       connected = false;
     }

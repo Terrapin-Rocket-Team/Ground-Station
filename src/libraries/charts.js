@@ -18,9 +18,8 @@ const createChart = (id, xUnits, yUnits, xConvert, yConvert, lines) => {
         datasets: [],
       },
       options: {
+        aspectRatio: 1.6,
         maintainAspectRatio: false,
-        resizeDelay: 10,
-        responsive: true,
         animation: false,
         plugins: {
           legend: {
@@ -46,7 +45,6 @@ const createChart = (id, xUnits, yUnits, xConvert, yConvert, lines) => {
             beginAtZero: true,
             ticks: {
               callback: (value) => `${value * yConvert} ${yUnits}`,
-              count: 5,
             },
           },
         },

@@ -12,10 +12,12 @@ private:
     int handle;
 public:
     LinuxNamedPipe(const char *name, bool create);
-    ~LinuxNamedPipe();
+    ~LinuxNamedPipe() override;
 
     int read(void *buffer, int bufferSize) override;
     int write(const void *buffer, int bufferSize) override;
+    int readStr(char *buffer, int bufferSize) override;
+    int writeStr(const char *buffer) override;
 };
 
 

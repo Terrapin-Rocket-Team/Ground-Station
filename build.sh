@@ -18,6 +18,11 @@ if [ $# = 0 ] || [ $1 = "help" ] ; then
     exit 0
 fi
 
+unlink ./build/serial/pipes/terpFcCommands
+unlink ./build/serial/pipes/terpTelemetry
+unlink ./build/serial/pipes/ffmpegVideoOne
+unlink ./build/serial/pipes/ffmpegVideoTwo
+
 while [ $# -gt 0 ] ; do
 
     case $1 in
