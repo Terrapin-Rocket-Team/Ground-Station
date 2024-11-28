@@ -4,14 +4,9 @@ const { EventEmitter } = require("node:events");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
-const serialDriverPath = path.join(
-  __dirname,
-  "..",
-  "build",
-  "serial",
-  "serial.exe"
-);
+const serialDriverPath = path.join(__dirname, "..", "build", "serial");
 
 /**
  * A class to communicate with the radio module using serialport
@@ -28,10 +23,24 @@ class Radio extends EventEmitter {
     this.chunks3 = "";
 
     //logic for starting the cpp program
-    this.cppApp = spawn(serialDriverPath);
+    if (os.platform() === "win32") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn(path.join(serialDriverPath, "DemuxLinux"));
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
+    });
+
+    this.cppApp.on("error", (err) => {
+      console.log("demux err: " + err);
+    });
+
+    this.cppApp.once("exit", (code, signal) => {
+      console.log("exit: " + code + ": Signal: " + signal);
     });
   }
 
@@ -56,8 +65,10 @@ class Radio extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
-    const pipePath = "\\\\.\\pipe\\terpFcCommands";
-    this.commandStream = fs.createWriteStream(pipePath, { encoding: "binary" });
+    const commandPipePath = (os.platform() == "win32") ?
+        "\\\\.\\pipe\\terpFcCommands" :
+        "./build/serial/pipes/terpFcCommands";
+    this.commandStream = fs.createWriteStream(commandPipePath, { encoding: "binary" });
 
     this.commandStream.on("error", (err) => {
       console.error("error writing command to named pipe", err.message);
@@ -65,7 +76,10 @@ class Radio extends EventEmitter {
     this.commandStream.write(port);
 
     // handle telemetry data
-    const pipeStream = fs.createReadStream("\\\\.\\pipe\\terpTelemetry");
+    const telemetyPipePath = (os.platform() == "win32") ?
+        "\\\\.\\pipe\\terpTelemetry" :
+        "./build/serial/pipes/terpTelemetry";
+    const pipeStream = fs.createReadStream(telemetyPipePath);
 
     pipeStream.on("data", (data) => {
       this.chunks3 += data;
@@ -124,7 +138,16 @@ class Radio extends EventEmitter {
 
   reload() {
     //logic for starting the cpp program
-    this.cppApp = spawn("./serial/main.exe");
+    //kill before rest
+    if (this.cppApp) this.cppApp.kill();
+
+    if (os.platform() === "win32") {
+      this.cppApp = spawn("./serial/DemuxWindows.exe");
+    } else if (os.platform() === "linux") {
+      this.cppApp = spawn("./serial/DemuxLinux");
+    } else {
+      console.log("Unsupported Platform!");
+    }
 
     this.cppApp.stdout.on("data", (data) => {
       console.log(`demux stdout: ${data}`);
