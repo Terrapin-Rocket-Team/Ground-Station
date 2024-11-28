@@ -15,7 +15,7 @@ private:
 
 public:
     WinNamedPipe(const char *name, bool create);
-    ~WinNamedPipe();
+    ~WinNamedPipe() override;
 
     int read(void *buffer, int bufferSize) override;
     int write(const void *buffer, int bufferSize) override;

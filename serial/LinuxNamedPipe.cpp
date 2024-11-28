@@ -4,6 +4,7 @@
 
 #include "LinuxNamedPipe.h"
 
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <ostream>
@@ -19,7 +20,7 @@ LinuxNamedPipe::LinuxNamedPipe(const char* name, bool create) : NamedPipe(name) 
         }
     }
 
-    handle = open(name, O_RDWR);
+    handle = open(name, O_RDWR | O_NONBLOCK);
     if(handle == -1) {
         std::cerr << "Error opening named pipe: " << name << std::endl;
     }
@@ -37,6 +38,27 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize) {
     }
 
     return bytesRead;
+}
+
+int LinuxNamedPipe::readStr(char *buffer, int bufferSize) {
+    int bytesRead = 1;
+    int count = 0;
+    while (count < bufferSize && bytesRead > 0)
+    {
+        bytesRead = 0;
+        bytesRead = read(buffer+count, 1);
+        if (buffer[count] == '\n')
+        {
+            buffer[count] = '\0';
+            break;
+        }
+        count += bytesRead;
+    }
+    return count;
+}
+
+int LinuxNamedPipe::writeStr(const char *buffer) {
+    return write(buffer, strlen(buffer));
 }
 
 int LinuxNamedPipe::write(const void *buffer, int bufferSize) {

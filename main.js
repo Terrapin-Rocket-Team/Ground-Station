@@ -588,11 +588,11 @@ ipcMain.on("video-controls", (event, controls) => {
 
 // getters
 ipcMain.handle("get-ports", (event, args) => {
-  return serial.getAvailablePorts();
+  return radio.getAvailablePorts();
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
-  return serial.isConnected();
+  return radio.isConnected();
 });
 
 ipcMain.handle("get-settings", (event, args) => {
@@ -662,7 +662,7 @@ serial.on("error", (message) => {
   log.err("Serial driver error: " + message);
 });
 
-serial.on("close", (path) => {
+radio.on("close", (path) => {
   log.info("Serial disconnected");
   if (!closed && windows.main)
     windows.main.webContents.send("serial-close", path);

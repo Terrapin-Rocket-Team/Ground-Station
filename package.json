@@ -25,7 +25,8 @@
       "packagerConfig": {
         "icon": "build/icons/logo"
       },
-      "makers": []
+      "makers": [
+      ]
     }
   },
   "devDependencies": {
@@ -36,7 +37,7 @@
     "@electron-forge/maker-zip": "^6.4.2",
     "@fiahfy/icns": "^0.0.7",
     "electron": "^26.3.0",
-    "png-to-ico": "^2.1.8",
-    "svg-render": "^2.0.0"
+    "svg-render": "^2.0.0",
+    "png-to-ico": "^2.1.8"
   }
 }
