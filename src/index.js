@@ -780,6 +780,7 @@ window.onload = () => {
     // apogee check
     // don't need to find apogee if it was loaded
     if (!loadedApogee) {
+      // TODO: this can get messed up if the app is reloaded near apogee
       // if the current altitude is greater than the previous, and we're actually in the air (stage > 0)
       if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
         lastAlt = msg.getAlt();
