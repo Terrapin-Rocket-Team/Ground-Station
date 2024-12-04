@@ -2,6 +2,8 @@
 
 rm -rf src
 mkdir -p src
+# electron doesn't like copying pipes, so remove them if they exist
+rm -rf serial/pipes/*
 cd ..
 npx electron-forge package
 mv out/Terp\ Rockets\ Ground\ Station*/* build/src/
