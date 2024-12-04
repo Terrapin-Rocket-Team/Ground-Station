@@ -17,17 +17,15 @@ target_include_directories(DriverShell PUBLIC "${PROJECT_INCLUDE}")
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "MSYS")
     set(CMAKE_CXX_FLAGS "-fPIC -static -static-libgcc -static-libstdc++")
 
-    target_sources(DemuxWindows PUBLIC
+    target_sources(SerialDriver PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}/crossPlatformDemux.cpp;${CMAKE_CURRENT_LIST_DIR}/WinSerialPort.cpp;${CMAKE_CURRENT_LIST_DIR}/WinNamedPipe.cpp")
     target_sources(DriverShell PUBLIC
-        "${CMAKE_CURRENT_LIST_DIR}/demuxShell.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxNamedPipe.cpp;${CMAKE_CURRENT_LIST_DIR}/LinuxSerialPort.cpp")
+        "${CMAKE_CURRENT_LIST_DIR}/demuxShell.cpp;${CMAKE_CURRENT_LIST_DIR}/WinSerialPort.cpp;${CMAKE_CURRENT_LIST_DIR}/WinNamedPipe.cpp")
 
-    target_compile_definitions(DemuxWindows PUBLIC WINDOWS=1)
+    target_compile_definitions(SerialDriver PUBLIC WINDOWS=1)
     target_compile_definitions(DriverShell PUBLIC WINDOWS=1)
-endif ()
-
-if(UNIX AND NOT APPLE)
-
+# if this is not an elseif msys makes cmake think it's building on both windows and linux
+elseif(UNIX AND NOT APPLE)
     add_executable(SerialLinuxTest linuxSerialTest.cpp)
     add_executable(NamedPipeLinuxTest linuxPipeTest.cpp)
 
