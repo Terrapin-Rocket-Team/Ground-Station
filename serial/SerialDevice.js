@@ -30,6 +30,9 @@ class SerialDevice extends EventEmitter {
     this.control = {};
     this.status = {};
 
+    // TODO: don't hardcode debug
+    this.debug = true;
+
     this.chunks3 = "";
 
     this.setupDriver();
@@ -86,12 +89,12 @@ class SerialDevice extends EventEmitter {
    */
   setupDriver() {
     // logic for starting the driver program
-    // TODO: debug mode?
     if (os.platform() === "win32") {
-      // this.driver = spawn(path.join(serialDriverPath, "DemuxWindows.exe"));
-      this.driver = spawn(path.join(serialDriverPath, "DemuxShell.exe"));
+      if (!this.debug) this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
+      else this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
     } else if (os.platform() === "linux") {
-      this.driver = spawn(path.join(serialDriverPath, "DemuxLinux"));
+      if (!this.debug) this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
+      else this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +
