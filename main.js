@@ -15,8 +15,8 @@ const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
 
 const iconPath = path.join(__dirname, "build", "icons");
-const dataPath = path.join(__dirname, "data");
-const logPath = path.join(__dirname, "log");
+const dataPath = "./data";
+const logPath = "./log";
 
 let windows = { main: null, video: null },
   telemSources = [],
@@ -54,7 +54,7 @@ try {
   // load defaults if no config file
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
-    config = JSON.parse(fs.readFileSync("./default-config.json"));
+    config = JSON.parse(fs.readFileSync(path.join(__dirname, "default-config.json")));
     if (config.version !== app.getVersion()) {
       log.warn(
         "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version."
@@ -62,7 +62,7 @@ try {
       // update config file version if app version has changed
       config.version = app.getVersion();
       fs.writeFileSync(
-        "./default-config.json",
+        path.join(__dirname, "default-config.json"),
         JSON.stringify(config, null, "\t")
       );
     }

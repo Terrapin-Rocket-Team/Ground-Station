@@ -4,14 +4,13 @@ CORES=1
 
 mkdir -p serial
 cd serial
+
 rm CMakeCache.txt
 cmake ../../serial
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  cmake --build ./ --target DemuxLinux
-  mkdir pipes
-else
-  cmake --build ./ --target DemuxWindows
+  mkdir -p pipes
 fi
+cmake --build ./
 echo "FINISHED CMAKE BUILD"
 cd ../serial
 cd ..

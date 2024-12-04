@@ -29,8 +29,8 @@ int main(int argc, char **argv)
     pipeStatus = new WinNamedPipe("\\\\.\\pipe\\status", true);
 #elif LINUX
     // THESE PATHS MIGHT BE WRONG!
-    pipeControl = new LinuxNamedPipe("./pipe/control", true);
-    pipeStatus = new LinuxNamedPipe("./pipe/status", true);
+    pipeControl = new LinuxNamedPipe("./build/serial/pipes/control", true);
+    pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true);
 #endif
 
     size_t x;
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 #ifdef WINDOWS
                 teensy = new WinSerialPort(portBuf);
 #elif LINUX
-                teensy = new LinuxSerialPort(strcat("./", portBuf));
+                teensy = new LinuxSerialPort(portBuf);
 #endif
 
                 // attempt to connect
@@ -188,7 +188,8 @@ int main(int argc, char **argv)
                             strcat(pipePath, pipeName);
                             dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
 #elif LINUX
-                            char pipePath[60] = "./pipe/";
+                            // char pipePath[60] = "./pipe/";
+                            char pipePath[60] = "";
                             strcat(pipePath, pipeName);
                             // THESE PATHS MIGHT BE WRONG!
                             dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
