@@ -4,12 +4,12 @@ CORES=1
 
 mkdir -p coders
 cd coders
-if ! [ -d ffmpeg-7.0.1 ] ; then
+if ! command -v ffmpeg  ; then
     curl -LO https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz
     tar -xvf ffmpeg-7.0.1.tar.xz
     rm ffmpeg-7.0.1.tar.xz
 fi
-if ! [ -d dav1d-1.4.2 ] ; then
+if ! command -v dav1d  ; then
     curl -LO https://downloads.videolan.org/pub/videolan/dav1d/1.4.2/dav1d-1.4.2.tar.xz
     tar -xvf dav1d-1.4.2.tar.xz
     rm dav1d-1.4.2.tar.xz
