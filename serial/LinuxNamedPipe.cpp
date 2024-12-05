@@ -17,6 +17,7 @@ LinuxNamedPipe::LinuxNamedPipe(const char *name, bool create) : NamedPipe(name)
     if (strlen(name) > sizeof(addr.sun_path) - 2)
     {
         std::cerr << "Server socket path too long:" << name << std::endl;
+
         return;
     }
     memset(&addr, 0, sizeof(sockaddr_un));
@@ -68,9 +69,10 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize)
     int bytesRead = 0;
     if (handle == -1)
     {
-        pollfd fds;
-        fds.fd = sockFd;
-        fds.events = POLLIN;
+        pollfd fds = {
+            .fd = sockFd,
+            .events = POLLIN,
+        };
         poll(&fds, 1, 0);
         if (fds.revents & POLLIN)
             handle = accept(sockFd, NULL, NULL);
@@ -112,9 +114,10 @@ int LinuxNamedPipe::write(const void *buffer, int bufferSize)
     int bytesWritten = 0;
     if (handle == -1)
     {
-        pollfd fds;
-        fds.fd = sockFd;
-        fds.events = POLLIN;
+        pollfd fds = {
+            .fd = sockFd,
+            .events = POLLIN,
+        };
         poll(&fds, 1, 0);
         if (fds.revents & POLLIN)
             handle = accept(sockFd, NULL, NULL);
