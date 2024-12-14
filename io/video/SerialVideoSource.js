@@ -5,6 +5,7 @@ const { spawn } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 const ffmpegPath =
   os.platform() == "win32"
