@@ -166,6 +166,7 @@ body {
   position: absolute;
   display: flex;
   align-items: center;
+  top: 0;
 }
 
 #team-name-container::after {
