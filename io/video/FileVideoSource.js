@@ -8,7 +8,15 @@ const os = require("node:os");
 
 const ffmpegPath =
   os.platform() == "win32"
-    ? path.join("build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe")
+    ? path.join(
+        __dirname,
+        "..",
+        "..",
+        "build",
+        "coders",
+        "ffmpeg-7.0.1",
+        "ffmpeg.exe"
+      )
     : path.join("/usr", "bin", "ffmpeg");
 
 /**
@@ -43,51 +51,63 @@ class FileVideoSource extends VideoSource {
     );
     this.dataLen = 0;
 
-    // check if rotation should be used
-    if (this.options.rotation === undefined) {
-      // set up ffmpeg instance
-      this.ffmpeg = spawn(ffmpegPath, [
-        "-re",
-        "-framerate",
-        this.options.framerate + "/1",
-        "-i",
-        "-",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "yuv420p",
-        "-s",
-        this.options.resolution.width + "x" + this.options.resolution.height,
-        "-framerate",
-        this.options.framerate + "/1",
-        "-",
-      ]);
-    } else {
-      // find proper rotation for ffmpeg
-      let r = 0;
-      if (this.options.rotation === "ccw") r = 0;
-      else if (this.options.rotation === "cw") r = 1;
-      else throw new Error("Invalid rotation");
+    try {
+      if (fs.existsSync(ffmpegPath)) {
+        // check if rotation should be used
+        if (this.options.rotation === undefined) {
+          // set up ffmpeg instance
+          this.ffmpeg = spawn(ffmpegPath, [
+            "-re",
+            "-framerate",
+            this.options.framerate + "/1",
+            "-i",
+            "-",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "yuv420p",
+            "-s",
+            this.options.resolution.width +
+              "x" +
+              this.options.resolution.height,
+            "-framerate",
+            this.options.framerate + "/1",
+            "-",
+          ]);
+        } else {
+          // find proper rotation for ffmpeg
+          let r = 0;
+          if (this.options.rotation === "ccw") r = 0;
+          else if (this.options.rotation === "cw") r = 1;
+          else throw new Error("Invalid rotation");
 
-      // set up ffmpeg instance
-      this.ffmpeg = spawn(ffmpegPath, [
-        "-re",
-        "-framerate",
-        this.options.framerate + "/1",
-        "-i",
-        "-",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "yuv420p",
-        "-vf",
-        "transpose=" + r,
-        "-s",
-        this.options.resolution.width + "x" + this.options.resolution.height,
-        "-framerate",
-        this.options.framerate + "/1",
-        "-",
-      ]);
+          // set up ffmpeg instance
+          this.ffmpeg = spawn(ffmpegPath, [
+            "-re",
+            "-framerate",
+            this.options.framerate + "/1",
+            "-i",
+            "-",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "yuv420p",
+            "-vf",
+            "transpose=" + r,
+            "-s",
+            this.options.resolution.width +
+              "x" +
+              this.options.resolution.height,
+            "-framerate",
+            this.options.framerate + "/1",
+            "-",
+          ]);
+        }
+      } else {
+        log.err("Failed to locate ffmpeg at path:" + ffmpegPath);
+      }
+    } catch (err) {
+      log.err("Unexpected error when looking for ffmpeg: " + err.message);
     }
 
     // create video log file if necessary
@@ -117,54 +137,62 @@ class FileVideoSource extends VideoSource {
    */
   startOutput() {
     // connect pipes
-    this.o = this.ffmpeg.stdout;
-    this.i.pipe(this.ffmpeg.stdin);
-    // connect video log pipe if necessary
-    if (this.options.createLog && this.dataFile) this.i.pipe(this.dataFile);
+    if (this.ffmpeg !== null) {
+      this.o = this.ffmpeg.stdout;
+      this.i.pipe(this.ffmpeg.stdin);
+      // connect video log pipe if necessary
+      if (this.options.createLog && this.dataFile) this.i.pipe(this.dataFile);
 
-    // handle data output from ffmpeg
-    this.o.on("data", (chunks) => {
-      // this needs to be efficient or ffmpeg runs too slow
-      chunks.copy(this.data, this.dataLen, 0, chunks.length);
-      this.dataLen += chunks.length;
-      if (
-        this.dataLen >
-        (this.options.resolution.width * this.options.resolution.height * 3) / 2
-      ) {
-        this.frames.push(
-          Buffer.from(
-            this.data.subarray(
-              0,
-              (this.options.resolution.width *
-                this.options.resolution.height *
-                3) /
-                2
+      // handle data output from ffmpeg
+      this.o.on("data", (chunks) => {
+        // this needs to be efficient or ffmpeg runs too slow
+        chunks.copy(this.data, this.dataLen, 0, chunks.length);
+        this.dataLen += chunks.length;
+        if (
+          this.dataLen >
+          (this.options.resolution.width * this.options.resolution.height * 3) /
+            2
+        ) {
+          this.frames.push(
+            Buffer.from(
+              this.data.subarray(
+                0,
+                (this.options.resolution.width *
+                  this.options.resolution.height *
+                  3) /
+                  2
+              )
             )
-          )
-        );
-        this.data.copy(
-          this.data,
-          0,
-          (this.options.resolution.width * this.options.resolution.height * 3) /
-            2,
-          this.datalen
-        );
-        this.dataLen -=
-          (this.options.resolution.width * this.options.resolution.height * 3) /
-          2;
-      }
-    });
+          );
+          this.data.copy(
+            this.data,
+            0,
+            (this.options.resolution.width *
+              this.options.resolution.height *
+              3) /
+              2,
+            this.datalen
+          );
+          this.dataLen -=
+            (this.options.resolution.width *
+              this.options.resolution.height *
+              3) /
+            2;
+        }
+      });
 
-    // other event handlers
-    this.o.on("close", () => {
-      this.emit("close");
-    });
+      // other event handlers
+      this.o.on("close", () => {
+        this.emit("close");
+      });
 
-    this.o.on("error", (err) => {
-      this.emit("error", err);
-    });
+      this.o.on("error", (err) => {
+        this.emit("error", err);
+      });
 
-    return this.o;
+      return this.o;
+    }
+    return null;
   }
 
   /**

@@ -35,6 +35,7 @@ class SerialTelemSource extends TextSource {
 
     // create telemtry log file if necessary
     if (this.options.createLog) {
+      // TODO: log raw messages
       const logName = path.join(
         "data",
         this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
@@ -45,7 +46,7 @@ class SerialTelemSource extends TextSource {
     }
 
     this.sd.on(this.name + "-data", (data) => {
-      this.emit("data", data);
+      this.options.parser(data);
       if (this.options.createLog && this.dataFile) {
         // write CSV of data to file
         let obj;

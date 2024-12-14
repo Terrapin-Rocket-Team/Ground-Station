@@ -6,15 +6,18 @@ const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
 
-const ffmpegPath = path.join(
-  __dirname,
-  "..",
-  "..",
-  "build",
-  "coders",
-  "ffmpeg-7.0.1",
-  "ffmpeg.exe"
-);
+const ffmpegPath =
+  os.platform() == "win32"
+    ? path.join(
+        __dirname,
+        "..",
+        "..",
+        "build",
+        "coders",
+        "ffmpeg-7.0.1",
+        "ffmpeg.exe"
+      )
+    : path.join("/usr", "bin", "ffmpeg");
 
 /**
  * A class to stream video from a serial device
