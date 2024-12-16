@@ -33,8 +33,6 @@ class SerialDevice extends EventEmitter {
     // TODO: don't hardcode debug
     this.debug = true;
 
-    this.chunks3 = "";
-
     this.setupDriver();
   }
 
@@ -50,7 +48,7 @@ class SerialDevice extends EventEmitter {
     let connections = 0;
 
     streams.forEach((stream) => {
-      stream.stream.on("connect", () => {
+      stream.on("connect", () => {
         connections++;
         if (connections == len) {
           callback();
@@ -81,7 +79,8 @@ class SerialDevice extends EventEmitter {
    * @param {Writable} outStream the stream to pipe to
    */
   pipe(name, outStream) {
-    this.deviceOutput.find((o) => o.name === name).pipe(outStream);
+    let stream = this.deviceOutput.find((o) => o.name === name);
+    if (stream) stream.stream.pipe(outStream);
   }
 
   /**
@@ -90,10 +89,12 @@ class SerialDevice extends EventEmitter {
   setupDriver() {
     // logic for starting the driver program
     if (os.platform() === "win32") {
-      if (!this.debug) this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
+      if (!this.debug)
+        this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
       else this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
     } else if (os.platform() === "linux") {
-      if (!this.debug) this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
+      if (!this.debug)
+        this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
       else this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
     } else {
       log.err(
@@ -288,9 +289,11 @@ class SerialDevice extends EventEmitter {
   write(name, data) {
     if (this.ready) {
       let stream = this.deviceInput.find((o) => o.name === name);
-      stream.write(data);
+      if (stream) {
+        stream.write(data);
 
-      log.debug("Wrote to stream " + name + ": " + data);
+        log.debug("Wrote to stream " + name + ": " + data);
+      }
     }
   }
 
@@ -326,30 +329,35 @@ class SerialDevice extends EventEmitter {
    * Completely close the serial driver
    */
   close() {
+    if (this.ready) this.control.stream.write("exit\n");
+    else if (this.driver) this.driver.kill();
     this.ready = false;
     this.connected = false;
     this.port = "";
     this.emit("close");
-    if (this.ready) this.control.stream.write("exit\n");
-    else if (this.driver) this.driver.kill();
   }
 
   /**
    * Completely close and then relaunch the serial driver
    */
   reload() {
-    this.ready = false;
-    this.connected = false;
-    this.port = "";
-    this.emit("close");
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
+    this.emit("close");
 
     if (this.ready || this.driver) {
       this.driver.once("exit", () => {
+        this.ready = false;
+        this.connected = false;
+        this.port = "";
         this.setupDriver();
       });
-    } else this.setupDriver();
+    } else {
+      this.ready = false;
+      this.connected = false;
+      this.port = "";
+      this.setupDriver();
+    }
   }
 }
 

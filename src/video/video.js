@@ -20,9 +20,9 @@ window.onload = () => {
     t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
 
   const chartsConfig = [
-    { name: "Avionics Altitude", color: t1Color },
-    { name: "Airbrake Altitude", color: t2Color },
-    { name: "Payload Altitude", color: t3Color },
+    { name: "Avionics", color: t1Color },
+    { name: "Airbrake", color: t2Color },
+    { name: "Payload", color: t3Color },
   ];
 
   //app control button listeners
@@ -136,6 +136,7 @@ window.onload = () => {
       layout = "telemetry-only";
 
     if (layout === "two-video") {
+      // need to move speed gauge to the bottom of the telemetry div for this layout
       telemetry.appendChild(document.getElementById("spd-gauge-container"));
       video0.appendChild(none0);
       video1.appendChild(none1);
@@ -144,6 +145,7 @@ window.onload = () => {
       videoSources.appendChild(charts);
     }
     if (layout === "one-video") {
+      // need to move max alt and speed text to bottom of telemetry div for this layout
       telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(none0);
       videoSources.appendChild(LV0.canvas);
@@ -151,6 +153,7 @@ window.onload = () => {
       videoSources.appendChild(charts);
     }
     if (layout === "telemetry-only") {
+      // need to move max alt and speed text to bottom of telemetry div for this layout
       telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(charts);
       videoSources.appendChild(LV0.canvas);

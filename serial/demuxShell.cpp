@@ -184,7 +184,8 @@ int main(int argc, char **argv)
                             pipeName[indexPos] = '\0';
                             std::cout << "Creating pipe of name: " << pipeName << std::endl;
 #ifdef WINDOWS
-                            char pipePath[60] = "\\\\.\\pipe\\";
+                            // char pipePath[60] = "\\\\.\\pipe\\";
+                            char pipePath[60] = "";
                             strcat(pipePath, pipeName);
                             dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
 #elif LINUX

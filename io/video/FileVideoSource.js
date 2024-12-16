@@ -192,6 +192,7 @@ class FileVideoSource extends VideoSource {
 
       return this.o;
     }
+    console.err("ffmpeg was not initialized properly, cannot start video");
     return null;
   }
 
