@@ -275,7 +275,7 @@ window.onload = () => {
     if (videoControls.layout === "two-video") option = "Full";
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
-    document.getElementById("video-layout-selected").textContent;
+    document.getElementById("video-layout-selected").textContent = option;
     if (videoControls.video0 === "live-video-0") option = "Input 0";
     if (videoControls.video0 === "live-video-1") option = "Input 1";
     if (videoControls.video0 === "charts") option = "Charts";
@@ -293,9 +293,9 @@ window.onload = () => {
 
   // create the charts
   const chartsConfig = [
-    { name: "Avionics Altitude", color: t1Color },
-    { name: "Airbrake Altitude", color: t2Color },
-    { name: "Payload Altitude", color: t3Color },
+    { name: "Avionics", color: t1Color },
+    { name: "Airbrake", color: t2Color },
+    { name: "Payload", color: t3Color },
   ];
   let altG = createChart("alt-graph", "s", "ft", 1, 1, chartsConfig);
   let spdG = createChart("spd-graph", "s", "ft/s", 1, 1, chartsConfig);

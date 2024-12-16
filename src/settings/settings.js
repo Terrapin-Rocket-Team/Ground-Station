@@ -257,7 +257,6 @@ window.onload = () => {
         // setup event listeners and options
         let callback = (idPrefix) => {
           setupStaticOptions(idPrefix, newConfig[key].range, (option) => {
-            newConfig[key].value = option;
             return true;
           });
         };

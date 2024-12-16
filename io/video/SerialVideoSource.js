@@ -131,54 +131,64 @@ class SerialVideoSource extends VideoSource {
    */
   startOutput() {
     //connect pipes
-    this.o = this.ffmpeg.stdout;
-    this.i.pipe(this.name, this.ffmpeg.stdin);
-    // connect video log pipe if necessary
-    if (this.options.createLog && this.dataFile) this.i.pipe(this.dataFile);
+    if (this.ffmpeg !== null) {
+      this.o = this.ffmpeg.stdout;
+      this.i.pipe(this.name, this.ffmpeg.stdin);
+      // connect video log pipe if necessary
+      if (this.options.createLog && this.dataFile)
+        this.i.pipe(this.name, this.dataFile);
 
-    //handle data output from ffmpeg
-    this.o.on("data", (chunks) => {
-      //this needs to be efficient or ffmpeg runs too slow
-      chunks.copy(this.data, this.dataLen, 0, chunks.length);
-      this.dataLen += chunks.length;
-      if (
-        this.dataLen >
-        (this.options.resolution.width * this.options.resolution.height * 3) / 2
-      ) {
-        this.frames.push(
-          Buffer.from(
-            this.data.subarray(
-              0,
-              (this.options.resolution.width *
-                this.options.resolution.height *
-                3) /
-                2
+      //handle data output from ffmpeg
+      this.o.on("data", (chunks) => {
+        //this needs to be efficient or ffmpeg runs too slow
+        chunks.copy(this.data, this.dataLen, 0, chunks.length);
+        this.dataLen += chunks.length;
+        if (
+          this.dataLen >
+          (this.options.resolution.width * this.options.resolution.height * 3) /
+            2
+        ) {
+          this.frames.push(
+            Buffer.from(
+              this.data.subarray(
+                0,
+                (this.options.resolution.width *
+                  this.options.resolution.height *
+                  3) /
+                  2
+              )
             )
-          )
-        );
-        this.data.copy(
-          this.data,
-          0,
-          (this.options.resolution.width * this.options.resolution.height * 3) /
-            2,
-          this.datalen
-        );
-        this.dataLen -=
-          (this.options.resolution.width * this.options.resolution.height * 3) /
-          2;
-      }
-    });
+          );
+          this.data.copy(
+            this.data,
+            0,
+            (this.options.resolution.width *
+              this.options.resolution.height *
+              3) /
+              2,
+            this.datalen
+          );
+          this.dataLen -=
+            (this.options.resolution.width *
+              this.options.resolution.height *
+              3) /
+            2;
+        }
+      });
 
-    // other event handlers
-    this.o.on("close", () => {
-      this.emit("close");
-    });
+      // other event handlers
+      this.o.on("close", () => {
+        this.emit("close");
+      });
 
-    this.o.on("error", (err) => {
-      this.emit("error", err);
-    });
+      this.o.on("error", (err) => {
+        this.emit("error", err);
+      });
 
-    return this.o;
+      return this.o;
+    }
+    console.err("ffmpeg was not initialized properly, cannot start video");
+    return null;
   }
 
   /**

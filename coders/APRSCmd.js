@@ -260,7 +260,7 @@ class APRSCmd {
     let c = APRSCmd.commandList.find((command) => {
       return this.cmd === command.num;
     });
-    return `Device ${this.deviceId} | ${c.name}: ${this.args.toString(16)}`;
+    return `Device ${this.deviceId} | ${c.name}: 0x${this.args.toString(16)}`;
   }
 
   /**
