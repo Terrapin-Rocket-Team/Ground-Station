@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; style-src 'self' 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <link rel="stylesheet" href="streams.css" />
+    <script src="streams.js"></script>
+    <title>Streams</title>
+  </head>
+  <body>
+    <!--Application top bar-->
+    <div id="top-bar">
+      <!--Name and logo-->
+      <div id="top-left">
+        <img src="../images/logo.svg" alt="Logo" />
+        <span>Terp Rockets Ground Station</span>
+      </div>
+      <!--Buttons and application control-->
+      <div id="top-right">
+        <a href="../index.html" id="home" class="top-button"
+          ><img src="../images/home.svg" alt="Home"
+        /></a>
+        <button id="fullscreen" class="top-button" title="Fullscreen">
+          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+        </button>
+        <button id="reload" class="top-button" title="Reload">
+          <img src="../images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="../images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="../images/close.svg" alt="Close" />
+        </button>
+      </div>
+    </div>
+    <!--Contains all elements besides the top bar-->
+    <div id="main">
+      <div class="stream-box" id="stream-1">
+        <div class="stream-box-left">
+          <span class="stream-input-label">Stream Name</span>
+          <input type="text" class="stream-name" id="stream-1-name" />
+          <span class="stream-input-label">Stream Type</span>
+          <div class="dropdown stream-type" id="stream-1-type-drop">
+            <span id="stream-1-type-selected">Select Type</span>
+            <img
+              src="../images/arrow_right.svg"
+              alt=">"
+              id="serial-arrow"
+              class="drop-arrow"
+            />
+            <div class="options" id="stream-1-type-options"></div>
+          </div>
+          <span class="stream-input-label">Stream ID</span>
+          <input type="number" class="stream-id" id="stream-1-id" />
+        </div>
+        <div class="stream-box-right">
+          <button id="move-up-1" title="Move Up">
+            <img
+              src="../images/arrow_up.svg"
+              alt="Move up"
+              class="stream-button-img"
+            />
+          </button>
+          <button id="move-down-1" title="Move Down">
+            <img
+              src="../images/arrow_down.svg"
+              alt="Move Down"
+              class="stream-button-img"
+            />
+          </button>
+          <button id="remove-1">
+            <img
+              src="../images/close.svg"
+              alt="Remove"
+              class="stream-button-img"
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
