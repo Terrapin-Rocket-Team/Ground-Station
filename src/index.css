@@ -101,10 +101,10 @@ body {
 
 img.drop-arrow {
   position: absolute;
-  transform: translate(0, -40%);
+  transform: translate(0, -50%);
   top: 50%;
   right: min(1vw, 5px);
-  height: 50%;
+  height: 35%;
 }
 
 .options {

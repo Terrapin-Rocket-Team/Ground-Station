@@ -203,19 +203,12 @@ class SerialDevice extends EventEmitter {
 
             // write the names of all the command pipes
             for (let i = 0; i < this.inputStreamNames.length; i++) {
-              this.control.stream.write(
-                this.inputStreamNames[i] + " " + i + "\n"
-              );
+              this.control.stream.write(this.inputStreamNames[i] + "\n");
             }
 
             // write the names of all the telemetry pipes
             for (let i = 0; i < this.outputStreamNames.length; i++) {
-              this.control.stream.write(
-                this.outputStreamNames[i] +
-                  " " +
-                  (i + this.inputStreamNames.length) +
-                  "\n"
-              );
+              this.control.stream.write(this.outputStreamNames[i] + "\n");
             }
 
             // wait for all the pipes to successfully be created

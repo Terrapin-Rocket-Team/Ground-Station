@@ -10,6 +10,8 @@ public:
     static const int maxMsgLen = 67;
     // the maximum length of the addressee portion
     static const int maxAddrLen = 9;
+    // APRSText type
+    static const uint8_t TYPE = 0x01;
     // the message buffer, 67 message length + 1 for \0
     char msg[maxMsgLen + 1] = {0};
     // the addressee buffer, 9 addressee length + 1 for \0

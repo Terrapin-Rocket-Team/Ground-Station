@@ -7,12 +7,25 @@ GSData::GSData(uint8_t streamIndex, uint8_t *buf, uint16_t size) : index(streamI
     this->fill(buf, size);
 }
 
-bool GSData::decodeHeader(uint16_t header, uint8_t &streamIndex, uint16_t &size)
+bool GSData::decodeHeader(uint32_t header, uint8_t &streamType, uint8_t &streamIndex, uint16_t &size)
 {
-    // header will be 0xLNMP so >> 12 to get 0x0L
-    streamIndex = header >> 12;
-    // then 0xLNMP & 0x0FFF to get 0x0NMP
-    size = header & 0x0FFF;
+    // header will be TISSss so >> 20 to get 0x0T
+    streamType = header >> 20;
+    // >> 16 to get 0xTI and & 0xF to get 0x0I
+    streamIndex = (header >> 16) & 0x0F;
+    // then & 0xFFFF to get SSss
+    size = header & 0xFFFF;
+    return true;
+}
+
+bool GSData::decodeHeader(uint8_t *header, uint8_t &streamType, uint8_t &streamIndex, uint16_t &size)
+{
+    // header will be TISSss so 0 is TI, so >> 4 to get 0x0T
+    streamType = header[0] >> 4;
+    // and & 0x0F to get 0x0I
+    streamIndex = header[0] & 0x0F;
+    // then SSss is in 1 and 2, so need to << 8 header[1] to make it 0xSS00, then add header[2]
+    size = (header[1] << 8) + header[2];
     return true;
 }
 
@@ -23,11 +36,17 @@ uint16_t GSData::encode(uint8_t *data, uint16_t size)
         return 0; // error not enough space for message
 
     // header
-    // index will be 0x0L so << 4 to make it 0xL0
-    // size will be 0x0NMP so >> 8 to get 0x000N
+    // TISSss
+    // T = type
+    // I = index
+    // Ss = size
+    // type will be 0x0T so << 4 to make it 0xT0
+    // index will be 0x0I so just add
     // then add to get 0xLN
-    data[pos++] = (this->index << 4) + (this->size >> 8);
-    // size will be 0x0NMP so & 0x00FF to get 0x00MP
+    data[pos++] = (this->index << 4) + (this->index);
+    // size will be 0xSSss so >> 8 to get 0x00SS
+    data[pos++] = this->size >> 8;
+    // size will be 0xSSss so & 0x00FF to get 0x00ss
     data[pos++] = this->size & 0x00FF;
 
     // body
@@ -43,12 +62,16 @@ uint16_t GSData::decode(uint8_t *data, uint16_t size)
         return 0; // error data too big
 
     // header
-    // first byte will be 0xLN so >> 4 to get 0x0L
-    this->index = data[pos] >> 4; // don't shift because the other half of the byte is size info
-    // still first byte, will be 0xLN so & 0x0F to get 0x0N, then << 8 to get 0x0N00
-    this->size = (data[pos++] & 0x0F) << 8;
-    // next byte is 0xMP, which is exactly what we need, so just add to get 0x0NMP
-    this->size += data[pos++];
+    // TISSss
+    // T = type
+    // I = index
+    // Ss = size
+    // 0 is 0xTI, so >> 4 to get 0x0T
+    this->type = data[pos] >> 4;
+    // and & 0x0F to get 0x0I
+    this->index = data[pos++] & 0x0F;
+    // then SSss is in 1 and 2, so need to << 8 header[1] to make it 0xSS00, then add header[2]
+    this->size = (data[pos++] << 8) + data[pos++];
 
     // body
     memcpy(this->buf, data + pos, size - pos);

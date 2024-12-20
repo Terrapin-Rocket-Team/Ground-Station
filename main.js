@@ -21,7 +21,7 @@ const logPath = "./log";
 let windows = { main: null, video: null },
   telemSources = [],
   videoSources = [],
-  commandSink,
+  commandSinks = [],
   config,
   cacheMeta,
   closed,
@@ -54,7 +54,9 @@ try {
   // load defaults if no config file
   log.warn('Failed to load config file, using defaults: "' + err.message + '"');
   try {
-    config = JSON.parse(fs.readFileSync(path.join(__dirname, "default-config.json")));
+    config = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "default-config.json"))
+    );
     if (config.version !== app.getVersion()) {
       log.warn(
         "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version."
@@ -126,6 +128,56 @@ try {
   log.err("Failed to create output folders: " + err.message);
 }
 
+const loadStreams = () => {
+  config.streams.forEach((stream) => {
+    if (stream.type === "APRSTelem") {
+      telemSources.push(
+        new SerialTelemSource(`${stream.name}-${stream.id}`, {
+          parser: (data) => {
+            let telem = new APRSTelem(data);
+            log.info(telem);
+            if (windows.main) windows.main.webContents.send("data", telem);
+            if (windows.video) windows.video.webContents.send("data", telem);
+          },
+          createLog: true,
+        })
+      );
+    }
+    if (stream.type === "APRSCmd") {
+      commandSinks.push(
+        new SerialCommandSink(`${stream.name}-${stream.id}`, {
+          createLog: true,
+        })
+      );
+    }
+    if (stream.type === "Metrics") {
+      telemSources.push(
+        new SerialTelemSource(`${stream.name}-${stream.id}`, {
+          parser: (data) => {
+            let telem = new Metrics(data);
+            log.info(telem);
+            if (windows.main) windows.main.webContents.send("data", telem);
+            if (windows.video) windows.video.webContents.send("data", telem);
+          },
+          isMetrics: true,
+          createLog: true,
+        })
+      );
+    }
+    if (stream.type === "video" && config.video.value) {
+      videoSources.push(
+        new SerialVideoSource(`${stream.name}-${stream.id}`, {
+          resolution: { width: 640, height: 832 },
+          framerate: 30,
+          rotation: "cw",
+          createLog: true,
+          createDecoderLog: config.debug.value,
+        })
+      );
+    }
+  });
+};
+
 // creates the main electron window
 const createMain = () => {
   const width = 1200,
@@ -193,55 +245,8 @@ const createMain = () => {
 
   // only create serial streams if not in debug mode
   // may want to change how this works so we can use debug statements and still test serial connection things
+  loadStreams();
   if (!config.debug.value) {
-    const ts1 = new SerialTelemSource("telem-avionics", {
-      parser: (data) => {
-        let telem = new APRSTelem(data);
-        log.info(telem);
-        if (windows.main) windows.main.webContents.send("data", telem);
-        if (windows.video) windows.video.webContents.send("data", telem);
-      },
-      createLog: true,
-    });
-
-    const ts2 = new SerialTelemSource("telem-airbrake", {
-      parser: (data) => {
-        let telem = new APRSTelem(data);
-        log.info(telem);
-        if (windows.main) windows.main.webContents.send("data", telem);
-        if (windows.video) windows.video.webContents.send("data", telem);
-      },
-      createLog: true,
-    });
-
-    const ts3 = new SerialTelemSource("telem-payload", {
-      parser: (data) => {
-        let telem = new APRSTelem(data);
-        log.info(telem);
-        if (windows.main) windows.main.webContents.send("data", telem);
-        if (windows.video) windows.video.webContents.send("data", telem);
-      },
-      createLog: true,
-    });
-
-    const metrics = new SerialTelemSource("metrics", {
-      parser: (data) => {
-        let telem = new Metrics(data);
-        log.info(telem);
-        if (windows.main) windows.main.webContents.send("data", telem);
-        if (windows.video) windows.video.webContents.send("data", telem);
-      },
-      isMetrics: true,
-      createLog: true,
-    });
-
-    // add everything to an array for later
-    telemSources.push(ts1);
-    telemSources.push(ts2);
-    telemSources.push(ts3);
-    telemSources.push(metrics);
-
-    commandSink = new SerialCommandSink("command", { createLog: true });
   }
 
   log.debug("Main window created");
@@ -302,28 +307,6 @@ const createVideo = () => {
       isFullscreen: false,
     });
   });
-
-  // only create serial video streams if not in debug mode
-  if (!config.debug.value) {
-    const vs1 = new SerialVideoSource("arc-0", {
-      resolution: { width: 640, height: 832 },
-      framerate: 30,
-      rotation: "cw",
-      createLog: true,
-      createDecoderLog: config.debug.value,
-    });
-
-    const vs2 = new SerialVideoSource("arc-1", {
-      resolution: { width: 640, height: 832 },
-      framerate: 30,
-      rotation: "cw",
-      createLog: true,
-      createDecoderLog: config.debug.value,
-    });
-
-    videoSources.push(vs1);
-    videoSources.push(vs2);
-  }
 
   log.debug("Live stream window created");
 };
@@ -411,11 +394,12 @@ ipcMain.on("dev-tools", (event, args) => {
 });
 
 // backend interfaces
-ipcMain.on("send-command", (event, command) => {
+ipcMain.on("send-command", (event, command, sinkId) => {
+  // TODO: is this necessary?
   for (let i = 0; i < command.length; i++) {
     if (command[i] === "") command[i] = 255;
   }
-  if (commandSink) commandSink.write(command);
+  if (commandSinks[sinkId]) commandSinks[sinkId].write(command);
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
@@ -609,6 +593,10 @@ ipcMain.handle("reset-settings", (event) => {
   }
 });
 
+ipcMain.handle("get-streams", (event, args) => {
+  return config.streams;
+});
+
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
@@ -653,6 +641,20 @@ ipcMain.on("update-settings", (event, settings) => {
       log.debug("Successfully updated settings");
     } catch (err) {
       log.err('Failed to update settings: "' + err.message + '"');
+    }
+  }
+});
+
+ipcMain.on("set-streams", (event, streams) => {
+  if (streams) {
+    config.streams = streams;
+    loadStreams();
+    try {
+      // write the new settings to the file
+      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+      log.debug("Successfully updated stream settings");
+    } catch (err) {
+      log.err('Failed to update stream settings: "' + err.message + '"');
     }
   }
 });

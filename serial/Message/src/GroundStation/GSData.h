@@ -7,23 +7,29 @@ class GSData : public Data
 {
 public:
     // maximum total message size
-    static const uint16_t maxSize = 0x0FFF;
+    static const uint16_t maxSize = 0xFFFF;
     // size of the header
-    static const uint8_t headerLen = 2;
+    static const uint8_t headerLen = 3;
     // maximum size of the data
     static const uint16_t maxDataSize = maxSize - headerLen;
+    // GSData type
+    static const uint8_t TYPE = 0x00;
 
-    // type of message, first byte of header, 0x00 is default, max is 16
+    // type of message, first byte of header, must be given by Data subclass, max 0xF
+    uint8_t type = 0x00;
+    // the multiplexing id of the message, max 0xF
     uint8_t index = 0x00;
     // size of message, second and third bytes of header
-    uint16_t size = 0x0000; // length of the message (2^12 = 4096 btyes should be enough)
+    uint16_t size = 0x0000; // length of the message (65535 btyes should be enough :)
     // buffer to store message data (not including header)
     uint8_t buf[maxDataSize] = {0}; // leave space for header
 
     // GSData default constructor
     GSData() {};
 
-    static bool decodeHeader(uint16_t header, uint8_t &streamIndex, uint16_t &size);
+    static bool decodeHeader(uint32_t header, uint8_t &streamType, uint8_t &streamIndex, uint16_t &size);
+    // header assumed to contain 3 bytes
+    static bool decodeHeader(uint8_t *header, uint8_t &streamType, uint8_t &streamIndex, uint16_t &size);
 
     // GSData constructor
     // - type : the type of the message

@@ -15,6 +15,8 @@ using namespace std;
 class Data
 {
 public:
+    static const uint8_t TYPE;
+
     virtual ~Data() {}; // Virtual descructor. Very important
     // encode the data stored in the ```Data``` object and place the result in ```data```, ```sz``` is the max size of ```data```
     virtual uint16_t encode(uint8_t *data, uint16_t sz) = 0;
