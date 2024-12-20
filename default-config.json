@@ -1,5 +1,6 @@
 {
 	"version": "2.0.0",
+	"general": {
 	"scale": {
 		"name": "Main Window Scale",
 		"description": "Changes the scale of the debug window for different sized screens.",
@@ -39,4 +40,12 @@
 		"type": "number",
 		"range": [0, -1]
 	}
+	},
+	"streams": [
+		{
+			"name": "test",
+			"type": "APRSTelem",
+			"id": 1
+		}
+	]
 }

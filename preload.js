@@ -88,7 +88,8 @@ class API extends EventEmitter {
     this.devTools = () => ipcRenderer.send("dev-tools");
 
     // backend interfaces
-    this.sendCommand = (command) => ipcRenderer.send("send-command", command);
+    this.sendCommand = (command, sinkId) =>
+      ipcRenderer.send("send-command", command, sinkId);
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
     this.closePort = () => ipcRenderer.send("close-port");
@@ -101,11 +102,13 @@ class API extends EventEmitter {
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
     this.resetSettings = () => ipcRenderer.invoke("reset-settings");
+    this.getStreams = () => ipcRenderer.invoke("get-streams");
     this.getVideo = () => ipcRenderer.invoke("get-video");
 
     // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
+    this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
   }
 }
 

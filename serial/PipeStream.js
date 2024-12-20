@@ -16,14 +16,13 @@ class PipeStream {
       pipePathBase = "\\\\.\\pipe\\"; // windows named pipe path
     } else if (os.platform() === "linux") {
       // pipePathBase = '\0'; // abstract unix pipe prefix
-      pipePathBase = path.join(__dirname, "../", "build", "serial", "pipes") + "/"; // temp store on file system since electron breaks abstract pipes
-    }   
-    
-    
+      pipePathBase =
+        path.join(__dirname, "../", "build", "serial", "pipes") + "/"; // temp store on file system since electron breaks abstract pipes
+    }
+
     this.stream = null;
     this.name = name;
     this.path = pipePathBase + name; // need to add (not path.join()) because pipePathBase on linux is just a prefix and not the root path
-
 
     // create a new net socket (fs locks up when trying to connect to too many pipes on Windows)
     this.stream = net.connect(this.path, () => {
@@ -45,8 +44,7 @@ class PipeStream {
    * @param {Function} listener the callback to when the event fires
    */
   on(eventName, listener) {
-    if (this.stream != null)
-    this.stream.on(eventName, listener);
+    if (this.stream != null) this.stream.on(eventName, listener);
   }
 
   /**

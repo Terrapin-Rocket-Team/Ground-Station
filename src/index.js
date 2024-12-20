@@ -436,7 +436,7 @@ window.onload = () => {
     previousCommands.appendChild(span);
 
     // send command to backend
-    api.sendCommand(command);
+    api.sendCommand(command, 0); // first command sink (0) temporarily hardcoded until support for more is needed
   });
 
   /// middle/data display

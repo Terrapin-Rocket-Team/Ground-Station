@@ -8,6 +8,9 @@ class VideoData : public Data
 public:
     // the maximum size of the data
     static const uint16_t maxSize = 2000;
+    // VideoData type
+    static const uint8_t TYPE = 0x04;
+
     // the size of the data
     uint16_t size = 0;
     // buffer to store the data
