@@ -21,6 +21,8 @@ public:
     // the length of the addressee buffer
     int addrLen = 0;
 
+    APRSText() : APRSData() {};
+
     // APRSText constructor
     // - config : the APRS config to use
     APRSText(APRSConfig config);

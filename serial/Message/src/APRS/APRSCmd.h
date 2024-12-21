@@ -16,6 +16,8 @@ public:
     // args for cmd
     uint16_t args = 0x0000;
 
+    APRSCmd() : APRSData() {};
+
     // APRSCmd constructor
     // - config : the APRS config to use
     APRSCmd(APRSConfig config);

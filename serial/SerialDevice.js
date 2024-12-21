@@ -73,6 +73,19 @@ class SerialDevice extends EventEmitter {
     this.outputStreamNames.push(name);
   }
 
+  clearStreams() {
+    let stream;
+    while ((stream = this.deviceInput.pop())) {
+      stream.close();
+    }
+    while ((stream = this.deviceOutput.pop())) {
+      stream.close();
+    }
+
+    this.inputStreamNames = [];
+    this.outputStreamNames = [];
+  }
+
   /**
    * Wrapper to pipe an output PipeStream to another stream
    * @param {String} name the name of the output PipeStream
@@ -193,13 +206,8 @@ class SerialDevice extends EventEmitter {
             this.control.stream.write("data pipes\n");
 
             // write the total number of pipes
-            this.control.stream.write(
-              this.outputStreamNames.length +
-                this.inputStreamNames.length +
-                "\n"
-            );
-
-            // TODO: need to figure out how to tell the driver how to hook up all these pipes to radios
+            this.control.stream.write(this.inputStreamNames.length + "\n");
+            this.control.stream.write(this.outputStreamNames.length + "\n");
 
             // write the names of all the command pipes
             for (let i = 0; i < this.inputStreamNames.length; i++) {
@@ -248,6 +256,7 @@ class SerialDevice extends EventEmitter {
                     this.deviceInput.concat(this.deviceOutput),
                     () => {
                       // resolve the promise
+                      this.control.stream.write("interface ready\n");
                       this.emit("connected");
                       this.connected = true;
                       res(1);
@@ -255,6 +264,7 @@ class SerialDevice extends EventEmitter {
                   );
                 } else {
                   // otherwise resolve the promise
+                  this.control.stream.write("interface ready\n");
                   this.emit("connected");
                   this.connected = true;
                   res(1);

@@ -25,6 +25,8 @@ public:
     uint32_t stateFlags = 0x00000000;   // flight computer specific state flags (max 32 bits)
                                         // maybe a bit much, but we can fit a lot of info here
 
+    APRSTelem() : APRSData() {};
+
     // APRSTelem constructor
     // - config : the APRS config to use
     APRSTelem(APRSConfig config);

@@ -2,7 +2,7 @@
 // Created by ramykaddouri on 10/19/24.
 //
 
-#define LINUX 1
+// #define LINUX 1
 
 #ifdef WINDOWS
 #include <WinSerialPort.h>
@@ -11,6 +11,8 @@
 #elif LINUX
 #include <LinuxNamedPipe.h>
 #include <LinuxSerialPort.h>
+#include <unistd.h>
+
 #endif
 #include <cstring>
 #include <iostream>
@@ -22,11 +24,17 @@
 int main(int argc, char **argv)
 {
     unsigned char data[MAX_DATA_LENGTH];
+    int dataHandled = 0;
     NamedPipe *pipeControl;
     NamedPipe *pipeStatus;
-    NamedPipe **dataPipes = nullptr;
+    NamedPipe **inputPipes = nullptr;
+    NamedPipe **outputPipes = nullptr;
     uint8_t *pipeDemuxIds = nullptr;
-    int numPipes = 0;
+    int numInputPipes = 0;
+    int numOutputPipes = 0;
+    int numTotalPipes = 0;
+
+    bool ready = false;
 
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
@@ -44,11 +52,11 @@ int main(int argc, char **argv)
     // size_t packetSize = 0;
     // size_t packetidx = 0;
     // bool packetSizeFound = false;
-    // size_t maxChunkSize = 1024 * 16;
+    const size_t maxChunkSize = 1024 * 16;
     // char chunks1[maxChunkSize];
     // char chunks2[maxChunkSize];
     // char chunks3[maxChunkSize];
-    // char chunkIn[7];
+    // char chunkIn[maxChunkSize];
 
     // size_t chunks1top = 0;
     // size_t chunks2top = 0;
@@ -65,8 +73,12 @@ int main(int argc, char **argv)
     uint8_t msgIndex = 0;
     uint16_t msgSize = 0;
 
+    char outStr[maxChunkSize] = {0};
+    char inStr[maxChunkSize] = {0};
+
     Message m;
     Message mOut;
+    Message mIn;
 
     GSData rawData;
 
@@ -80,11 +92,13 @@ int main(int argc, char **argv)
     while (!exit)
     {
         memset(controlStr, 0, sizeof(controlStr));
+
         if (pipeControl->readStr(controlStr, sizeof(controlStr)) > 0)
         {
             std::cout << controlStr << std::endl;
             if (strcmp(controlStr, "close") == 0)
             {
+                ready = false;
                 // close the serial connection
                 if (device != nullptr)
                 {
@@ -94,6 +108,7 @@ int main(int argc, char **argv)
             }
             if (strcmp(controlStr, "reset") == 0)
             {
+                ready = false;
 
                 if (device != nullptr)
                 {
@@ -147,81 +162,160 @@ int main(int argc, char **argv)
             }
             if (strcmp(controlStr, "data pipes") == 0)
             {
-                bool gotNumPipes = false;
-                char numPipesStr[3] = {0};
-                while (!gotNumPipes)
+                // get number of input pipes
+                bool gotNumInputPipes = false;
+                char numInputPipesStr[3] = {0};
+                while (!gotNumInputPipes)
                 {
-                    memset(numPipesStr, 0, sizeof(numPipesStr));
-                    if (pipeControl->readStr(numPipesStr, sizeof(numPipesStr)) > 0)
+                    memset(numInputPipesStr, 0, sizeof(numInputPipesStr));
+                    if (pipeControl->readStr(numInputPipesStr, sizeof(numInputPipesStr)) > 0)
                     {
-                        numPipesStr[sizeof(numPipesStr) - 1] = '\0';
-                        std::cout << "Received num pipes: " << numPipesStr << std::endl;
-                        gotNumPipes = true;
+                        numInputPipesStr[sizeof(numInputPipesStr) - 1] = '\0';
+                        std::cout << "Received num pipes: " << numInputPipesStr << std::endl;
+                        gotNumInputPipes = true;
                     }
                 }
 
-                if (dataPipes != nullptr)
+                // get number of output pipes
+                bool gotNumOutputPipes = false;
+                char numOutputPipesStr[3] = {0};
+                while (!gotNumOutputPipes)
                 {
-                    for (int i = 0; i < numPipes; i++)
+                    memset(numOutputPipesStr, 0, sizeof(numOutputPipesStr));
+                    if (pipeControl->readStr(numOutputPipesStr, sizeof(numOutputPipesStr)) > 0)
                     {
-                        delete dataPipes[i];
+                        numOutputPipesStr[sizeof(numOutputPipesStr) - 1] = '\0';
+                        std::cout << "Received num pipes: " << numOutputPipesStr << std::endl;
+                        gotNumOutputPipes = true;
                     }
-                    delete[] dataPipes;
-                    dataPipes = nullptr;
                 }
+
+                // delete existing input and output pipes
+                if (inputPipes != nullptr)
+                {
+                    for (int i = 0; i < numInputPipes; i++)
+                    {
+                        delete inputPipes[i];
+                    }
+                    delete[] inputPipes;
+                    inputPipes = nullptr;
+                }
+                if (outputPipes != nullptr)
+                {
+                    for (int i = 0; i < numOutputPipes; i++)
+                    {
+                        delete outputPipes[i];
+                    }
+                    delete[] outputPipes;
+                    outputPipes = nullptr;
+                }
+
                 if (pipeDemuxIds != nullptr)
                 {
                     delete[] pipeDemuxIds;
                     pipeDemuxIds = nullptr;
                 }
-                numPipes = atoi(numPipesStr);
-                if (numPipes > 0)
+
+                numInputPipes = atoi(numInputPipesStr);
+                numOutputPipes = atoi(numOutputPipesStr);
+                numTotalPipes = numInputPipes + numOutputPipes;
+
+                if (numTotalPipes > 0)
                 {
-                    dataPipes = new NamedPipe *[numPipes];
-                    pipeDemuxIds = new uint8_t[numPipes];
+                    inputPipes = new NamedPipe *[numInputPipes];
+                    outputPipes = new NamedPipe *[numOutputPipes];
+                    pipeDemuxIds = new uint8_t[numTotalPipes];
 
                     int gotPipeNames = 0;
+                    int gotInputPipeNames = 0;
+                    int gotOutputPipeNames = 0;
                     char pipeName[50] = {0};
-                    while (gotPipeNames < numPipes)
+
+                    // input pipes will be given first
+                    while (gotPipeNames < numTotalPipes)
                     {
-                        memset(pipeName, 0, sizeof(pipeName));
-                        if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
+                        while (gotInputPipeNames < numInputPipes)
                         {
-                            pipeName[sizeof(pipeName) - 1] = '\0';
-                            int indexPos = 0;
-                            for (int i = 0; i < strlen(pipeName); i++)
+                            memset(pipeName, 0, sizeof(pipeName));
+                            if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
                             {
-                                if (pipeName[i] == '-')
-                                    indexPos = i;
-                            }
+                                pipeName[sizeof(pipeName) - 1] = '\0';
+                                int indexPos = 0;
+                                for (int i = 0; i < strlen(pipeName); i++)
+                                {
+                                    if (pipeName[i] == '-')
+                                        indexPos = i;
+                                }
 
-                            int pipeId = atoi(pipeName + indexPos + 1);
-                            std::cout << pipeId << std::endl;
-                            pipeDemuxIds[gotPipeNames] = pipeId;
+                                int pipeId = atoi(pipeName + indexPos + 1);
+                                std::cout << pipeId << std::endl;
+                                pipeDemuxIds[gotPipeNames] = pipeId;
 
-                            // pipeName[indexPos] = '\0';
-                            std::cout << "Creating pipe of name: " << pipeName << std::endl;
+                                // pipeName[indexPos] = '\0';
+                                std::cout << "Creating pipe of name: " << pipeName << std::endl;
 #ifdef WINDOWS
-                            // char pipePath[60] = "\\\\.\\pipe\\";
-                            char pipePath[60] = "";
-                            strcat(pipePath, pipeName);
-                            dataPipes[gotPipeNames++] = new WinNamedPipe(pipePath, true);
+                                // char pipePath[60] = "\\\\.\\pipe\\";
+                                char pipePath[60] = "";
+                                strcat(pipePath, pipeName);
+                                inputPipes[gotInputPipeNames++] = new WinNamedPipe(pipePath, true);
 #elif LINUX
-                            char pipePath[60] = "./build/serial/pipes/";
-                            // char pipePath[60] = "";
-                            strcat(pipePath, pipeName);
-                            // THESE PATHS MIGHT BE WRONG!
-                            dataPipes[gotPipeNames++] = new LinuxNamedPipe(pipePath, true);
+                                char pipePath[60] = "./build/serial/pipes/";
+                                // char pipePath[60] = "";
+                                strcat(pipePath, pipeName);
+                                // THESE PATHS MIGHT BE WRONG!
+                                inputPipes[gotInputPipeNames++] = new LinuxNamedPipe(pipePath, true);
 #endif
+                                gotPipeNames++;
+                            }
+                        }
+
+                        while (gotOutputPipeNames < numOutputPipes)
+                        {
+                            memset(pipeName, 0, sizeof(pipeName));
+                            if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
+                            {
+                                pipeName[sizeof(pipeName) - 1] = '\0';
+                                int indexPos = 0;
+                                for (int i = 0; i < strlen(pipeName); i++)
+                                {
+                                    if (pipeName[i] == '-')
+                                        indexPos = i;
+                                }
+
+                                int pipeId = atoi(pipeName + indexPos + 1);
+                                std::cout << pipeId << std::endl;
+                                pipeDemuxIds[gotPipeNames] = pipeId;
+
+                                // pipeName[indexPos] = '\0';
+                                std::cout << "Creating pipe of name: " << pipeName << std::endl;
+#ifdef WINDOWS
+                                // char pipePath[60] = "\\\\.\\pipe\\";
+                                char pipePath[60] = "";
+                                strcat(pipePath, pipeName);
+                                outputPipes[gotOutputPipeNames++] = new WinNamedPipe(pipePath, true);
+#elif LINUX
+                                char pipePath[60] = "./build/serial/pipes/";
+                                // char pipePath[60] = "";
+                                strcat(pipePath, pipeName);
+                                // THESE PATHS MIGHT BE WRONG!
+                                outputPipes[gotOutputPipeNames++] = new LinuxNamedPipe(pipePath, true);
+#endif
+                                gotPipeNames++;
+                            }
                         }
                     }
                     std::cout << "Pipe Demux Ids: " << std::endl;
-                    for (int i = 0; i < numPipes; i++)
+                    for (int i = 0; i < numTotalPipes; i++)
                     {
                         std::cout << (int)pipeDemuxIds[i] << std::endl;
                     }
                 }
                 pipeStatus->writeStr("pipe creation successful");
+            }
+            if (strcmp(controlStr, "interface ready") == 0)
+            {
+                std::cout << "interface ready" << std::endl;
+                ready = true;
             }
             if (strcmp(controlStr, "connected") == 0)
             {
@@ -237,285 +331,236 @@ int main(int argc, char **argv)
             if (strcmp(controlStr, "exit") == 0)
             {
                 std::cout << "exiting" << std::endl;
+                ready = false;
                 exit = true;
             }
         }
 
         // TODO: add a handshake sequence, i.e. make sure both sides are ready before sending/looking for data
-        if (device->isConnected())
+        if (ready && device != nullptr && device->isConnected())
         {
             x = device->readSerialPort(data, MAX_DATA_LENGTH);
+            dataHandled = 0;
 
-            // check if we need to find the header
-            if (!headerFound)
+            while (dataHandled < x)
             {
-                // copy up to 5 bytes into header
-                for (int i = 0; i < x; i++)
+                // check if we need to find the header
+                if (!headerFound)
                 {
-                    header[headerSize] = data[i];
-                    headerSize++;
-                    if (headerSize == 5)
-                        break;
+                    // copy up to headerLen bytes into header
+                    for (int i = 0; i < x; i++)
+                    {
+                        header[headerSize] = data[i];
+                        headerSize++;
+                        if (headerSize == GSData::headerLen)
+                            break;
+                    }
+
+                    // if we have 5 bytes in the header we've found the header
+                    if (headerSize == GSData::headerLen)
+                    {
+
+                        GSData::decodeHeader(header, msgType, msgIndex, msgSize); // TODO: I think something in header decoding is wrong
+                        std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
+                        if (msgType > 0 && msgIndex > 0 && msgSize > 0)
+                        {
+                            headerFound = true;
+                        }
+                        else
+                        {
+                            std::cout << "Error parsing header, at least one field was not set correctly" << std::endl;
+                        }
+                        memset(header, 0, sizeof(header));
+                        headerSize = 0;
+                    }
+
+                    // append the read data to the message
+                    std::cout << x - dataHandled << std::endl;
+                    if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
+                    {
+                        m.append(data + dataHandled, x - dataHandled);
+                        dataHandled += x - dataHandled;
+                        std::cout << m.size << std::endl;
+                    }
+                    else if (x - dataHandled > 0 && m.size < msgSize + GSData::headerLen && m.size + x - dataHandled > msgSize + GSData::headerLen)
+                    {
+                        int toCopy = msgSize + GSData::headerLen - m.size;
+                        m.append(data + dataHandled, toCopy);
+                        dataHandled += toCopy;
+                    }
+                }
+                // we found the header
+                if (headerFound)
+                {
+                    // append the read data to the message
+                    if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
+                    {
+                        m.append(data + dataHandled, x - dataHandled);
+                        dataHandled += x - dataHandled;
+                    }
+                    else if (x - dataHandled > 0 && m.size + x - dataHandled > msgSize + GSData::headerLen)
+                    {
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << " and got size: " << m.size << std::endl;
+                        int toCopy = msgSize + GSData::headerLen - m.size;
+                        m.append(data + dataHandled, toCopy);
+                        dataHandled += toCopy;
+                    }
+
+                    if (m.size > msgSize + GSData::headerLen)
+                    {
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << m.size << std::endl;
+                    }
+
+                    if (x - dataHandled == 0 && m.size < msgSize + GSData::headerLen)
+                    {
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << m.size << std::endl;
+                    }
+
+                    // if the message size (which includes the GSData)
+                    // is the same as the payload size + the header then we read the whole message
+                    if (m.size == msgSize + GSData::headerLen)
+                    {
+
+                        // we have a complete message
+                        m.decode(&rawData);
+
+                        std::cout << "After decoding:" << std::endl;
+                        std::cout << rawData.buf << std::endl;
+
+                        // reset the output message
+                        mOut.clear();
+                        // add the GSData payload to the output message
+                        mOut.fill(rawData.buf, rawData.size);
+
+                        if (rawData.type == APRSTelem::TYPE)
+                        {
+                            // this is an APRSTelem message
+                            std::cout << "APRSTelem" << std::endl;
+                            APRSTelem outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            {
+                                if (pipeDemuxIds[i] == rawData.index)
+                                {
+                                    std::cout << "Pipe id: " << i << std::endl;
+                                    memset(outStr, 0, sizeof(outStr));
+                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                }
+                            }
+                        }
+                        if (rawData.type == VideoData::TYPE)
+                        {
+                            // this is video data
+                            VideoData outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            {
+                                // need to skip over all the input pipe ids
+                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                {
+                                    outputPipes[i]->write(m.buf, m.size);
+                                }
+                            }
+                        }
+                        if (rawData.type == APRSCmd::TYPE)
+                        {
+                            // this is an APRSCmd message
+                            APRSCmd outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            {
+                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                {
+                                    memset(outStr, 0, sizeof(outStr));
+                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                }
+                            }
+                        }
+                        if (rawData.type == APRSText::TYPE)
+                        {
+                            // this is an APRSText message
+                            APRSText outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = 0; i < numOutputPipes; i++)
+                            {
+                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                {
+                                    memset(outStr, 0, sizeof(outStr));
+                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                }
+                            }
+                        }
+
+                        // reset
+                        m.clear();
+                        headerFound = false;
+                        msgType = 0;
+                        msgIndex = 0;
+                        msgSize = 0;
+                        std::cout << "end" << std::endl;
+                    }
                 }
 
-                // if we have 5 bytes in the header we've found the header
-                if (headerSize == 5)
-                {
-                    headerFound = true;
+                std::cout << "Found: " << headerFound << std::endl;
+                std::cout << "Handled " << dataHandled << " out of " << x << std::endl;
 
-                    GSData::decodeHeader(header, msgType, msgIndex, msgSize);
-                }
-
-                // always append to the message
-                m.append(data, x);
-            }
-            // othewise we found the header already
-            else
-            {
-                // append the read data to the message
-                m.append(data, x);
-
-                // if the message size (which includes the GSData)
-                // is the same as the payload size + the header then we read the whole message
-                if (m.size == msgSize + GSData::headerLen)
-                {
-                    // we have a complete message
-                    m.decode(&rawData);
-
-                    // reset the output message
-                    mOut.clear();
-                    // add the GSData payload to the output message
-                    mOut.fill(rawData.buf, rawData.size);
-                    if (rawData.type == APRSTelem::TYPE)
-                    {
-                        // this is an APRSTelem message
-                        APRSTelem outData;
-                        mOut.decode(&outData);
-                        // locate the proper pipe and send data
-                    }
-                    if (rawData.type == VideoData::TYPE)
-                    {
-                        // this is video data
-                        VideoData outData;
-                        mOut.decode(&outData);
-                        // locate the proper pipe and send data
-                    }
-                    if (rawData.type == APRSCmd::TYPE)
-                    {
-                        // this is an APRSCmd message
-                        APRSCmd outData;
-                        mOut.decode(&outData);
-                        // locate the proper pipe and send data
-                    }
-                    if (rawData.type == APRSText::TYPE)
-                    {
-                        // this is an APRSText message
-                        APRSText outData;
-                        mOut.decode(&outData);
-                        // locate the proper pipe and send data
-                    }
-
-                    // reset
-                    m.clear();
-                    headerFound = false;
-                    msgType = 0;
-                    msgIndex = 0;
-                    msgSize = 0;
-                }
-            }
-
-            // implement demuxer on data
-            // dataidx = 0; // index of the next byte to read from data (so we don't need
-            // to always resize it)
-
-            // repeat until we have processed all data
-            // while (dataidx < x)
-            // {
-            //     // we need to check if the data is either video or telemetry
-            //     if (source == 0)
-            //     {
-            //         std::cout << "source == 0 at " << totalCount << std::endl;
-            //         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                   << " | ";
-            //         if (data[dataidx] == 0x01)
-            //             source = 1;
-            //         else if (data[dataidx] == 0x02)
-            //             source = 2;
-            //         else if (data[dataidx] == 0xfe)
-            //             source = 3;
-
-            //         dataidx++;
-            //         totalCount++;
-            //         packetSize = 0;
-            //     }
-
-            //     // we need to find packetsize
-            //     if (packetSize == 0 && packetSizeFound == false && dataidx < x &&
-            //         source != 0)
-            //     {
-            //         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                   << " | ";
-            //         packetSize = data[dataidx] * 256;
-            //         packetSizeFound = false;
-            //         dataidx++;
-            //         totalCount++;
-            //     }
-            //     // find the second byte of the packetsize
-            //     if (packetSizeFound == false && dataidx < x && source != 0)
-            //     {
-            //         std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                   << " | ";
-            //         packetSize += data[dataidx];
-            //         packetSizeFound = true;
-            //         packetidx = 0;
-            //         dataidx++;
-            //         totalCount++;
-            //     }
-
-            //     if (source == 1 && packetSizeFound)
-            //     {
-            //         // copy data to the circular buffer
-            //         while (dataidx < x && packetidx < packetSize)
-            //         {
-            //             std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                       << " | ";
-            //             chunks1[chunks1top] = data[dataidx];
-            //             chunks1top = (chunks1top + 1) % maxChunkSize;
-            //             packetidx++;
-            //             dataidx++;
-            //             totalCount++;
-            //         }
-
-            //         // if we have a full packet, emit it
-            //         if (packetidx == packetSize)
-            //         {
-            //             std::cout << "packetidx1 == packetSize1" << std::endl;
-
-            //             // write from bottom to end of buffer or bottom to top of buffer
-            //             if (chunks1top > chunks1bot)
-            //             {
-            //                 hPipe1->write(chunks1 + chunks1bot, chunks1top - chunks1bot);
-
-            //                 // update bottom index
-            //                 chunks1bot = chunks1top;
-            //             }
-            //             else
-            //             {
-            //                 hPipe1->write(chunks1 + chunks1bot, maxChunkSize - chunks1bot);
-            //                 chunks1bot = 0;
-            //                 hPipe1->write(chunks1 + chunks1bot, chunks1top - chunks1bot);
-
-            //                 // update bottom index
-            //                 chunks1bot = chunks1top;
-            //             }
-
-            //             source = 0;
-            //             packetSize = 0;
-            //             packetSizeFound = false;
-            //             packetidx = 0;
-            //         }
-            //     }
-            //     else if (source == 2 && packetSizeFound)
-            //     {
-            //         // copy data to the circular buffer
-            //         while (dataidx < x && packetidx < packetSize)
-            //         {
-            //             std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                       << " | ";
-            //             chunks2[chunks2top] = data[dataidx];
-            //             chunks2top = (chunks2top + 1) % maxChunkSize;
-            //             packetidx++;
-            //             dataidx++;
-            //             totalCount++;
-            //         }
-
-            //         // if we have a full packet, emit it
-            //         if (packetidx == packetSize)
-            //         {
-            //             // std::cout << "packetidx2 == packetSize2" << std::endl;
-
-            //             // write from bottom to end of buffer or bottom to top of buffer
-            //             if (chunks2top > chunks2bot)
-            //             {
-            //                 hPipe2->write(chunks2 + chunks2bot, chunks2top - chunks2bot);
-
-            //                 // update bottom index
-            //                 chunks2bot = chunks2top;
-            //             }
-            //             else
-            //             {
-            //                 hPipe2->write(chunks2 + chunks2bot, maxChunkSize - chunks2bot);
-            //                 chunks2bot = 0;
-            //                 hPipe2->write(chunks2 + chunks2bot, chunks2top - chunks2bot);
-
-            //                 // update bottom index
-            //                 chunks2bot = chunks2top;
-            //             }
-
-            //             source = 0;
-            //             packetSize = 0;
-            //             packetSizeFound = false;
-            //             packetidx = 0;
-            //         }
-            //     }
-            //     else if (source == 3 && packetSizeFound)
-            //     {
-            //         // std::cout << "packetidx3 == packetSize3" << std::endl;
-
-            //         // copy data to the start of the telemetry buffer
-            //         while (dataidx < x && packetidx < packetSize)
-            //         {
-            //             std::cout << totalCount << ":" << std::hex << (int)data[dataidx]
-            //                       << " | ";
-            //             chunks3[chunks3top] = data[dataidx];
-            //             chunks3top = (chunks3top + 1) % maxChunkSize;
-            //             packetidx++;
-            //             dataidx++;
-            //             totalCount++;
-            //         }
-
-            //         // if we have a full packet, emit it
-            //         if (packetidx == packetSize)
-            //         {
-            //             // write from bottom to end of buffer or bottom to top of buffer
-            //             if (chunks3top > chunks3bot)
-            //             {
-            //                 hPipe3->write(chunks3 + chunks3bot, chunks3top - chunks3bot);
-
-            //                 // update bottom index
-            //                 chunks3bot = chunks3top;
-            //             }
-            //             else
-            //             {
-            //                 hPipe3->write(chunks3 + chunks3bot, maxChunkSize - chunks3bot);
-            //                 chunks3bot = 0;
-            //                 hPipe3->write(chunks3 + chunks3bot, chunks3top - chunks3bot);
-
-            //                 // update bottom index
-            //                 chunks3bot = chunks3top;
-            //             }
-
-            //             source = 0;
-            //             packetSize = 0;
-            //             packetSizeFound = false;
-            //             packetidx = 0;
-            //         }
-            //     }
-            // }
-
-            // check to see if we received a command from the GUI
-            if (hPipeIn->read(chunkIn, 7))
-            {
-                device->writeSerialPort(chunkIn, 7);
+                // for (int i = 0; i < numInputPipes; i++)
+                // {
+                //     // check to see if we received a command from the GUI
+                //     memset(inStr, 0, sizeof(inStr));
+                //     if (inputPipes[i]->read(inStr, sizeof(inStr)))
+                //     {
+                //         // assume APRSCmd for now
+                //         // encode the APRSCmd from the JSON
+                //         APRSCmd inData;
+                //         char streamName[100];
+                //         inData.fromJSON(inStr, strlen(inStr), streamName);
+                //         mIn.clear();
+                //         mIn.encode(&inData);
+                //         // take the APRSCmd and place it in a GSData object for multiplexing
+                //         GSData inDataGS(APRSCmd::TYPE, i, mIn.buf, mIn.size);
+                //         mIn.clear();
+                //         mIn.encode(&inDataGS);
+                //         // write the new message formatted for multiplexing
+                //         device->writeSerialPort(mIn.buf, mIn.size);
+                //     }
+                // }
             }
         }
     }
 
-    std::cout << totalCount << std::endl;
+    // std::cout << totalCount << std::endl;
 
+    std::cout << "Exit" << std::endl;
+
+    // properly delete everything
     if (device != nullptr)
         device->closeSerial();
-    std::cout << "Exit" << std::endl;
+
+    if (inputPipes != nullptr)
+    {
+        for (int i = 0; i < numInputPipes; i++)
+        {
+            delete inputPipes[i];
+        }
+        delete[] inputPipes;
+    }
+    if (outputPipes != nullptr)
+    {
+        for (int i = 0; i < numOutputPipes; i++)
+        {
+            delete outputPipes[i];
+        }
+        delete[] outputPipes;
+    }
+
     delete pipeControl;
     delete pipeStatus;
 

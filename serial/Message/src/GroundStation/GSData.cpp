@@ -1,8 +1,8 @@
 #include "GSData.h"
 
-GSData::GSData(uint8_t streamIndex) : index(streamIndex) {}
+GSData::GSData(uint8_t streamType, uint8_t streamIndex) : type(streamType), index(streamIndex) {}
 
-GSData::GSData(uint8_t streamIndex, uint8_t *buf, uint16_t size) : index(streamIndex)
+GSData::GSData(uint8_t streamType, uint8_t streamIndex, uint8_t *buf, uint16_t size) : type(streamType), index(streamIndex)
 {
     this->fill(buf, size);
 }
@@ -43,7 +43,7 @@ uint16_t GSData::encode(uint8_t *data, uint16_t size)
     // type will be 0x0T so << 4 to make it 0xT0
     // index will be 0x0I so just add
     // then add to get 0xLN
-    data[pos++] = (this->index << 4) + (this->index);
+    data[pos++] = (this->type << 4) + (this->index);
     // size will be 0xSSss so >> 8 to get 0x00SS
     data[pos++] = this->size >> 8;
     // size will be 0xSSss so & 0x00FF to get 0x00ss
@@ -71,7 +71,8 @@ uint16_t GSData::decode(uint8_t *data, uint16_t size)
     // and & 0x0F to get 0x0I
     this->index = data[pos++] & 0x0F;
     // then SSss is in 1 and 2, so need to << 8 header[1] to make it 0xSS00, then add header[2]
-    this->size = (data[pos++] << 8) + data[pos++];
+    this->size = (data[pos++] << 8);
+    this->size += data[pos++];
 
     // body
     memcpy(this->buf, data + pos, size - pos);

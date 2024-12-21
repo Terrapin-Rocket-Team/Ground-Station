@@ -5,10 +5,12 @@ project(SerialDriver)
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be the path to the include directory of the project
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/Message/CMakeLists.txt)
 
 add_executable(SerialDriver crossPlatformDemux.cpp)
 add_executable(DriverShell demuxShell.cpp)
 
+target_link_libraries(DriverShell Message)
 
 target_include_directories(SerialDriver PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(DriverShell PUBLIC "${PROJECT_INCLUDE}")
