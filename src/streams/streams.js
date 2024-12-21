@@ -1,7 +1,7 @@
 window.onload = () => {
   let fullscreened = false;
   let streamConfig, newStreamConfig;
-  let inputs = {};
+  let inputs = [];
   let saveCallbacks = [];
 
   const mainContainer = document.getElementById("stream-container");
@@ -11,13 +11,11 @@ window.onload = () => {
 
   // saves the settings when the page is unloaded
   const handleNavigateAway = () => {
-    console.log(newStreamConfig);
-    console.log(saveCallbacks);
     // get new settings from each input
     saveCallbacks.forEach((c) => c());
     // check if the configs are equal
     if (!configEquals(streamConfig, newStreamConfig)) {
-      // api.setSettings(newConfig);
+      api.setStreams(newStreamConfig);
     }
   };
 
@@ -227,15 +225,15 @@ window.onload = () => {
 
   const loadStreamInputs = () => {
     while (mainContainer.childElementCount > 0) {
-      console.log("ere");
       mainContainer.removeChild(mainContainer.firstChild);
     }
 
+    inputs = [];
     saveCallbacks = [];
 
     // generate html for each input
     for (let i = 0; i < newStreamConfig.length; i++) {
-      createStreamBox(i, newStreamConfig[i]);
+      inputs.push(createStreamBox(i, newStreamConfig[i]));
     }
 
     // setup each input
@@ -278,8 +276,7 @@ window.onload = () => {
       const keyListLen = keyList.length;
       for (let i = 0; i < keyListLen; i++) {
         try {
-          if (config1[j][keyList[i]].value !== config2[j][keyList[i]].value)
-            return false;
+          if (config1[j][keyList[i]] !== config2[j][keyList[i]]) return false;
         } catch (err) {
           // should really only happen if somehow one config has an attribute another doesn't
           console.error("Failed to compare configs: " + err.message);

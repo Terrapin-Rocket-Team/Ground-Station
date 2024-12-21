@@ -1,7 +1,7 @@
 #ifndef GSDATA_H
 #define GSDATA_H
 
-#include "Data.h"
+#include "../Data.h"
 
 class GSData : public Data
 {
@@ -33,13 +33,13 @@ public:
 
     // GSData constructor
     // - type : the type of the message
-    GSData(uint8_t streamIndex);
+    GSData(uint8_t streamType, uint8_t streamIndex);
 
     // GSData constructor
     // - type : the type of the message
     // - buf : the data for the message
     // - size : the size of the data
-    GSData(uint8_t streamIndex, uint8_t *buf, uint16_t size);
+    GSData(uint8_t streamType, uint8_t streamIndex, uint8_t *buf, uint16_t size);
 
     // encode the data stored in the ```Data``` object and place the result in ```data```
     uint16_t encode(uint8_t *data, uint16_t sz) override;

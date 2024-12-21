@@ -75,12 +75,12 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize)
         };
         poll(&fds, 1, 0);
         if (fds.revents & POLLIN)
-            handle = accept(sockFd, NULL, NULL);
+            handle = accept4(sockFd, NULL, NULL, SOCK_NONBLOCK);
     }
     if (handle != -1 && (bytesRead = ::read(handle, buffer, bufferSize)) < 0)
     {
-        std::cout << "Error reading from named pipe at " << path << std::endl;
-        perror("read");
+        // std::cout << "Error reading from named pipe at " << path << std::endl;
+        // perror("read");
     }
 
     return bytesRead;

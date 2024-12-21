@@ -129,14 +129,22 @@ try {
 }
 
 const loadStreams = () => {
+  // reset everything
+  telemSources = [];
+  videoSources = [];
+  commandSinks = [];
+  serial.clearStreams();
+
+  // load streams from config
   config.streams.forEach((stream) => {
     if (stream.type === "APRSTelem") {
       telemSources.push(
         new SerialTelemSource(`${stream.name}-${stream.id}`, {
           parser: (data) => {
-            let telem = new APRSTelem(data);
+            let telem = new APRSTelem(data, stream.name);
             log.info(telem);
             if (windows.main) windows.main.webContents.send("data", telem);
+            log.debug("after");
             if (windows.video) windows.video.webContents.send("data", telem);
           },
           createLog: true,
