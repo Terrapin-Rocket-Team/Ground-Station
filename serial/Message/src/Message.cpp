@@ -215,7 +215,21 @@ Message *Message::print(Stream &Serial)
 Message *Message::write(Stream &Serial)
 {
     Serial.write(this->buf, this->size);
-    Serial.write('\n');
+    return this;
+}
+
+#elif defined(_WIN32) || defined(_WIN64) || defined(__unix__) || defined(__APPLE__)
+
+Message *Message::print()
+{
+    printf((char *)this->buf);
+    return this;
+}
+
+Message *Message::write()
+{
+    for (int i = 0; i < this->size; i++)
+        printf("%c", this->buf);
     return this;
 }
 
