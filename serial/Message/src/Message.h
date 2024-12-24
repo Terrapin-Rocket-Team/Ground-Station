@@ -82,8 +82,16 @@ public:
     Message *print(Stream &Serial);
 
     // writes the contents of the message over ```Serial```
-    // Note: video supported (though I don't know why you want to write raw video data to the console)
+    // Note: video supported
     Message *write(Stream &Serial);
+#elif defined(_WIN32) || defined(_WIN64) || defined(__unix__) || defined(__APPLE__)
+    // prints the contents of the message to stdout
+    // Note: video not supported
+    Message *print();
+
+    // writes the contents of the message to stdout
+    // Note: video supported
+    Message *write();
 #endif
 };
 

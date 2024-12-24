@@ -2,8 +2,6 @@
 // Created by ramykaddouri on 10/19/24.
 //
 
-// #define LINUX 1
-
 #ifdef WINDOWS
 #include <WinSerialPort.h>
 #include <WinNamedPipe.h>
@@ -20,6 +18,8 @@
 #include <cstdint>
 
 #include "Message/src/RadioMessage.h"
+
+void createPipe(NamedPipe **arr, int &index, const char *name);
 
 int main(int argc, char **argv)
 {
@@ -46,24 +46,7 @@ int main(int argc, char **argv)
 #endif
 
     size_t x;
-    // size_t dataidx;
-    // size_t totalCount = 0;
-    // size_t source = 0;
-    // size_t packetSize = 0;
-    // size_t packetidx = 0;
-    // bool packetSizeFound = false;
     const size_t maxChunkSize = 1024 * 16;
-    // char chunks1[maxChunkSize];
-    // char chunks2[maxChunkSize];
-    // char chunks3[maxChunkSize];
-    // char chunkIn[maxChunkSize];
-
-    // size_t chunks1top = 0;
-    // size_t chunks2top = 0;
-    // size_t chunks3top = 0;
-    // size_t chunks1bot = 0;
-    // size_t chunks2bot = 0;
-    // size_t chunks3bot = 0;
 
     uint8_t header[5] = {0};
     uint8_t headerSize = 0;
@@ -250,21 +233,7 @@ int main(int argc, char **argv)
                                 int pipeId = atoi(pipeName + indexPos + 1);
                                 std::cout << pipeId << std::endl;
                                 pipeDemuxIds[gotPipeNames] = pipeId;
-
-                                // pipeName[indexPos] = '\0';
-                                std::cout << "Creating pipe of name: " << pipeName << std::endl;
-#ifdef WINDOWS
-                                // char pipePath[60] = "\\\\.\\pipe\\";
-                                char pipePath[60] = "";
-                                strcat(pipePath, pipeName);
-                                inputPipes[gotInputPipeNames++] = new WinNamedPipe(pipePath, true);
-#elif LINUX
-                                char pipePath[60] = "./build/serial/pipes/";
-                                // char pipePath[60] = "";
-                                strcat(pipePath, pipeName);
-                                // THESE PATHS MIGHT BE WRONG!
-                                inputPipes[gotInputPipeNames++] = new LinuxNamedPipe(pipePath, true);
-#endif
+                                createPipe(inputPipes, gotInputPipeNames, pipeName);
                                 gotPipeNames++;
                             }
                         }
@@ -287,19 +256,7 @@ int main(int argc, char **argv)
                                 pipeDemuxIds[gotPipeNames] = pipeId;
 
                                 // pipeName[indexPos] = '\0';
-                                std::cout << "Creating pipe of name: " << pipeName << std::endl;
-#ifdef WINDOWS
-                                // char pipePath[60] = "\\\\.\\pipe\\";
-                                char pipePath[60] = "";
-                                strcat(pipePath, pipeName);
-                                outputPipes[gotOutputPipeNames++] = new WinNamedPipe(pipePath, true);
-#elif LINUX
-                                char pipePath[60] = "./build/serial/pipes/";
-                                // char pipePath[60] = "";
-                                strcat(pipePath, pipeName);
-                                // THESE PATHS MIGHT BE WRONG!
-                                outputPipes[gotOutputPipeNames++] = new LinuxNamedPipe(pipePath, true);
-#endif
+                                createPipe(outputPipes, gotOutputPipeNames, pipeName);
                                 gotPipeNames++;
                             }
                         }
@@ -443,7 +400,6 @@ int main(int argc, char **argv)
                             {
                                 if (pipeDemuxIds[i] == rawData.index)
                                 {
-                                    std::cout << "Pipe id: " << i << std::endl;
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), "");
                                     outputPipes[i]->write(outStr, strlen(outStr));
@@ -504,7 +460,6 @@ int main(int argc, char **argv)
                         msgType = 0;
                         msgIndex = 0;
                         msgSize = 0;
-                        std::cout << "end" << std::endl;
                     }
                 }
 
@@ -536,8 +491,6 @@ int main(int argc, char **argv)
         }
     }
 
-    // std::cout << totalCount << std::endl;
-
     std::cout << "Exit" << std::endl;
 
     // properly delete everything
@@ -565,4 +518,23 @@ int main(int argc, char **argv)
     delete pipeStatus;
 
     return 0;
+}
+
+// adds a new named pipe (based on platform, with prefix) to the NamedPipe "arr" at "index" with name "name"
+// also increments the index
+void createPipe(NamedPipe **arr, int &index, const char *name)
+{
+    std::cout << "Creating pipe of name: " << name << std::endl;
+#ifdef WINDOWS
+    char pipePath[60] = "\\\\.\\pipe\\";
+    // char pipePath[60] = "";
+    strcat(pipePath, name);
+    arr[index++] = new WinNamedPipe(pipePath, true);
+#elif LINUX
+    char pipePath[60] = "./build/serial/pipes/";
+    // char pipePath[60] = "";
+    strcat(pipePath, name);
+    // THESE PATHS MIGHT BE WRONG!
+    arr[index++] = new LinuxNamedPipe(pipePath, true);
+#endif
 }

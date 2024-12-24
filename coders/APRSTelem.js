@@ -41,9 +41,9 @@ class APRSTelem {
       this.deviceId = message.deviceId;
       this.latitude = parseFloat(message.data.lat);
       this.longitude = parseFloat(message.data.lng);
-      this.altitude = parseFloat(message.data.alt);
-      this.speed = parseFloat(message.data.spd);
-      this.heading = parseFloat(message.data.hdg);
+      this.altitude = Math.round(parseFloat(message.data.alt));
+      this.speed = Math.round(parseFloat(message.data.spd));
+      this.heading = Math.round(parseFloat(message.data.hdg));
       this.orientation = [
         parseFloat(message.data.orient[0]),
         parseFloat(message.data.orient[1]),
@@ -57,9 +57,9 @@ class APRSTelem {
       this.deviceId = message.deviceId;
       this.latitude = parseFloat(message.latitude);
       this.longitude = parseFloat(message.longitude);
-      this.altitude = parseFloat(message.altitude);
-      this.speed = parseFloat(message.speed);
-      this.heading = parseFloat(message.heading);
+      this.altitude = Math.round(parseFloat(message.altitude));
+      this.speed = Math.round(parseFloat(message.speed));
+      this.heading = Math.round(parseFloat(message.heading));
       this.orientation = [
         parseFloat(message.orientation[0]),
         parseFloat(message.orientation[1]),
