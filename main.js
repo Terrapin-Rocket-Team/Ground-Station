@@ -144,7 +144,6 @@ const loadStreams = () => {
             let telem = new APRSTelem(data, stream.name);
             log.info(telem);
             if (windows.main) windows.main.webContents.send("data", telem);
-            log.debug("after");
             if (windows.video) windows.video.webContents.send("data", telem);
           },
           createLog: true,

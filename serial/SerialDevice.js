@@ -3,10 +3,12 @@ const { PipeStream } = require("./PipeStream");
 const { EventEmitter } = require("node:events");
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 const os = require("os");
 const { log } = require("../debug.js");
 
 const serialDriverPath = path.join(__dirname, "..", "build", "serial");
+const logPath = "./log";
 
 /**
  * A class to communicate with the radio module using Serial
@@ -151,9 +153,9 @@ class SerialDevice extends EventEmitter {
     });
 
     // setup debug output of all serial driver stdout data
-    this.driver.stdout.on("data", (data) => {
-      log.debug(`demux stdout: ${data}`);
-    });
+    this.driver.stdout.pipe(
+      fs.createWriteStream(path.join(logPath, "serial_driver_debug.log"))
+    );
   }
 
   /**

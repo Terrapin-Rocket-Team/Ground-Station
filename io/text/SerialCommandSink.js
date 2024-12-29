@@ -28,12 +28,13 @@ class SerialCommandSink extends TextSink {
 
     this.options = options;
     this.dataFile = null;
+    this.firstLine = true;
 
     // create commands log file if necessary
     if (this.options.createLog) {
       const logName = path.join(
         "data",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".txt"
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
       );
       this.dataFile = fs.createWriteStream(logName);
 
@@ -58,8 +59,10 @@ class SerialCommandSink extends TextSink {
     // write the the serial device
     this.sd.write(this.name, outputText);
     // write to the log file if specified
-    if (this.options.createLog && this.dataFile)
-      this.dataFile.write(outputText + "\n");
+    if (this.options.createLog && this.dataFile) {
+      this.dataFile.write(aprsCmd.toCSV(this.firstLine));
+      if (this.firstLine) this.firstLine = false;
+    }
   }
 }
 

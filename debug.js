@@ -12,6 +12,7 @@ const getLogPrefix = (level) => {
   let stackArr = e.stack.split("\n")[4].split(path.sep);
   let info = stackArr[stackArr.length - 1].split(":");
   return (
+    // (level == "error" ? e.stack + "\n" : "") +
     "[" +
     info[0] +
     ":" +

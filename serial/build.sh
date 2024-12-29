@@ -5,7 +5,7 @@ CORES=1
 mkdir -p serial
 cd serial
 
-rm -f CMakeCache.txt
+# rm -f CMakeCache.txt
 cmake ../../serial
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   mkdir -p pipes
