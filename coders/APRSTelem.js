@@ -10,10 +10,7 @@ format from the Message library
         "spd": 0.0,
         "hdg": 0.0,
         "orient": [0.0, 0.0, 0.0],
-        "stateFlags": 0,
-        "state": {
-          ...
-        }
+        "stateFlags": 0
     }
 }
 */
@@ -38,7 +35,7 @@ class APRSTelem {
         message = JSON.parse(message);
       }
 
-      this.deviceId = message.deviceId;
+      this.deviceId = parseInt(message.deviceId);
       this.latitude = parseFloat(message.data.lat);
       this.longitude = parseFloat(message.data.lng);
       this.altitude = Math.round(parseFloat(message.data.alt));
@@ -54,7 +51,7 @@ class APRSTelem {
       // assume the message is in this object's format
       this.stream = message.stream;
 
-      this.deviceId = message.deviceId;
+      this.deviceId = parseInt(message.deviceId);
       this.latitude = parseFloat(message.latitude);
       this.longitude = parseFloat(message.longitude);
       this.altitude = Math.round(parseFloat(message.altitude));
@@ -232,12 +229,12 @@ class APRSTelem {
   }
 
   /**
-   * @param {Boolean} csvCreated whether to write the CSV header
+   * @param {Boolean} firstLine whether to write the CSV header
    * @returns {string} the CSV string
    */
-  toCSV(csvCreated) {
+  toCSV(firstLine) {
     let csv = "";
-    if (!csvCreated) {
+    if (firstLine) {
       csv =
         "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags\n";
     }

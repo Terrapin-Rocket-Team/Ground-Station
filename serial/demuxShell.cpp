@@ -17,7 +17,7 @@
 #include <ostream>
 #include <cstdint>
 
-#include "Message/src/RadioMessage.h"
+#include "RadioMessage.h"
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
 
@@ -317,7 +317,7 @@ int main(int argc, char **argv)
                     if (headerSize == GSData::headerLen)
                     {
 
-                        GSData::decodeHeader(header, msgType, msgIndex, msgSize); // TODO: I think something in header decoding is wrong
+                        GSData::decodeHeader(header, msgType, msgIndex, msgSize);
                         std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
                         if (msgType > 0 && msgIndex > 0 && msgSize > 0)
                         {
@@ -332,12 +332,10 @@ int main(int argc, char **argv)
                     }
 
                     // append the read data to the message
-                    std::cout << x - dataHandled << std::endl;
                     if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
                     {
                         m.append(data + dataHandled, x - dataHandled);
                         dataHandled += x - dataHandled;
-                        std::cout << m.size << std::endl;
                     }
                     else if (x - dataHandled > 0 && m.size < msgSize + GSData::headerLen && m.size + x - dataHandled > msgSize + GSData::headerLen)
                     {
@@ -392,16 +390,15 @@ int main(int argc, char **argv)
                         if (rawData.type == APRSTelem::TYPE)
                         {
                             // this is an APRSTelem message
-                            std::cout << "APRSTelem" << std::endl;
                             APRSTelem outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == rawData.index)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
-                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
@@ -412,10 +409,10 @@ int main(int argc, char **argv)
                             VideoData outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
                                 // need to skip over all the input pipe ids
-                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.index)
                                 {
                                     outputPipes[i]->write(m.buf, m.size);
                                 }
@@ -427,12 +424,12 @@ int main(int argc, char **argv)
                             APRSCmd outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numOutputPipes; i++)
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.index)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
-                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[numInputPipes + i]);
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
@@ -443,12 +440,12 @@ int main(int argc, char **argv)
                             APRSText outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = 0; i < numOutputPipes; i++)
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[numInputPipes + i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.index)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
-                                    outData.toJSON(outStr, sizeof(outStr), "");
+                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }

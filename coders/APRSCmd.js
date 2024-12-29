@@ -26,7 +26,7 @@ class APRSCmd {
       command = JSON.parse(command);
     }
 
-    this.deviceId = command.deviceId;
+    this.deviceId = parseInt(command.deviceId);
     this.cmd = parseInt(command.data.cmd);
     this.args = parseInt(command.data.args);
   }
@@ -264,12 +264,12 @@ class APRSCmd {
   }
 
   /**
-   * @param {Boolean} csvCreated whether to write the CSV header
+   * @param {Boolean} firstLine whether to write the CSV header
    * @returns {string} the CSV string
    */
-  toCSV(csvCreated) {
+  toCSV(firstLine) {
     let csv = "";
-    if (!csvCreated) {
+    if (firstLine) {
       csv = "Time,Device ID,Cmd,Args\n";
     }
     csv += `${this.time.toISOString().split("T")[1]},${this.deviceId},${

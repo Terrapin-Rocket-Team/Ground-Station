@@ -13,9 +13,9 @@ class Metrics {
       metrics = JSON.parse(metrics);
     }
 
+    this.deviceId = parseInt(metrics.deviceId);
     this.bitrate = parseFloat(metrics.bitrate);
     this.rssi = parseInt(metrics.rssi);
-    this.deviceId = metrics.deviceId;
   }
 
   /**
@@ -78,12 +78,12 @@ class Metrics {
   }
 
   /**
-   * @param {Boolean} csvCreated whether to write the CSV header
+   * @param {Boolean} firstLine whether to write the CSV header
    * @returns {string} the CSV string
    */
-  toCSV(csvCreated) {
+  toCSV(firstLine) {
     let csv = "";
-    if (!csvCreated) {
+    if (firstLine) {
       csv = "Time,Device ID,Bitrate,RSSI\n";
     }
     csv += `${this.time.toISOString().split("T")[1]},${this.deviceId},${

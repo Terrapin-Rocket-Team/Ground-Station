@@ -52,10 +52,10 @@ class SerialTelemSource extends TextSource {
         let obj;
         // not ideal, but good enough for now, ideally we're coder agnostic here
         if (options.isMetrics) obj = new Metrics(data);
-        if (!options.isMetrics) obj = new APRSTelem(data);
+        if (!options.isMetrics) obj = new APRSTelem(data, this.name);
 
         // if first time write csv header
-        this.dataFile.write(obj.toCSV(this.firstLine) + "\n");
+        this.dataFile.write(obj.toCSV(this.firstLine));
         if (this.firstLine) this.firstLine = false;
       }
     });
