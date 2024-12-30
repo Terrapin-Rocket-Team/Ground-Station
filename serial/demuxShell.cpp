@@ -1,5 +1,6 @@
 //
-// Created by ramykaddouri on 10/19/24.
+// Created by Joseph Hauerstein
+// Original by ramykaddouri
 //
 
 #ifdef WINDOWS
@@ -10,8 +11,8 @@
 #include <LinuxNamedPipe.h>
 #include <LinuxSerialPort.h>
 #include <unistd.h>
-
 #endif
+
 #include <cstring>
 #include <iostream>
 #include <ostream>
@@ -24,72 +25,113 @@ void createPipe(NamedPipe **arr, int &index, const char *name);
 
 int main(int argc, char **argv)
 {
+    // multiplexing data
     unsigned char data[MAX_DATA_LENGTH + 1];
+    // amount of data handled out of x
     int dataHandled = 0;
+    // amount of data available
+    size_t x;
+    // the pipe to control the driver
     NamedPipe *pipeControl;
+    // the pipe to provide driver status
     NamedPipe *pipeStatus;
+    // the pipes to input data into the driver
     NamedPipe **inputPipes = nullptr;
+    // the pipes to output data from the driver
     NamedPipe **outputPipes = nullptr;
+    // the multiplexing ids/indexes for each pipe
     uint8_t *pipeDemuxIds = nullptr;
+    // the number of input pipes
     int numInputPipes = 0;
+    // the number of output pipes
     int numOutputPipes = 0;
+    // the total number of pipes (input and output)
     int numTotalPipes = 0;
 
+    // whether the pipe interface is ready
     bool ready = false;
+    // whether the handshake with the device was successful
     bool handshakeSuccess = false;
+    // whether there is a handshake being attempted (with a specific sequence)
     bool handshakeAttempt = false;
+    // whether a handshake is in progress (up to 5 attempts)
     bool handshakePending = false;
+    // whether connection status was requested during the handshake process
     bool checkConnectionAfterHandshake = false;
+    // the current handshake sequence
     char handshakeSequence[6 + 1] = {0};
-    uint8_t handshakeMaxAttempts = 5;
+    // the maximum number of handshake attempts
+    const uint8_t handshakeMaxAttempts = 5;
+    // the current number of handshake attempts
     uint8_t handshakeNumAttempts = 0;
+    // seed the random number generator
     srand(time(0));
 
+    // create the status and control pipes
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
     pipeStatus = new WinNamedPipe("\\\\.\\pipe\\status", true);
 #elif LINUX
-    // THESE PATHS MIGHT BE WRONG!
+    // need to be updated when switching to abstract sockets
     pipeControl = new LinuxNamedPipe("./build/serial/pipes/control", true);
     pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true);
 #endif
 
-    size_t x;
-    const size_t maxChunkSize = 1024 * 16;
-
+    // holds the header data
     uint8_t header[5] = {0};
+    // holds the current size of the received header
     uint8_t headerSize = 0;
+    // whether the header has been found
     bool headerFound = false;
 
+    // the type of the message from the header
     uint8_t msgType = 0;
+    // the index/id of the message from the header
     uint8_t msgIndex = 0;
+    // the size of the message from the header
     uint16_t msgSize = 0;
 
+    // the max size of a single chunk (string data only)
+    const size_t maxChunkSize = 1024;
+    // holds string data that is being output from the driver
     char outStr[maxChunkSize] = {0};
+    // holds string data that is being input into the driver
     char inStr[maxChunkSize] = {0};
 
+    // TODO: m and mOut can probably be the same
+    // a message to hold multiplexing input data (may end up holding data for multiple messages)
     Message m;
+    // a message to hold only the data for a single multiplexed message
     Message mOut;
+    // a message to hold data from driver input pipes
     Message mIn;
-
+    // a GSData object to decode multplexed data
     GSData rawData;
 
+    // an object to handle the serial device connection
     SerialPort *device = nullptr;
 
+    // required so that the program interfacing with the driver knows when the control and status pipes are ready
     std::cout << "driver ready" << std::endl;
 
+    // controls the exiting the main loop
     bool exit = false;
+    // a string to hold commands received over the control pipe
     char controlStr[50];
 
     while (!exit)
     {
+        // wipe the command string
         memset(controlStr, 0, sizeof(controlStr));
 
+        // attempt to read a command string
         if (pipeControl->readStr(controlStr, sizeof(controlStr)) > 0)
         {
             std::cout << controlStr << std::endl;
+            // check for close command
             if (strcmp(controlStr, "close") == 0)
             {
+                // reset ready status and handshake
                 ready = false;
                 handshakeSuccess = false;
                 handshakeNumAttempts = 0;
@@ -100,18 +142,22 @@ int main(int argc, char **argv)
                     device = nullptr;
                 }
             }
+            // check for reset command
             if (strcmp(controlStr, "reset") == 0)
             {
+                // reset ready status and handshake
                 ready = false;
                 handshakeSuccess = false;
                 handshakeNumAttempts = 0;
 
+                // close the existing serial connection
                 if (device != nullptr)
                 {
                     delete device;
                     device = nullptr;
                 }
 
+                // get the port path to connect to
                 bool receivedPort = false;
                 char portBuf[50];
 
@@ -126,6 +172,7 @@ int main(int argc, char **argv)
                     }
                 }
 
+                // get the baud rate to connect with
                 bool receivedBaudRate = false;
                 char baudRate[50];
 
@@ -140,22 +187,14 @@ int main(int argc, char **argv)
                     }
                 }
 
+                // create a new serial connection
 #ifdef WINDOWS
                 device = new WinSerialPort(portBuf);
 #elif LINUX
                 device = new LinuxSerialPort(portBuf);
 #endif
-
-                // attempt to connect
-                // time_t start = time(0);
-                // bool timeout = false;
-                // while (!timeout && !(device->isConnected()))
-                // {
-                //     time_t end = time(0);
-                //     if (difftime(end, start) > 2)
-                //         timeout = true;
-                // }
             }
+            // check for data pipes command
             if (strcmp(controlStr, "data pipes") == 0)
             {
                 // get number of input pipes
@@ -206,32 +245,40 @@ int main(int argc, char **argv)
                     outputPipes = nullptr;
                 }
 
+                // clear existing multiplexing ids
                 if (pipeDemuxIds != nullptr)
                 {
                     delete[] pipeDemuxIds;
                     pipeDemuxIds = nullptr;
                 }
 
+                // convert numbers of input and output pipes from string
                 numInputPipes = atoi(numInputPipesStr);
                 numOutputPipes = atoi(numOutputPipesStr);
                 numTotalPipes = numInputPipes + numOutputPipes;
 
+                // make sure more than 0 pipes should be requested
                 if (numTotalPipes > 0)
                 {
+                    // allocate memory for input and output pipes and multiplexing ids
                     inputPipes = new NamedPipe *[numInputPipes];
                     outputPipes = new NamedPipe *[numOutputPipes];
                     pipeDemuxIds = new uint8_t[numTotalPipes];
 
+                    // keep track of total, input, and output pipe names received
                     int gotPipeNames = 0;
                     int gotInputPipeNames = 0;
                     int gotOutputPipeNames = 0;
+                    // string to store the name of the pipe
                     char pipeName[50] = {0};
 
-                    // input pipes will be given first
-                    while (gotPipeNames < numTotalPipes)
+                    // get all the pipe names
+                    while (gotPipeNames < numTotalPipes) // TODO: probably not needed
                     {
+                        // input pipes will be given first
                         while (gotInputPipeNames < numInputPipes)
                         {
+                            // get the pipe name
                             memset(pipeName, 0, sizeof(pipeName));
                             if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
                             {
@@ -243,6 +290,7 @@ int main(int argc, char **argv)
                                         indexPos = i;
                                 }
 
+                                // separate the multiplexing id and create a pipe
                                 int pipeId = atoi(pipeName + indexPos + 1);
                                 std::cout << pipeId << std::endl;
                                 pipeDemuxIds[gotPipeNames] = pipeId;
@@ -251,6 +299,7 @@ int main(int argc, char **argv)
                             }
                         }
 
+                        // then get output pipes
                         while (gotOutputPipeNames < numOutputPipes)
                         {
                             memset(pipeName, 0, sizeof(pipeName));
@@ -264,33 +313,39 @@ int main(int argc, char **argv)
                                         indexPos = i;
                                 }
 
+                                // separate the multiplexing id and create a pipe
                                 int pipeId = atoi(pipeName + indexPos + 1);
                                 std::cout << pipeId << std::endl;
                                 pipeDemuxIds[gotPipeNames] = pipeId;
-
-                                // pipeName[indexPos] = '\0';
+                                // pipeName[indexPos] = '\0'; // for abstract pipes
                                 createPipe(outputPipes, gotOutputPipeNames, pipeName);
                                 gotPipeNames++;
                             }
                         }
                     }
+                    // print all the multiplexing ids for debugging
                     std::cout << "Pipe Demux Ids: " << std::endl;
                     for (int i = 0; i < numTotalPipes; i++)
                     {
                         std::cout << (int)pipeDemuxIds[i] << std::endl;
                     }
                 }
+                // tell the connected program the pipes have been created
                 pipeStatus->writeStr("pipe creation successful");
             }
+            // check for interface ready command
             if (strcmp(controlStr, "interface ready") == 0)
             {
                 std::cout << "interface ready" << std::endl;
                 ready = true;
             }
+            // check for connected command
             if (strcmp(controlStr, "connected") == 0)
             {
+                // if a handshake is pending we need to check connected after the handshake completes
                 if (!handshakePending)
                 {
+                    // otherwise check if the connection was successful now
                     if ((device != nullptr && device->isConnected() && handshakeSuccess))
                     {
                         pipeStatus->writeStr("connected");
@@ -309,11 +364,13 @@ int main(int argc, char **argv)
                     checkConnectionAfterHandshake = true;
                 }
             }
+            // check for exit command
             if (strcmp(controlStr, "exit") == 0)
             {
-                std::cout << "exiting" << std::endl;
+                // disable other parts of the main loop
                 ready = false;
                 handshakeSuccess = false;
+                // exit the main loop
                 exit = true;
             }
         }
@@ -321,24 +378,34 @@ int main(int argc, char **argv)
         // handshake sequence, i.e. make sure both sides are ready before sending/looking for data
         if (!handshakeSuccess && device != nullptr && device->isConnected() && handshakeNumAttempts < handshakeMaxAttempts)
         {
+            // see if we need to start a new handshake attempt
             if (!handshakeAttempt)
             {
+                // handshake is pending until successful or max attempts reached
                 handshakePending = true;
                 std::cout << "attempting handshake" << std::endl;
+
+                // set the handshake sequence to 0
                 memset(handshakeSequence, 0, sizeof(handshakeSequence));
+                // generate a new handshake sequence
                 snprintf(handshakeSequence, 7, "%d\n", rand() % 32767);
                 std::cout << "handshake sequence: " << handshakeSequence << std::endl;
+
+                // tell connected serial device to start handshake sequence and write handshake sequence
                 device->writeSerialPort((void *)"handshake\n", 11);
                 device->writeSerialPort(handshakeSequence, 6);
                 handshakeAttempt = true;
             }
+
+            // if a handshake attempt is in progress
             if (handshakeAttempt)
             {
+                // try to read from the serial port
                 x = device->readSerialPort(data, MAX_DATA_LENGTH);
 
+                // if we received data
                 if (x > 0)
                 {
-                    data[x] = 0;
                     std::cout << "Sequence: " << handshakeSequence;
                     std::cout << "Data: ";
                     for (int i = 0; i < x; i++)
@@ -346,14 +413,19 @@ int main(int argc, char **argv)
                         std::cout << data[i];
                     }
                     std::cout << std::endl;
+                    // check if the handshake sequence matches
                     if (strcmp(handshakeSequence, (char *)data) == 0)
                     {
+                        // if it matches then the handshake has succeeded
                         std::cout << "handshake attempt succeeded" << std::endl;
+                        // tell the device the handshake has succeeded
                         device->writeSerialPort((void *)"success\n", 9);
+                        // set flags
                         handshakeSuccess = true;
                         handshakeAttempt = false;
                         handshakePending = false;
 
+                        // report connection status if requested
                         if (checkConnectionAfterHandshake)
                         {
                             if ((device != nullptr && device->isConnected() && handshakeSuccess))
@@ -373,19 +445,28 @@ int main(int argc, char **argv)
                     }
                     else
                     {
+                        // otherwise the connection failed
                         std::cout << "handshake attempt failed" << std::endl;
+                        // so set flags
                         handshakeSuccess = false;
                         handshakeAttempt = false;
+                        // increase the number of attempts
                         handshakeNumAttempts++;
                     }
                 }
             }
+
+            // if we have reached the max handshake attempts without a successful handshake
             if (handshakeNumAttempts >= handshakeMaxAttempts && !handshakeSuccess)
             {
+                // report that the handshake has failed
                 std::cout << "max attempts reached" << std::endl;
+                // TODO: maybe not needed
                 pipeStatus->writeStr("Interrupt\n");
                 pipeStatus->writeStr("serial connection error: handshake failed\n");
                 handshakePending = false;
+
+                // report connection status if requested
                 if (checkConnectionAfterHandshake)
                 {
                     if ((device != nullptr && device->isConnected() && handshakeSuccess))
@@ -405,11 +486,14 @@ int main(int argc, char **argv)
             }
         }
 
+        // if interface is ready and handshake was successful, then we can read from the device
         if (handshakeSuccess && ready && device != nullptr && device->isConnected())
         {
+            // try reading multiplexing data from the device
             x = device->readSerialPort(data, MAX_DATA_LENGTH);
             dataHandled = 0;
 
+            // while all of the data hasn't been handled
             while (dataHandled < x)
             {
                 // check if we need to find the header
@@ -427,7 +511,7 @@ int main(int argc, char **argv)
                     // if we have 5 bytes in the header we've found the header
                     if (headerSize == GSData::headerLen)
                     {
-
+                        // decode the header and check we got a valid header
                         GSData::decodeHeader(header, msgType, msgIndex, msgSize);
                         std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
                         if (msgType > 0 && msgIndex > 0 && msgSize > 0)
@@ -438,6 +522,7 @@ int main(int argc, char **argv)
                         {
                             std::cout << "Error parsing header, at least one field was not set correctly" << std::endl;
                         }
+                        // reset the header variables
                         memset(header, 0, sizeof(header));
                         headerSize = 0;
                     }
@@ -472,6 +557,7 @@ int main(int argc, char **argv)
                         dataHandled += toCopy;
                     }
 
+                    // debug statements if something goes wrong
                     if (m.size > msgSize + GSData::headerLen)
                     {
                         std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << m.size << std::endl;
@@ -498,12 +584,14 @@ int main(int argc, char **argv)
                         // add the GSData payload to the output message
                         mOut.fill(rawData.buf, rawData.size);
 
+                        // determine the type of data
                         if (rawData.type == APRSTelem::TYPE)
                         {
                             // this is an APRSTelem message
                             APRSTelem outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
+                            // need to skip over all the input pipe ids
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == rawData.index)
@@ -523,7 +611,6 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                // need to skip over all the input pipe ids
                                 if (pipeDemuxIds[i] == rawData.index)
                                 {
                                     outputPipes[i]->write(m.buf, m.size);
@@ -577,29 +664,33 @@ int main(int argc, char **argv)
                 std::cout << "Found: " << headerFound << std::endl;
                 std::cout << "Handled " << dataHandled << " out of " << x << std::endl;
 
-                // for (int i = 0; i < numInputPipes; i++)
-                // {
-                //     // check to see if we received a command from the GUI
-                //     memset(inStr, 0, sizeof(inStr));
-                //     if (inputPipes[i]->read(inStr, sizeof(inStr)))
-                //     {
-                //         // assume APRSCmd for now
-                //         // encode the APRSCmd from the JSON
-                //         APRSCmd inData;
-                //         char streamName[100];
-                //         inData.fromJSON(inStr, strlen(inStr), streamName);
-                //         mIn.clear();
-                //         mIn.encode(&inData);
-                //         // take the APRSCmd and place it in a GSData object for multiplexing
-                //         GSData inDataGS(APRSCmd::TYPE, i, mIn.buf, mIn.size);
-                //         mIn.clear();
-                //         mIn.encode(&inDataGS);
-                //         // write the new message formatted for multiplexing
-                //         device->writeSerialPort(mIn.buf, mIn.size);
-                //     }
-                // }
+                // handle commands
+                for (int i = 0; i < numInputPipes; i++)
+                {
+                    // check to see if we received a command from the GUI
+                    memset(inStr, 0, sizeof(inStr));
+                    if (inputPipes[i]->read(inStr, sizeof(inStr)))
+                    {
+                        // assume APRSCmd for now
+                        // encode the APRSCmd from the JSON
+                        APRSCmd inData;
+                        int id = 0;
+                        inData.fromJSON(inStr, strlen(inStr), id);
+                        mIn.clear();
+                        mIn.encode(&inData);
+                        // take the APRSCmd and place it in a GSData object for multiplexing
+                        GSData inDataGS(APRSCmd::TYPE, id, mIn.buf, mIn.size);
+                        mIn.clear();
+                        mIn.encode(&inDataGS);
+                        // tell the device we are sending a command
+                        device->writeSerialPort((void *)"command\n", 9);
+                        // write the new message formatted for multiplexing
+                        device->writeSerialPort(mIn.buf, mIn.size);
+                    }
+                }
             }
         }
+        // handle the device being disconnected
         else if (ready && device != nullptr && !device->isConnected())
         {
             pipeStatus->writeStr("Interrupt\n");
@@ -643,16 +734,15 @@ int main(int argc, char **argv)
 void createPipe(NamedPipe **arr, int &index, const char *name)
 {
     std::cout << "Creating pipe of name: " << name << std::endl;
+    // assemble the pipe name and call the proper class based on platform
 #ifdef WINDOWS
     char pipePath[60] = "\\\\.\\pipe\\";
-    // char pipePath[60] = "";
     strcat(pipePath, name);
     arr[index++] = new WinNamedPipe(pipePath, true);
 #elif LINUX
+    // need to update these paths for abstract sockets
     char pipePath[60] = "./build/serial/pipes/";
-    // char pipePath[60] = "";
     strcat(pipePath, name);
-    // THESE PATHS MIGHT BE WRONG!
     arr[index++] = new LinuxNamedPipe(pipePath, true);
 #endif
 }

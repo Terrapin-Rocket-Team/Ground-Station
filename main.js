@@ -778,9 +778,11 @@ if (config.debug.value) {
     }
 
     // create the command sink
-    commandSink = new FileCommandSink(path.join(logPath, "commands.txt"), {
-      asString: true,
-    });
+    commandSinks.push(
+      new FileCommandSink(path.join(logPath, "commands.txt"), {
+        asString: true,
+      })
+    );
 
     if (config.video.value) {
       // test to see if first video exists

@@ -107,6 +107,7 @@ void LinuxSerialPort::closeSerial()
 
 bool LinuxSerialPort::isConnected()
 {
+  // check if serial is still connected
   pollfd fds = {
       .fd = portHandle,
       .events = POLLHUP,

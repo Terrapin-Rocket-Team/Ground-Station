@@ -124,6 +124,7 @@ class SerialDevice extends EventEmitter {
       log.err(err.message);
     });
     this.driver.once("exit", (code, signal) => {
+      // reset all flags
       this.ready = false;
       this.connected = false;
       this.port = "";
@@ -153,6 +154,7 @@ class SerialDevice extends EventEmitter {
               for (let i = 0; i < strings.length - 1; i++) {
                 if (strings[i] == "Interrupt") {
                   // we know there the serial driver is trying to tell us something at i+1
+                  // figure out what that is
                   if (strings[i + 1].includes("serial connection error")) {
                     log.debug(
                       "Error communicating with serial device: " +
