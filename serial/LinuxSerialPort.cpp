@@ -77,7 +77,6 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
 
 bool LinuxSerialPort::writeSerialPort(void *buffer, unsigned int buf_size)
 {
-  memset(buffer, 0, buf_size);
   return write(portHandle, buffer, buf_size) == buf_size;
 }
 bool LinuxSerialPort::writeSerialPort(int data, unsigned int buf_size)
