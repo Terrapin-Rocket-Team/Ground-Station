@@ -338,6 +338,7 @@ int main(int argc, char **argv)
 
                 if (x > 0)
                 {
+                    data[x] = 0;
                     std::cout << "Sequence: " << handshakeSequence;
                     std::cout << "Data: ";
                     for (int i = 0; i < x; i++)
