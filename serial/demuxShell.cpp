@@ -16,6 +16,7 @@
 #include <iostream>
 #include <ostream>
 #include <cstdint>
+#include <cstdlib>
 
 #include "RadioMessage.h"
 
@@ -23,7 +24,7 @@ void createPipe(NamedPipe **arr, int &index, const char *name);
 
 int main(int argc, char **argv)
 {
-    unsigned char data[MAX_DATA_LENGTH];
+    unsigned char data[MAX_DATA_LENGTH + 1];
     int dataHandled = 0;
     NamedPipe *pipeControl;
     NamedPipe *pipeStatus;
@@ -35,6 +36,14 @@ int main(int argc, char **argv)
     int numTotalPipes = 0;
 
     bool ready = false;
+    bool handshakeSuccess = false;
+    bool handshakeAttempt = false;
+    bool handshakePending = false;
+    bool checkConnectionAfterHandshake = false;
+    char handshakeSequence[6 + 1] = {0};
+    uint8_t handshakeMaxAttempts = 5;
+    uint8_t handshakeNumAttempts = 0;
+    srand(time(0));
 
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
@@ -82,6 +91,8 @@ int main(int argc, char **argv)
             if (strcmp(controlStr, "close") == 0)
             {
                 ready = false;
+                handshakeSuccess = false;
+                handshakeNumAttempts = 0;
                 // close the serial connection
                 if (device != nullptr)
                 {
@@ -92,6 +103,8 @@ int main(int argc, char **argv)
             if (strcmp(controlStr, "reset") == 0)
             {
                 ready = false;
+                handshakeSuccess = false;
+                handshakeNumAttempts = 0;
 
                 if (device != nullptr)
                 {
@@ -134,14 +147,14 @@ int main(int argc, char **argv)
 #endif
 
                 // attempt to connect
-                time_t start = time(0);
-                bool timeout = false;
-                while (!timeout && !(device->isConnected()))
-                {
-                    time_t end = time(0);
-                    if (difftime(end, start) > 2)
-                        timeout = true;
-                }
+                // time_t start = time(0);
+                // bool timeout = false;
+                // while (!timeout && !(device->isConnected()))
+                // {
+                //     time_t end = time(0);
+                //     if (difftime(end, start) > 2)
+                //         timeout = true;
+                // }
             }
             if (strcmp(controlStr, "data pipes") == 0)
             {
@@ -276,25 +289,122 @@ int main(int argc, char **argv)
             }
             if (strcmp(controlStr, "connected") == 0)
             {
-                if ((device != nullptr && device->isConnected()))
+                if (!handshakePending)
                 {
-                    pipeStatus->writeStr("connected");
+                    if ((device != nullptr && device->isConnected() && handshakeSuccess))
+                    {
+                        pipeStatus->writeStr("connected");
+                    }
+                    else if (device == nullptr || !device->isConnected())
+                    {
+                        pipeStatus->writeStr("connection failed");
+                    }
+                    else if (!handshakeSuccess)
+                    {
+                        pipeStatus->writeStr("handshake failed");
+                    }
                 }
                 else
                 {
-                    pipeStatus->writeStr("not connected");
+                    checkConnectionAfterHandshake = true;
                 }
             }
             if (strcmp(controlStr, "exit") == 0)
             {
                 std::cout << "exiting" << std::endl;
                 ready = false;
+                handshakeSuccess = false;
                 exit = true;
             }
         }
 
-        // TODO: add a handshake sequence, i.e. make sure both sides are ready before sending/looking for data
-        if (ready && device != nullptr && device->isConnected())
+        // handshake sequence, i.e. make sure both sides are ready before sending/looking for data
+        if (!handshakeSuccess && device != nullptr && device->isConnected() && handshakeNumAttempts < handshakeMaxAttempts)
+        {
+            if (!handshakeAttempt)
+            {
+                handshakePending = true;
+                std::cout << "attempting handshake" << std::endl;
+                memset(handshakeSequence, 0, sizeof(handshakeSequence));
+                snprintf(handshakeSequence, 7, "%d\n", rand() % 32767);
+                std::cout << "handshake sequence: " << handshakeSequence << std::endl;
+                device->writeSerialPort((void *)"handshake\n", 11);
+                device->writeSerialPort(handshakeSequence, 6);
+                handshakeAttempt = true;
+            }
+            if (handshakeAttempt)
+            {
+                x = device->readSerialPort(data, MAX_DATA_LENGTH);
+
+                if (x > 0)
+                {
+                    std::cout << "Sequence: " << handshakeSequence;
+                    std::cout << "Data: ";
+                    for (int i = 0; i < x; i++)
+                    {
+                        std::cout << data[i];
+                    }
+                    std::cout << std::endl;
+                    if (strcmp(handshakeSequence, (char *)data) == 0)
+                    {
+                        std::cout << "handshake attempt succeeded" << std::endl;
+                        device->writeSerialPort((void *)"success\n", 9);
+                        handshakeSuccess = true;
+                        handshakeAttempt = false;
+                        handshakePending = false;
+
+                        if (checkConnectionAfterHandshake)
+                        {
+                            if ((device != nullptr && device->isConnected() && handshakeSuccess))
+                            {
+                                pipeStatus->writeStr("connected");
+                            }
+                            else if (device == nullptr || !device->isConnected())
+                            {
+                                pipeStatus->writeStr("connection failed");
+                            }
+                            else if (!handshakeSuccess)
+                            {
+                                pipeStatus->writeStr("handshake failed");
+                            }
+                            checkConnectionAfterHandshake = false;
+                        }
+                    }
+                    else
+                    {
+                        std::cout << "handshake attempt failed" << std::endl;
+                        handshakeSuccess = false;
+                        handshakeAttempt = false;
+                        handshakeNumAttempts++;
+                    }
+                }
+            }
+            if (handshakeNumAttempts >= handshakeMaxAttempts && !handshakeSuccess)
+            {
+                std::cout << "max attempts reached" << std::endl;
+                pipeStatus->writeStr("Interrupt\n");
+                pipeStatus->writeStr("serial connection error: handshake failed\n");
+                handshakePending = false;
+                if (checkConnectionAfterHandshake)
+                {
+                    if ((device != nullptr && device->isConnected() && handshakeSuccess))
+                    {
+                        pipeStatus->writeStr("connected");
+                    }
+                    else if (device == nullptr || !device->isConnected())
+                    {
+                        pipeStatus->writeStr("connection failed");
+                    }
+                    else if (!handshakeSuccess)
+                    {
+                        pipeStatus->writeStr("handshake failed");
+                    }
+                    checkConnectionAfterHandshake = false;
+                }
+            }
+        }
+
+        if (handshakeSuccess && ready && device != nullptr && device->isConnected())
         {
             x = device->readSerialPort(data, MAX_DATA_LENGTH);
             dataHandled = 0;
@@ -399,6 +509,7 @@ int main(int argc, char **argv)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
+                                    strcat(outStr, "\n");
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
@@ -430,6 +541,7 @@ int main(int argc, char **argv)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[numInputPipes + i]);
+                                    strcat(outStr, "\n");
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
@@ -446,6 +558,7 @@ int main(int argc, char **argv)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
+                                    strcat(outStr, "\n");
                                     outputPipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
@@ -485,6 +598,13 @@ int main(int argc, char **argv)
                 //     }
                 // }
             }
+        }
+        else if (ready && device != nullptr && !device->isConnected())
+        {
+            pipeStatus->writeStr("Interrupt\n");
+            pipeStatus->writeStr("serial connection error: connection lost\n");
+            handshakeSuccess = false;
+            ready = false;
         }
     }
 

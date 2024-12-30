@@ -46,18 +46,25 @@ class SerialTelemSource extends TextSource {
     }
 
     this.sd.on(this.name + "-data", (data) => {
-      this.options.parser(data);
-      if (this.options.createLog && this.dataFile) {
-        // write CSV of data to file
-        let obj;
-        // not ideal, but good enough for now, ideally we're coder agnostic here
-        if (options.isMetrics) obj = new Metrics(data);
-        if (!options.isMetrics) obj = new APRSTelem(data, this.name);
+      data
+        .toString()
+        .split("\n")
+        .forEach((line) => {
+          if (line) {
+            this.options.parser(line);
+            if (this.options.createLog && this.dataFile) {
+              // write CSV of data to file
+              let obj;
+              // not ideal, but good enough for now, ideally we're coder agnostic here
+              if (options.isMetrics) obj = new Metrics(line);
+              if (!options.isMetrics) obj = new APRSTelem(line, this.name);
 
-        // if first time write csv header
-        this.dataFile.write(obj.toCSV(this.firstLine));
-        if (this.firstLine) this.firstLine = false;
-      }
+              // if first time write csv header
+              this.dataFile.write(obj.toCSV(this.firstLine));
+              if (this.firstLine) this.firstLine = false;
+            }
+          }
+        });
     });
 
     // TODO: handle serial close?
