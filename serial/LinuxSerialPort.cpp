@@ -6,10 +6,13 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <poll.h>
 
-LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
+LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
+{
   portHandle = open(portName, O_RDWR);
-  if (portHandle < 0) {
+  if (portHandle < 0)
+  {
     std::cout << "ERROR: Failed to open serial port at " << portName << "\n";
     std::cout << strerror(errno) << "\n";
     return;
@@ -17,7 +20,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
 
   struct termios2 tty;
 
-  if (ioctl(portHandle, TCGETS, &tty) != 0) {
+  if (ioctl(portHandle, TCGETS, &tty) != 0)
+  {
     std::cout << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
               << "\n";
     connected = false;
@@ -35,10 +39,10 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
       CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
 
   tty.c_lflag &= ~ICANON;
-  tty.c_lflag &= ~ECHO;   // Disable echo
-  tty.c_lflag &= ~ECHOE;  // Disable erasure
-  tty.c_lflag &= ~ECHONL; // Disable new-line echo
-  tty.c_lflag &= ~ISIG;   // Disable interpretation of INTR, QUIT and SUSP
+  tty.c_lflag &= ~ECHO;                   // Disable echo
+  tty.c_lflag &= ~ECHOE;                  // Disable erasure
+  tty.c_lflag &= ~ECHONL;                 // Disable new-line echo
+  tty.c_lflag &= ~ISIG;                   // Disable interpretation of INTR, QUIT and SUSP
   tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
   tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR |
                    ICRNL); // Disable any special handling of received bytes
@@ -61,7 +65,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   tty.c_ospeed = 600000;
 
   // Save tty settings, also checking for error
-  if (ioctl(portHandle, TCSETSW, &tty) != 0) {
+  if (ioctl(portHandle, TCSETSW, &tty) != 0)
+  {
     std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
               << "\n";
     connected = false;
@@ -70,23 +75,29 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName) {
   connected = true;
 }
 
-bool LinuxSerialPort::writeSerialPort(void *buffer, unsigned int buf_size) {
+bool LinuxSerialPort::writeSerialPort(void *buffer, unsigned int buf_size)
+{
   memset(buffer, 0, buf_size);
   return write(portHandle, buffer, buf_size) == buf_size;
 }
-bool LinuxSerialPort::writeSerialPort(int data, unsigned int buf_size) {
+bool LinuxSerialPort::writeSerialPort(int data, unsigned int buf_size)
+{
   return writeSerialPort((void *)(&data), buf_size) == buf_size;
 }
 
-int LinuxSerialPort::readSerialPort(void *buffer, unsigned int buf_size) {
+int LinuxSerialPort::readSerialPort(void *buffer, unsigned int buf_size)
+{
   return read(portHandle, buffer, buf_size);
 }
 
-void LinuxSerialPort::closeSerial() {
-  if (connected) {
+void LinuxSerialPort::closeSerial()
+{
+  if (connected)
+  {
     // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-    if (ioctl(portHandle, TCSETSW, &backup) != 0) {
+    if (ioctl(portHandle, TCSETSW, &backup) != 0)
+    {
       std::cout << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
                 << "\n";
       connected = false;
@@ -95,6 +106,16 @@ void LinuxSerialPort::closeSerial() {
   }
 }
 
-bool LinuxSerialPort::isConnected() { return connected; }
+bool LinuxSerialPort::isConnected()
+{
+  pollfd fds = {
+      .fd = portHandle,
+      .events = POLLHUP,
+  };
+  poll(&fds, 1, 0);
+  if (fds.revents & POLLHUP)
+    this->connected = false;
+  return this->connected;
+}
 
 LinuxSerialPort::~LinuxSerialPort() { closeSerial(); }

@@ -677,6 +677,10 @@ serial.on("close", (path) => {
     windows.main.webContents.send("serial-close", path);
 });
 
+serial.on("exit", () => {
+  log.info("Serial driver exited");
+});
+
 // testing
 if (config.debug.value) {
   // start after 1 second to give everything time to load

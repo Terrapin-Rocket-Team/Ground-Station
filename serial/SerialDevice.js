@@ -124,8 +124,12 @@ class SerialDevice extends EventEmitter {
       log.err(err.message);
     });
     this.driver.once("exit", (code, signal) => {
+      this.ready = false;
+      this.connected = false;
+      this.port = "";
       if (code) log.info("Driver exited with code: " + code);
       if (signal) log.info("Driver exited with signal: " + signal);
+      this.emit("exit");
     });
 
     // wait for output on stdout
@@ -144,6 +148,24 @@ class SerialDevice extends EventEmitter {
           // above streams allow us much more flexibility on stdout
 
           this.waitReady([this.control, this.status], () => {
+            this.status.on("data", (data) => {
+              let strings = data.toString().split("\n");
+              for (let i = 0; i < strings.length - 1; i++) {
+                if (strings[i] == "Interrupt") {
+                  // we know there the serial driver is trying to tell us something at i+1
+                  if (strings[i + 1].includes("serial connection error")) {
+                    log.debug(
+                      "Error communicating with serial device: " +
+                        strings[i + 1]
+                    );
+                    this.emit("close", this.port);
+                    this.control.stream.write("close\n");
+                    this.connected = false;
+                    this.port = "";
+                  }
+                }
+              }
+            });
             log.info("Serial driver ready");
             this.emit("ready");
             this.ready = true;
@@ -239,7 +261,7 @@ class SerialDevice extends EventEmitter {
                   newStream.on("data", (data) => {
                     try {
                       // anyone who wants data from this pipe will listen for this event
-                      this.emit(name + "-data", JSON.parse(data));
+                      this.emit(name + "-data", data);
                     } catch (err) {
                       this.emit(
                         "error",
@@ -257,10 +279,11 @@ class SerialDevice extends EventEmitter {
                   this.waitReady(
                     this.deviceInput.concat(this.deviceOutput),
                     () => {
-                      // resolve the promise
+                      // tell the serial driver the ground station is ready
                       this.control.stream.write("interface ready\n");
                       this.emit("connected");
                       this.connected = true;
+                      // resolve the promise
                       res(1);
                     }
                   );
@@ -326,6 +349,8 @@ class SerialDevice extends EventEmitter {
   reset() {
     if (this.ready) {
       this.control.stream.write("close\n");
+      this.emit("close", this.port);
+      this.connected = false;
       this.port = "";
     }
   }
@@ -339,7 +364,7 @@ class SerialDevice extends EventEmitter {
     this.ready = false;
     this.connected = false;
     this.port = "";
-    this.emit("close");
+    this.emit("exit");
   }
 
   /**
@@ -348,7 +373,7 @@ class SerialDevice extends EventEmitter {
   reload() {
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
-    this.emit("close");
+    this.emit("exit");
 
     if (this.ready || this.driver) {
       this.driver.once("exit", () => {

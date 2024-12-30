@@ -858,6 +858,9 @@ window.onload = () => {
       const img = document.getElementById(portInUse.idPrefix + "-connection");
       img.setAttribute("src", "./images/serial_disconnected.svg");
       img.setAttribute("title", "Connection Error");
+      document.getElementById(portInUse.idPrefix + "-selected").textContent =
+        "Select Port";
+      portInUse = { path: null, idPrefix: null };
     }
   });
 };
