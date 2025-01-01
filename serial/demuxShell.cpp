@@ -35,10 +35,8 @@ int main(int argc, char **argv)
     NamedPipe *pipeControl;
     // the pipe to provide driver status
     NamedPipe *pipeStatus;
-    // the pipes to input data into the driver
-    NamedPipe **inputPipes = nullptr;
-    // the pipes to output data from the driver
-    NamedPipe **outputPipes = nullptr;
+    // the pipes to input and output data for the driver
+    NamedPipe **pipes = nullptr;
     // the multiplexing ids/indexes for each pipe
     uint8_t *pipeDemuxIds = nullptr;
     // the number of input pipes
@@ -54,6 +52,8 @@ int main(int argc, char **argv)
     bool handshakeSuccess = false;
     // whether there is a handshake being attempted (with a specific sequence)
     bool handshakeAttempt = false;
+    // timeout to allow multiple attempts for 1 handshake sequence
+    clock_t handshakeStart = clock();
     // whether a handshake is in progress (up to 5 attempts)
     bool handshakePending = false;
     // whether connection status was requested during the handshake process
@@ -226,23 +226,14 @@ int main(int argc, char **argv)
                 }
 
                 // delete existing input and output pipes
-                if (inputPipes != nullptr)
+                if (pipes != nullptr)
                 {
-                    for (int i = 0; i < numInputPipes; i++)
+                    for (int i = 0; i < numTotalPipes; i++)
                     {
-                        delete inputPipes[i];
+                        delete pipes[i];
                     }
-                    delete[] inputPipes;
-                    inputPipes = nullptr;
-                }
-                if (outputPipes != nullptr)
-                {
-                    for (int i = 0; i < numOutputPipes; i++)
-                    {
-                        delete outputPipes[i];
-                    }
-                    delete[] outputPipes;
-                    outputPipes = nullptr;
+                    delete[] pipes;
+                    pipes = nullptr;
                 }
 
                 // clear existing multiplexing ids
@@ -261,66 +252,35 @@ int main(int argc, char **argv)
                 if (numTotalPipes > 0)
                 {
                     // allocate memory for input and output pipes and multiplexing ids
-                    inputPipes = new NamedPipe *[numInputPipes];
-                    outputPipes = new NamedPipe *[numOutputPipes];
+                    pipes = new NamedPipe *[numTotalPipes];
                     pipeDemuxIds = new uint8_t[numTotalPipes];
 
                     // keep track of total, input, and output pipe names received
                     int gotPipeNames = 0;
-                    int gotInputPipeNames = 0;
-                    int gotOutputPipeNames = 0;
                     // string to store the name of the pipe
                     char pipeName[50] = {0};
 
                     // get all the pipe names
-                    while (gotPipeNames < numTotalPipes) // TODO: probably not needed
+                    while (gotPipeNames < numTotalPipes)
                     {
-                        // input pipes will be given first
-                        while (gotInputPipeNames < numInputPipes)
+                        // input pipes will be given first, then output pipes
+                        memset(pipeName, 0, sizeof(pipeName));
+                        if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
                         {
                             // get the pipe name
-                            memset(pipeName, 0, sizeof(pipeName));
-                            if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
+                            pipeName[sizeof(pipeName) - 1] = '\0';
+                            int indexPos = 0;
+                            for (int i = 0; i < strlen(pipeName); i++)
                             {
-                                pipeName[sizeof(pipeName) - 1] = '\0';
-                                int indexPos = 0;
-                                for (int i = 0; i < strlen(pipeName); i++)
-                                {
-                                    if (pipeName[i] == '-')
-                                        indexPos = i;
-                                }
-
-                                // separate the multiplexing id and create a pipe
-                                int pipeId = atoi(pipeName + indexPos + 1);
-                                std::cout << pipeId << std::endl;
-                                pipeDemuxIds[gotPipeNames] = pipeId;
-                                createPipe(inputPipes, gotInputPipeNames, pipeName);
-                                gotPipeNames++;
+                                if (pipeName[i] == '-')
+                                    indexPos = i;
                             }
-                        }
 
-                        // then get output pipes
-                        while (gotOutputPipeNames < numOutputPipes)
-                        {
-                            memset(pipeName, 0, sizeof(pipeName));
-                            if (pipeControl->readStr(pipeName, sizeof(pipeName)) > 0)
-                            {
-                                pipeName[sizeof(pipeName) - 1] = '\0';
-                                int indexPos = 0;
-                                for (int i = 0; i < strlen(pipeName); i++)
-                                {
-                                    if (pipeName[i] == '-')
-                                        indexPos = i;
-                                }
-
-                                // separate the multiplexing id and create a pipe
-                                int pipeId = atoi(pipeName + indexPos + 1);
-                                std::cout << pipeId << std::endl;
-                                pipeDemuxIds[gotPipeNames] = pipeId;
-                                // pipeName[indexPos] = '\0'; // for abstract pipes
-                                createPipe(outputPipes, gotOutputPipeNames, pipeName);
-                                gotPipeNames++;
-                            }
+                            // separate the multiplexing id and create a pipe
+                            int pipeId = atoi(pipeName + indexPos + 1);
+                            std::cout << pipeId << std::endl;
+                            pipeDemuxIds[gotPipeNames] = pipeId;
+                            createPipe(pipes, gotPipeNames, pipeName); // this increments gotPipeNames
                         }
                     }
                     // print all the multiplexing ids for debugging
@@ -376,7 +336,7 @@ int main(int argc, char **argv)
         }
 
         // handshake sequence, i.e. make sure both sides are ready before sending/looking for data
-        if (!handshakeSuccess && device != nullptr && device->isConnected() && handshakeNumAttempts < handshakeMaxAttempts)
+        if (!exit && !handshakeSuccess && device != nullptr && device->isConnected() && handshakeNumAttempts < handshakeMaxAttempts)
         {
             // see if we need to start a new handshake attempt
             if (!handshakeAttempt)
@@ -385,6 +345,11 @@ int main(int argc, char **argv)
                 handshakePending = true;
                 std::cout << "attempting handshake" << std::endl;
 
+                // reset multiplexing message in case it caused the handshake attempt
+                m.clear();
+                // start timeout
+                handshakeStart = clock();
+
                 // set the handshake sequence to 0
                 memset(handshakeSequence, 0, sizeof(handshakeSequence));
                 // generate a new handshake sequence
@@ -392,7 +357,7 @@ int main(int argc, char **argv)
                 std::cout << "handshake sequence: " << handshakeSequence << std::endl;
 
                 // tell connected serial device to start handshake sequence and write handshake sequence
-                device->writeSerialPort((void *)"handshake\n", 11);
+                device->writeSerialPort((void *)"handshake\n", strlen("handshake\n"));
                 device->writeSerialPort(handshakeSequence, 6);
                 handshakeAttempt = true;
             }
@@ -406,6 +371,8 @@ int main(int argc, char **argv)
                 // if we received data
                 if (x > 0)
                 {
+                    // make sure data is null terminated
+                    data[x] = 0;
                     std::cout << "Sequence: " << handshakeSequence;
                     std::cout << "Data: ";
                     for (int i = 0; i < x; i++)
@@ -419,7 +386,7 @@ int main(int argc, char **argv)
                         // if it matches then the handshake has succeeded
                         std::cout << "handshake attempt succeeded" << std::endl;
                         // tell the device the handshake has succeeded
-                        device->writeSerialPort((void *)"success\n", 9);
+                        device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
                         // set flags
                         handshakeSuccess = true;
                         handshakeAttempt = false;
@@ -445,14 +412,20 @@ int main(int argc, char **argv)
                     }
                     else
                     {
-                        // otherwise the connection failed
-                        std::cout << "handshake attempt failed" << std::endl;
-                        // so set flags
-                        handshakeSuccess = false;
-                        handshakeAttempt = false;
-                        // increase the number of attempts
-                        handshakeNumAttempts++;
+                        std::cout << "handshake failed" << std::endl;
                     }
+                }
+
+                // make sure we still have an active handshake attempt (in case there was a successful handshake we don't want to override that)
+                if (handshakeAttempt && clock() - handshakeStart > 10) // 10ms timeout
+                {
+                    // the connection failed
+                    std::cout << "handshake attempt timeout" << std::endl;
+                    // so set flags
+                    handshakeSuccess = false;
+                    handshakeAttempt = false;
+                    // increase the number of attempts
+                    handshakeNumAttempts++;
                 }
             }
 
@@ -464,6 +437,7 @@ int main(int argc, char **argv)
                 // TODO: maybe not needed
                 pipeStatus->writeStr("Interrupt\n");
                 pipeStatus->writeStr("serial connection error: handshake failed\n");
+                device->writeSerialPort((void *)"handshake failed\n", strlen("handshake failed\n"));
                 handshakePending = false;
 
                 // report connection status if requested
@@ -493,6 +467,16 @@ int main(int argc, char **argv)
             x = device->readSerialPort(data, MAX_DATA_LENGTH);
             dataHandled = 0;
 
+            if (x > 0)
+            {
+                std::cout << "Serial data: ";
+                for (int i = 0; i < x; i++)
+                {
+                    std::cout << data[i];
+                }
+                std::cout << std::endl;
+            }
+
             // while all of the data hasn't been handled
             while (dataHandled < x)
             {
@@ -508,7 +492,7 @@ int main(int argc, char **argv)
                             break;
                     }
 
-                    // if we have 5 bytes in the header we've found the header
+                    // if we have GSData::headerLen bytes in the header we've found the header
                     if (headerSize == GSData::headerLen)
                     {
                         // decode the header and check we got a valid header
@@ -516,7 +500,16 @@ int main(int argc, char **argv)
                         std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
                         if (msgType > 0 && msgIndex > 0 && msgSize > 0)
                         {
-                            headerFound = true;
+                            if (msgSize <= Message::maxSize)
+                            {
+                                headerFound = true;
+                            }
+                            else
+                            {
+                                std::cout << "Requested size of " << msgSize << " is too large, ignoring" << std::endl;
+                                // something is out of sync, so redo handshake
+                                handshakeSuccess = false;
+                            }
                         }
                         else
                         {
@@ -585,7 +578,7 @@ int main(int argc, char **argv)
                         mOut.fill(rawData.buf, rawData.size);
 
                         // determine the type of data
-                        if (rawData.type == APRSTelem::TYPE)
+                        if (rawData.dataType == APRSTelem::type)
                         {
                             // this is an APRSTelem message
                             APRSTelem outData;
@@ -594,16 +587,16 @@ int main(int argc, char **argv)
                             // need to skip over all the input pipe ids
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
                                     strcat(outStr, "\n");
-                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                    pipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
                         }
-                        if (rawData.type == VideoData::TYPE)
+                        if (rawData.dataType == VideoData::type)
                         {
                             // this is video data
                             VideoData outData;
@@ -611,13 +604,13 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.id)
                                 {
-                                    outputPipes[i]->write(m.buf, m.size);
+                                    pipes[i]->write(mOut.buf, mOut.size);
                                 }
                             }
                         }
-                        if (rawData.type == APRSCmd::TYPE)
+                        if (rawData.dataType == APRSCmd::type)
                         {
                             // this is an APRSCmd message
                             APRSCmd outData;
@@ -625,16 +618,16 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[numInputPipes + i]);
                                     strcat(outStr, "\n");
-                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                    pipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
                         }
-                        if (rawData.type == APRSText::TYPE)
+                        if (rawData.dataType == APRSText::type)
                         {
                             // this is an APRSText message
                             APRSText outData;
@@ -642,12 +635,12 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.index)
+                                if (pipeDemuxIds[i] == rawData.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
                                     strcat(outStr, "\n");
-                                    outputPipes[i]->write(outStr, strlen(outStr));
+                                    pipes[i]->write(outStr, strlen(outStr));
                                 }
                             }
                         }
@@ -669,21 +662,25 @@ int main(int argc, char **argv)
                 {
                     // check to see if we received a command from the GUI
                     memset(inStr, 0, sizeof(inStr));
-                    if (inputPipes[i]->read(inStr, sizeof(inStr)))
+                    if (pipes[i]->read(inStr, sizeof(inStr)))
                     {
                         // assume APRSCmd for now
                         // encode the APRSCmd from the JSON
                         APRSCmd inData;
                         int id = 0;
+                        strlen(inStr);
+                        std::cout << inStr << std::endl;
                         inData.fromJSON(inStr, strlen(inStr), id);
                         mIn.clear();
                         mIn.encode(&inData);
                         // take the APRSCmd and place it in a GSData object for multiplexing
-                        GSData inDataGS(APRSCmd::TYPE, id, mIn.buf, mIn.size);
+                        GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], mIn.buf, mIn.size);
                         mIn.clear();
                         mIn.encode(&inDataGS);
+                        mIn.write();
+                        std::cout << std::endl;
                         // tell the device we are sending a command
-                        device->writeSerialPort((void *)"command\n", 9);
+                        device->writeSerialPort((void *)"command\n", strlen("command\n"));
                         // write the new message formatted for multiplexing
                         device->writeSerialPort(mIn.buf, mIn.size);
                     }
@@ -704,23 +701,15 @@ int main(int argc, char **argv)
 
     // properly delete everything
     if (device != nullptr)
-        device->closeSerial();
+        delete device;
 
-    if (inputPipes != nullptr)
+    if (pipes != nullptr)
     {
-        for (int i = 0; i < numInputPipes; i++)
+        for (int i = 0; i < numTotalPipes; i++)
         {
-            delete inputPipes[i];
+            delete pipes[i];
         }
-        delete[] inputPipes;
-    }
-    if (outputPipes != nullptr)
-    {
-        for (int i = 0; i < numOutputPipes; i++)
-        {
-            delete outputPipes[i];
-        }
-        delete[] outputPipes;
+        delete[] pipes;
     }
 
     delete pipeControl;
