@@ -49,7 +49,7 @@ WinSerialPort::WinSerialPort(const char *portName) : SerialPort(portName)
       {
         this->connected = true;
         PurgeComm(this->handler, PURGE_RXCLEAR | PURGE_TXCLEAR);
-        Sleep(ARDUINO_WAIT_TIME); // TODO: does this need to be here?
+        // Sleep(ARDUINO_WAIT_TIME); // TODO: does this need to be here?
       }
     }
   }

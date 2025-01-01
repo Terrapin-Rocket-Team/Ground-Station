@@ -76,14 +76,6 @@ class SerialDevice extends EventEmitter {
   }
 
   clearStreams() {
-    let stream;
-    while ((stream = this.deviceInput.pop())) {
-      stream.close();
-    }
-    while ((stream = this.deviceOutput.pop())) {
-      stream.close();
-    }
-
     this.inputStreamNames = [];
     this.outputStreamNames = [];
   }
@@ -320,7 +312,7 @@ class SerialDevice extends EventEmitter {
     if (this.ready) {
       let stream = this.deviceInput.find((o) => o.name === name);
       if (stream) {
-        stream.write(data);
+        stream.stream.write(data);
 
         log.debug("Wrote to stream " + name + ": " + data);
       }
@@ -363,10 +355,12 @@ class SerialDevice extends EventEmitter {
   close() {
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
+    else this.emit("exit"); // we only need to emit exit if the driver process doesn't exist
+    // since there is a listener that will do this for us when it does
+
     this.ready = false;
     this.connected = false;
     this.port = "";
-    this.emit("exit");
   }
 
   /**
@@ -375,7 +369,7 @@ class SerialDevice extends EventEmitter {
   reload() {
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
-    this.emit("exit");
+    else this.emit("exit");
 
     if (this.ready || this.driver) {
       this.driver.once("exit", () => {
