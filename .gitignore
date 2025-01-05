@@ -5,7 +5,7 @@
 /log/
 /src/cachedtiles/
 
-/build/
+**/build/
 /serial/*.bin
 
 config.json
@@ -15,3 +15,4 @@ config.json
 *.av1
 *.yuv
 *.xz
+*.gsm

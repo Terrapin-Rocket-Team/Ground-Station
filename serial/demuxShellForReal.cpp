@@ -3,6 +3,8 @@
 // Original by ramykaddouri
 //
 
+// TODO: metrics
+
 #ifdef WINDOWS
 #include <WinSerialPort.h>
 #include <WinNamedPipe.h>
@@ -22,6 +24,9 @@
 #include "RadioMessage.h"
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
+
+// TODO: don't hardcode this
+const char *inputFileName = "out.gsm";
 
 int main(int argc, char **argv)
 {
@@ -48,22 +53,10 @@ int main(int argc, char **argv)
 
     // whether the pipe interface is ready
     bool ready = false;
-    // whether the handshake with the device was successful
-    bool handshakeSuccess = false;
-    // whether there is a handshake being attempted (with a specific sequence)
-    bool handshakeAttempt = false;
-    // timeout to allow multiple attempts for 1 handshake sequence
-    clock_t handshakeStart = clock();
-    // whether a handshake is in progress (up to 5 attempts)
-    bool handshakePending = false;
-    // whether connection status was requested during the handshake process
-    bool checkConnectionAfterHandshake = false;
-    // the current handshake sequence
-    char handshakeSequence[6 + 1] = {0};
-    // the maximum number of handshake attempts
-    const uint8_t handshakeMaxAttempts = 5;
-    // the current number of handshake attempts
-    uint8_t handshakeNumAttempts = 0;
+    clock_t timer = clock();
+    int bytesPerSecond = 62549;
+    int bytesReadThisSecond = 0;
+    int timeToWait = 0;
     // seed the random number generator
     srand(time(0));
 
@@ -108,14 +101,16 @@ int main(int argc, char **argv)
     // a GSData object to decode multplexed data
     GSData rawData;
 
-    // an object to handle the serial device connection
-    SerialPort *device = nullptr;
+    // file to read data from
+    FILE *input = fopen(inputFileName, "rb");
+
+    int totalBytesRead = 0;
 
     // required so that the program interfacing with the driver knows when the control and status pipes are ready
     std::cout << "driver ready" << std::endl;
 
     // identify the driver
-    std::cout << "main driver v2.0.0" << std::endl;
+    std::cout << "shell driver v2.0.0" << std::endl;
 
     // controls the exiting the main loop
     bool exit = false;
@@ -136,29 +131,12 @@ int main(int argc, char **argv)
             {
                 // reset ready status and handshake
                 ready = false;
-                handshakeSuccess = false;
-                handshakeNumAttempts = 0;
-                // close the serial connection
-                if (device != nullptr)
-                {
-                    delete device;
-                    device = nullptr;
-                }
             }
             // check for reset command
             if (strcmp(controlStr, "reset") == 0)
             {
                 // reset ready status and handshake
                 ready = false;
-                handshakeSuccess = false;
-                handshakeNumAttempts = 0;
-
-                // close the existing serial connection
-                if (device != nullptr)
-                {
-                    delete device;
-                    device = nullptr;
-                }
 
                 // get the port path to connect to
                 bool receivedPort = false;
@@ -190,12 +168,12 @@ int main(int argc, char **argv)
                     }
                 }
 
-                // create a new serial connection
-#ifdef WINDOWS
-                device = new WinSerialPort(portBuf);
-#elif LINUX
-                device = new LinuxSerialPort(portBuf);
-#endif
+                // eventually open file here
+                if (!input)
+                {
+                    pipeStatus->writeStr("Interrupt\n");
+                    pipeStatus->writeStr("serial driver error: failed to open input file\n");
+                }
             }
             // check for data pipes command
             if (strcmp(controlStr, "data pipes") == 0)
@@ -301,184 +279,41 @@ int main(int argc, char **argv)
             {
                 std::cout << "interface ready" << std::endl;
                 ready = true;
+                timer = clock();
             }
             // check for connected command
             if (strcmp(controlStr, "connected") == 0)
             {
-                // if a handshake is pending we need to check connected after the handshake completes
-                if (!handshakePending)
-                {
-                    // otherwise check if the connection was successful now
-                    if ((device != nullptr && device->isConnected() && handshakeSuccess))
-                    {
-                        pipeStatus->writeStr("connected");
-                    }
-                    else if (device == nullptr || !device->isConnected())
-                    {
-                        pipeStatus->writeStr("connection failed");
-                    }
-                    else if (!handshakeSuccess)
-                    {
-                        pipeStatus->writeStr("handshake failed");
-                    }
-                }
-                else
-                {
-                    checkConnectionAfterHandshake = true;
-                }
+                pipeStatus->writeStr("connected");
             }
             // check for exit command
             if (strcmp(controlStr, "exit") == 0)
             {
                 // disable other parts of the main loop
                 ready = false;
-                handshakeSuccess = false;
                 // exit the main loop
                 exit = true;
             }
         }
 
-        // handshake sequence, i.e. make sure both sides are ready before sending/looking for data
-        if (!exit && !handshakeSuccess && device != nullptr && device->isConnected() && handshakeNumAttempts < handshakeMaxAttempts)
-        {
-            // see if we need to start a new handshake attempt
-            if (!handshakeAttempt)
-            {
-                // handshake is pending until successful or max attempts reached
-                handshakePending = true;
-                std::cout << "attempting handshake" << std::endl;
-
-                // reset multiplexing message in case it caused the handshake attempt
-                m.clear();
-                // start timeout
-                handshakeStart = clock();
-
-                // set the handshake sequence to 0
-                memset(handshakeSequence, 0, sizeof(handshakeSequence));
-                // generate a new handshake sequence
-                snprintf(handshakeSequence, 7, "%d\n", rand() % 32767);
-                std::cout << "handshake sequence: " << handshakeSequence << std::endl;
-
-                // tell connected serial device to start handshake sequence and write handshake sequence
-                device->writeSerialPort((void *)"handshake\n", strlen("handshake\n"));
-                device->writeSerialPort(handshakeSequence, 6);
-                handshakeAttempt = true;
-            }
-
-            // if a handshake attempt is in progress
-            if (handshakeAttempt)
-            {
-                // try to read from the serial port
-                x = device->readSerialPort(data, MAX_DATA_LENGTH);
-
-                // if we received data
-                if (x > 0)
-                {
-                    // make sure data is null terminated
-                    data[x] = 0;
-                    std::cout << "Sequence: " << handshakeSequence;
-                    std::cout << "Data: ";
-                    for (int i = 0; i < x; i++)
-                    {
-                        std::cout << data[i];
-                    }
-                    std::cout << std::endl;
-                    // check if the handshake sequence matches
-                    if (strcmp(handshakeSequence, (char *)data) == 0)
-                    {
-                        // if it matches then the handshake has succeeded
-                        std::cout << "handshake attempt succeeded" << std::endl;
-                        // tell the device the handshake has succeeded
-                        device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
-                        // set flags
-                        handshakeSuccess = true;
-                        handshakeAttempt = false;
-                        handshakePending = false;
-
-                        // report connection status if requested
-                        if (checkConnectionAfterHandshake)
-                        {
-                            if ((device != nullptr && device->isConnected() && handshakeSuccess))
-                            {
-                                pipeStatus->writeStr("connected");
-                            }
-                            else if (device == nullptr || !device->isConnected())
-                            {
-                                pipeStatus->writeStr("connection failed");
-                            }
-                            else if (!handshakeSuccess)
-                            {
-                                pipeStatus->writeStr("handshake failed");
-                            }
-                            checkConnectionAfterHandshake = false;
-                        }
-                    }
-                    else
-                    {
-                        std::cout << "handshake failed" << std::endl;
-                    }
-                }
-
-                // make sure we still have an active handshake attempt (in case there was a successful handshake we don't want to override that)
-                if (handshakeAttempt && clock() - handshakeStart > 10) // 10ms timeout
-                {
-                    // the connection failed
-                    std::cout << "handshake attempt timeout" << std::endl;
-                    // so set flags
-                    handshakeSuccess = false;
-                    handshakeAttempt = false;
-                    // increase the number of attempts
-                    handshakeNumAttempts++;
-                }
-            }
-
-            // if we have reached the max handshake attempts without a successful handshake
-            if (handshakeNumAttempts >= handshakeMaxAttempts && !handshakeSuccess)
-            {
-                // report that the handshake has failed
-                std::cout << "max attempts reached" << std::endl;
-                // TODO: maybe not needed
-                pipeStatus->writeStr("Interrupt\n");
-                pipeStatus->writeStr("serial connection error: handshake failed\n");
-                device->writeSerialPort((void *)"handshake failed\n", strlen("handshake failed\n"));
-                handshakePending = false;
-
-                // report connection status if requested
-                if (checkConnectionAfterHandshake)
-                {
-                    if ((device != nullptr && device->isConnected() && handshakeSuccess))
-                    {
-                        pipeStatus->writeStr("connected");
-                    }
-                    else if (device == nullptr || !device->isConnected())
-                    {
-                        pipeStatus->writeStr("connection failed");
-                    }
-                    else if (!handshakeSuccess)
-                    {
-                        pipeStatus->writeStr("handshake failed");
-                    }
-                    checkConnectionAfterHandshake = false;
-                }
-            }
-        }
-
         // if interface is ready and handshake was successful, then we can read from the device
-        if (handshakeSuccess && ready && device != nullptr && device->isConnected())
+        if (ready && input && feof(input) == 0 && clock() - timer > timeToWait)
         {
-            // try reading multiplexing data from the device
-            x = device->readSerialPort(data, MAX_DATA_LENGTH);
+            // try reading multiplexing data from the file
+            x = fread(data, sizeof(char), MAX_DATA_LENGTH, input);
+            totalBytesRead += x;
             dataHandled = 0;
+            std::cout << "Bytes read: " << totalBytesRead << std::endl;
 
-            if (x > 0)
-            {
-                std::cout << "Serial data: ";
-                for (int i = 0; i < x; i++)
-                {
-                    std::cout << data[i];
-                }
-                std::cout << std::endl;
-            }
+            // if (x > 0)
+            // {
+            //     std::cout << "Serial data: ";
+            //     for (int i = 0; i < x; i++)
+            //     {
+            //         std::cout << data[i];
+            //     }
+            //     std::cout << std::endl;
+            // }
 
             // while all of the data hasn't been handled
             while (dataHandled < x)
@@ -510,8 +345,7 @@ int main(int argc, char **argv)
                             else
                             {
                                 std::cout << "Requested size of " << msgSize << " is too large, ignoring" << std::endl;
-                                // something is out of sync, so redo handshake
-                                handshakeSuccess = false;
+                                // normally rehandshake here
                             }
                         }
                         else
@@ -525,6 +359,7 @@ int main(int argc, char **argv)
                     }
 
                     // append the read data to the message
+                    // TODO: this may have issues
                     if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
                     {
                         m.append(data + dataHandled, x - dataHandled);
@@ -573,13 +408,14 @@ int main(int argc, char **argv)
                         // we have a complete message
                         m.decode(&rawData);
 
-                        std::cout << "After decoding:" << std::endl;
-                        std::cout << rawData.buf << std::endl;
-
                         // reset the output message
                         mOut.clear();
                         // add the GSData payload to the output message
                         mOut.fill(rawData.buf, rawData.size);
+
+                        // std::cout << "After decoding:" << std::endl;
+                        // mOut.write();
+                        // std::cout << std::endl;
 
                         // determine the type of data
                         if (rawData.dataType == APRSTelem::type)
@@ -662,6 +498,10 @@ int main(int argc, char **argv)
                 std::cout << "Handled " << dataHandled << " out of " << x << std::endl;
             }
 
+            timeToWait = ((double)x / bytesPerSecond * 1000) - 2; // minus 2 cause we would rather have slightly too high bitrate than slightly too low
+            std::cout << "Waiting: " << timeToWait << std::endl;
+            timer = clock();
+
             // handle commands
             for (int i = 0; i < numInputPipes; i++)
             {
@@ -684,28 +524,20 @@ int main(int argc, char **argv)
                     mIn.encode(&inDataGS);
                     mIn.write();
                     std::cout << std::endl;
+                    // TODO: implement commands
                     // tell the device we are sending a command
-                    device->writeSerialPort((void *)"command\n", strlen("command\n"));
+                    // device->writeSerialPort((void *)"command\n", strlen("command\n"));
                     // write the new message formatted for multiplexing
-                    device->writeSerialPort(mIn.buf, mIn.size);
+                    // device->writeSerialPort(mIn.buf, mIn.size);
                 }
             }
-        }
-        // handle the device being disconnected
-        else if (ready && device != nullptr && !device->isConnected())
-        {
-            pipeStatus->writeStr("Interrupt\n");
-            pipeStatus->writeStr("serial connection error: connection lost\n");
-            handshakeSuccess = false;
-            ready = false;
         }
     }
 
     std::cout << "Exit" << std::endl;
 
     // properly delete everything
-    if (device != nullptr)
-        delete device;
+    fclose(input);
 
     if (pipes != nullptr)
     {

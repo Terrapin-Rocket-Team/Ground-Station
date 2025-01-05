@@ -133,7 +133,7 @@ window.onload = () => {
   api
     .getPortStatus()
     .then((status) => {
-      if (status.connected) {
+      if (status.connected && status.path) {
         portInUse.path = status.path;
         portInUse.idPrefix = "serial";
         const selected = document.getElementById("serial-selected");

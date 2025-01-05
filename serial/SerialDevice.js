@@ -32,10 +32,7 @@ class SerialDevice extends EventEmitter {
     this.control = {};
     this.status = {};
 
-    // TODO: don't hardcode debug
-    this.debug = true;
-
-    this.setupDriver();
+    this.useDebug = false;
   }
 
   /**
@@ -88,6 +85,7 @@ class SerialDevice extends EventEmitter {
   pipe(name, outStream) {
     let stream = this.deviceOutput.find((o) => o.name === name);
     if (stream) stream.stream.pipe(outStream);
+    else log.err("Could not find output stream: " + name);
   }
 
   /**
@@ -95,14 +93,19 @@ class SerialDevice extends EventEmitter {
    */
   setupDriver() {
     // logic for starting the driver program
+    // TODO: fix these names
     if (os.platform() === "win32") {
-      if (!this.debug)
-        this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
-      else this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
+      if (!this.useDebug)
+        this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
+      else
+        this.driver = spawn(
+          path.join(serialDriverPath, "DriverShellForReal.exe")
+        );
     } else if (os.platform() === "linux") {
-      if (!this.debug)
-        this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
-      else this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
+      if (!this.useDebug)
+        this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
+      else
+        this.driver = spawn(path.join(serialDriverPath, "DriverShellForReal"));
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +
@@ -156,6 +159,12 @@ class SerialDevice extends EventEmitter {
                     this.control.stream.write("close\n");
                     this.connected = false;
                     this.port = "";
+                  }
+                  if (strings[i + 1].includes("serial driver error")) {
+                    log.debug(
+                      "Error starting serial driver: " + strings[i + 1]
+                    );
+                    this.close();
                   }
                 }
               }

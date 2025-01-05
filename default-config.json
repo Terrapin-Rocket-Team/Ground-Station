@@ -13,6 +13,18 @@
 		"value": false,
 		"type": "toggle"
 	},
+	"dataDebug": {
+		"name": "Debug Data Input",
+		"description": "Read input data from local data files. The normal Serial connection will be non-functional with this setting on.",
+		"value": false,
+		"type": "toggle"
+	},
+	"driverDebug": {
+		"name": "Serial Driver Debug",
+		"description": "Use the debug serial driver to input data from a Ground Station Muxer file. The normal Serial connection will be non-functional with this setting on.",
+		"value": false,
+		"type": "toggle"
+	},
 	"video": {
 		"name": "Video Mode",
 		"description": "Turn on to switch the ground station to video streaming mode.",
