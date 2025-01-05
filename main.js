@@ -43,12 +43,19 @@ try {
     config.debugScale !== undefined ||
     config.noGUI !== undefined ||
     config.version !== app.getVersion()
-  )
+  ) {
     log.warn(
       "Older config version (likely v1.5) detected, save your settings to remove this warning"
     );
+    throw new Error("old config version"); // throw an error to get the default config to load
+  }
   // setup logger
   log.useDebug = config.debug.value;
+  serial.useDebug = config.driverDebug.value;
+  if (config.dataDebug.value && config.driverDebug.value)
+    log.warn(
+      'Configuration warning: "Debug Data Input" and "Serial Driver Debug" have both been turned on. These settings can create conflicting streams of data so it is recommended to disable one of them.'
+    );
   log.debug("Config loaded");
 } catch (err) {
   // load defaults if no config file
@@ -68,7 +75,7 @@ try {
         JSON.stringify(config, null, "\t")
       );
     }
-    //create new config file
+    // create new config file
     try {
       if (!fs.existsSync("./config.json")) {
         fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
@@ -82,8 +89,11 @@ try {
   }
 }
 
+// need to setup after loading config
+serial.setupDriver();
+
 try {
-  //load cache metadata
+  // load cache metadata
   cacheMeta = JSON.parse(
     fs.readFileSync(path.join(__dirname, "src", "cachedtiles", "metadata.json"))
   );
@@ -250,10 +260,9 @@ const createMain = () => {
     windows.main.webContents.send("video-controls", videoControls);
   });
 
-  // only create serial streams if not in debug mode
-  // may want to change how this works so we can use debug statements and still test serial connection things
-  loadStreams();
-  if (!config.debug.value) {
+  // only create serial streams if reading debug data from local files
+  if (!config.dataDebug.value) {
+    loadStreams();
   }
 
   log.debug("Main window created");
@@ -579,7 +588,10 @@ ipcMain.on("video-controls", (event, controls) => {
 
 // getters
 ipcMain.handle("get-ports", (event, args) => {
-  return serial.getAvailablePorts();
+  if (!config.dataDebug.value && !config.driverDebug.value)
+    return serial.getAvailablePorts();
+  else if (config.driverDebug.value) return [{ path: "Begin driver debug" }];
+  else if (config.dataDebug.value) return [];
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
@@ -607,10 +619,12 @@ ipcMain.handle("get-streams", (event, args) => {
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
-    if (stream.hasFrame())
+    if (stream.hasFrame()) {
+      let streamName = stream.name.split("-");
+      streamName.pop();
       // must use readFrame() to get rid of old frame
-      videoData.push({ name: stream.name, data: stream.readFrame() });
-    else videoData.push(null); // TODO: this seems a bit odd
+      videoData.push({ name: streamName.join("-"), data: stream.readFrame() });
+    } else videoData.push(null); // TODO: this seems a bit odd
   });
   return videoData;
 });
@@ -618,23 +632,39 @@ ipcMain.handle("get-video", (event, args) => {
 // setters
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
-    // try to connect to the given port, log any errors
-    serial
-      .connect(portConfig.path, config.baudRate.value)
-      .then((result) => {
-        log.info("Successfully connected to port " + portConfig.path);
-        res(1);
-      })
-      .catch((err) => {
-        log.err(
-          "Failed to connect to port " +
-            portConfig.path +
-            ': "' +
-            err.message +
-            '"'
-        );
-        res(0);
-      });
+    // convert user interface friendly string to more generic string for the serial driver
+    if (config.driverDebug.value && portConfig.path === "Begin driver debug")
+      portConfig.path === "begin debug";
+
+    if (!config.dataDebug.value) {
+      // try to connect to the given port, log any errors
+      serial
+        .connect(portConfig.path, config.baudRate.value)
+        .then((result) => {
+          // TODO: maybe put this in a better spot
+          // needs to be after the pipes are created
+          videoSources.forEach((source) => {
+            source.startOutput();
+          });
+          log.info("Successfully connected to port " + portConfig.path);
+          res(1);
+        })
+        .catch((err) => {
+          log.err(
+            "Failed to connect to port " +
+              portConfig.path +
+              ': "' +
+              err.message +
+              '"'
+          );
+          res(0);
+        });
+    } else {
+      log.warn(
+        "Attempted serial connection in data debug mode. Switch out of data debug mode to use the serial driver"
+      );
+      res(0);
+    }
   });
 });
 
@@ -655,7 +685,11 @@ ipcMain.on("update-settings", (event, settings) => {
 ipcMain.on("set-streams", (event, streams) => {
   if (streams) {
     config.streams = streams;
-    loadStreams();
+    if (!config.dataDebug.value) {
+      // need to reload streams and reset serial to get everything updated
+      loadStreams();
+      serial.reset();
+    }
     try {
       // write the new settings to the file
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
@@ -682,7 +716,7 @@ serial.on("exit", () => {
 });
 
 // testing
-if (config.debug.value) {
+if (config.dataDebug.value) {
   // start after 1 second to give everything time to load
   setTimeout(() => {
     // set up telemetry sources

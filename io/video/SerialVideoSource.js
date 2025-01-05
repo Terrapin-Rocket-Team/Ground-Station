@@ -117,7 +117,7 @@ class SerialVideoSource extends VideoSource {
 
     // if ffmpeg was properly initialized, set up a write stream for the log file if necessary
     if (this.ffmpeg !== null && this.options.createDecoderLog) {
-      const logName = path.join("logs", "ffmpeg-" + this.name + ".log");
+      const logName = path.join("log", "ffmpeg-" + this.name + ".log");
       const logFile = fs.createWriteStream(logName);
       this.ffmpeg.stderr.pipe(logFile);
 
@@ -130,13 +130,14 @@ class SerialVideoSource extends VideoSource {
    * @returns {Readable} the output stream
    */
   startOutput() {
+    log.debug("Starting serial video source " + this.name);
     //connect pipes
     if (this.ffmpeg !== null) {
       this.o = this.ffmpeg.stdout;
       this.i.pipe(this.name, this.ffmpeg.stdin);
       // connect video log pipe if necessary
-      if (this.options.createLog && this.dataFile)
-        this.i.pipe(this.name, this.dataFile);
+      // if (this.options.createLog && this.dataFile)
+      //   this.i.pipe(this.name, this.dataFile);
 
       //handle data output from ffmpeg
       this.o.on("data", (chunks) => {

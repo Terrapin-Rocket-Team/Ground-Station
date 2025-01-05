@@ -100,6 +100,10 @@ window.onload = () => {
             LV0.frame.u.bytes = video.data.u;
             LV0.frame.v.bytes = video.data.v;
             LV0.ctx.drawFrame(LV0.frame);
+          } else {
+            console.warn(
+              "Unrecognized video name " + video.name + ", ignoring"
+            );
           }
         }
       });
