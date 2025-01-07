@@ -55,8 +55,8 @@ class SerialTelemSource extends TextSource {
             if (this.options.createLog && this.dataFile) {
               // write CSV of data to file
               let obj;
-              // not ideal, but good enough for now, ideally we're coder agnostic here
-              if (options.isMetrics) obj = new Metrics(line);
+              // TODO: not ideal, but good enough for now, ideally we're coder agnostic here
+              if (options.isMetrics) obj = new Metrics(line, true);
               if (!options.isMetrics) obj = new APRSTelem(line, this.name);
 
               // if first time write csv header

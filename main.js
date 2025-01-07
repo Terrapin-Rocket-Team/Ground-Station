@@ -171,10 +171,10 @@ const loadStreams = () => {
       telemSources.push(
         new SerialTelemSource(`${stream.name}-${stream.id}`, {
           parser: (data) => {
-            let telem = new Metrics(data);
+            let telem = new Metrics(data, true);
             log.info(telem);
-            if (windows.main) windows.main.webContents.send("data", telem);
-            if (windows.video) windows.video.webContents.send("data", telem);
+            if (windows.main) windows.main.webContents.send("metrics", telem);
+            if (windows.video) windows.video.webContents.send("metrics", telem);
           },
           isMetrics: true,
           createLog: true,
@@ -190,6 +190,11 @@ const loadStreams = () => {
           createLog: true,
           createDecoderLog: config.debug.value,
         })
+      );
+    } else if (stream.type === "video" && !config.video.value) {
+      log.warn(
+        "Not in video mode. Skipping video stream source for: " +
+          `${stream.name}-${stream.id}`
       );
     }
   });

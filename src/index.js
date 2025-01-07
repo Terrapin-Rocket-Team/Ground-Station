@@ -804,14 +804,14 @@ window.onload = () => {
   api.on("metrics", (metric) => {
     // update signal strength and bitrate
     let m = new Metrics(metric);
-    // TODO: need to update these values based on actual device ids
-    if (m.deviceId === "3") {
+    // figure out which device display this metrics belongs to
+    if (m.deviceId === 3) {
       updateRadioStatus("telem", m);
     }
-    if (m.deviceId === "2") {
+    if (m.deviceId === 2) {
       updateRadioStatus("video0", m);
     }
-    if (m.deviceId === "1") {
+    if (m.deviceId === 1) {
       updateRadioStatus("video1", m);
     }
   });

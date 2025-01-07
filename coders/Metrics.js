@@ -4,8 +4,9 @@
 class Metrics {
   /**
    * @param {object|string} metrics the metrics data
+   * @param {boolean} [isMessageFormat] whether the passed metrics is in the Message library format
    */
-  constructor(metrics) {
+  constructor(metrics, isMessageFormat) {
     // log message time
     this.time = new Date();
 
@@ -13,9 +14,15 @@ class Metrics {
       metrics = JSON.parse(metrics);
     }
 
-    this.deviceId = parseInt(metrics.deviceId);
-    this.bitrate = parseFloat(metrics.bitrate);
-    this.rssi = parseInt(metrics.rssi);
+    if (isMessageFormat) {
+      this.deviceId = parseInt(metrics.data.deviceId);
+      this.bitrate = parseFloat(metrics.data.bitrate);
+      this.rssi = parseInt(metrics.data.rssi);
+    } else {
+      this.deviceId = parseInt(metrics.deviceId);
+      this.bitrate = parseFloat(metrics.bitrate);
+      this.rssi = parseInt(metrics.rssi);
+    }
   }
 
   /**
