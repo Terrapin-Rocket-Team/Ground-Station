@@ -31,18 +31,23 @@ class SerialTelemSource extends TextSource {
 
     this.options = options;
     this.dataFile = null;
+    this.logFile = null;
     this.firstLine = true;
 
     // create telemtry log file if necessary
     if (this.options.createLog) {
-      // TODO: log raw messages
-      const logName = path.join(
+      const dataName = path.join(
         "data",
         this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
       );
-      this.dataFile = fs.createWriteStream(logName);
+      const logName = path.join(
+        "log",
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".txt"
+      );
+      this.dataFile = fs.createWriteStream(dataName);
+      this.logFile = fs.createWriteStream(logName);
 
-      log.debug("Log file created for " + this.name + ": " + logName);
+      log.debug("Data log file created for " + this.name + ": " + dataName);
     }
 
     this.sd.on(this.name + "-data", (data) => {
@@ -62,6 +67,10 @@ class SerialTelemSource extends TextSource {
               // if first time write csv header
               this.dataFile.write(obj.toCSV(this.firstLine));
               if (this.firstLine) this.firstLine = false;
+            }
+            if (this.options.createLog && this.logFile) {
+              // write a log of the raw messages
+              this.logFile.write(line + "\n");
             }
           }
         });

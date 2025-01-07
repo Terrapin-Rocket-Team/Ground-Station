@@ -3,8 +3,6 @@
 // Original by ramykaddouri
 //
 
-// TODO: metrics
-
 #ifdef WINDOWS
 #include <WinSerialPort.h>
 #include <WinNamedPipe.h>
@@ -93,9 +91,6 @@ int main(int argc, char **argv)
     // holds string data that is being input into the driver
     char inStr[maxChunkSize] = {0};
 
-    // TODO: m and mOut can probably be the same
-    // a message to hold multiplexing input data (may end up holding data for multiple messages)
-    Message m;
     // a message to hold only the data for a single multiplexed message
     Message mOut;
     // a message to hold data from driver input pipes
@@ -361,16 +356,16 @@ int main(int argc, char **argv)
                     }
 
                     // append the read data to the message
-                    // TODO: this may have issues
-                    if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
+                    // NOTE: this may have issues
+                    if (x - dataHandled > 0 && mOut.size + x - dataHandled <= msgSize + GSData::headerLen)
                     {
-                        m.append(data + dataHandled, x - dataHandled);
+                        mOut.append(data + dataHandled, x - dataHandled);
                         dataHandled += x - dataHandled;
                     }
-                    else if (x - dataHandled > 0 && m.size < msgSize + GSData::headerLen && m.size + x - dataHandled > msgSize + GSData::headerLen)
+                    else if (x - dataHandled > 0 && mOut.size < msgSize + GSData::headerLen && mOut.size + x - dataHandled > msgSize + GSData::headerLen)
                     {
-                        int toCopy = msgSize + GSData::headerLen - m.size;
-                        m.append(data + dataHandled, toCopy);
+                        int toCopy = msgSize + GSData::headerLen - mOut.size;
+                        mOut.append(data + dataHandled, toCopy);
                         dataHandled += toCopy;
                     }
                 }
@@ -378,37 +373,37 @@ int main(int argc, char **argv)
                 if (headerFound)
                 {
                     // append the read data to the message
-                    if (x - dataHandled > 0 && m.size + x - dataHandled <= msgSize + GSData::headerLen)
+                    if (x - dataHandled > 0 && mOut.size + x - dataHandled <= msgSize + GSData::headerLen)
                     {
-                        m.append(data + dataHandled, x - dataHandled);
+                        mOut.append(data + dataHandled, x - dataHandled);
                         dataHandled += x - dataHandled;
                     }
-                    else if (x - dataHandled > 0 && m.size + x - dataHandled > msgSize + GSData::headerLen)
+                    else if (x - dataHandled > 0 && mOut.size + x - dataHandled > msgSize + GSData::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << " and got size: " << m.size << std::endl;
-                        int toCopy = msgSize + GSData::headerLen - m.size;
-                        m.append(data + dataHandled, toCopy);
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << " and got size: " << mOut.size << std::endl;
+                        int toCopy = msgSize + GSData::headerLen - mOut.size;
+                        mOut.append(data + dataHandled, toCopy);
                         dataHandled += toCopy;
                     }
 
                     // debug statements if something goes wrong
-                    if (m.size > msgSize + GSData::headerLen)
+                    if (mOut.size > msgSize + GSData::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << m.size << std::endl;
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << mOut.size << std::endl;
                     }
 
-                    if (x - dataHandled == 0 && m.size < msgSize + GSData::headerLen)
+                    if (x - dataHandled == 0 && mOut.size < msgSize + GSData::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << m.size << std::endl;
+                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << mOut.size << std::endl;
                     }
 
                     // if the message size (which includes the GSData)
                     // is the same as the payload size + the header then we read the whole message
-                    if (m.size == msgSize + GSData::headerLen)
+                    if (mOut.size == msgSize + GSData::headerLen)
                     {
 
                         // we have a complete message
-                        m.decode(&rawData);
+                        mOut.decode(&rawData);
 
                         // reset the output message
                         mOut.clear();
@@ -505,7 +500,7 @@ int main(int argc, char **argv)
                         }
 
                         // reset
-                        m.clear();
+                        mOut.clear();
                         headerFound = false;
                         msgType = 0;
                         msgIndex = 0;

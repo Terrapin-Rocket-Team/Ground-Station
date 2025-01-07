@@ -28,15 +28,21 @@ class SerialCommandSink extends TextSink {
 
     this.options = options;
     this.dataFile = null;
+    this.logFile = null;
     this.firstLine = true;
 
     // create commands log file if necessary
     if (this.options.createLog) {
-      const logName = path.join(
+      const dataName = path.join(
         "data",
         this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
       );
-      this.dataFile = fs.createWriteStream(logName);
+      const logName = path.join(
+        "log",
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".txt"
+      );
+      this.dataFile = fs.createWriteStream(dataName);
+      this.logFile = fs.createWriteStream(logName);
 
       log.debug("Log file created for " + this.name + ": " + logName);
     }
@@ -62,6 +68,10 @@ class SerialCommandSink extends TextSink {
     if (this.options.createLog && this.dataFile) {
       this.dataFile.write(aprsCmd.toCSV(this.firstLine));
       if (this.firstLine) this.firstLine = false;
+    }
+    if (this.options.createLog && this.logFile) {
+      // write a log of the raw messages
+      this.logFile.write(text + "\n");
     }
   }
 }

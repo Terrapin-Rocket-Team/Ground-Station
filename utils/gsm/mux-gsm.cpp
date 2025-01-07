@@ -7,14 +7,6 @@
 // must be less than GSData::maxSize
 #define PACKET_SIZE 100
 
-// on Windows build in MinGW
-
-// TODO: add to build system
-// build instructions:
-// mkdir build && cd build
-// cmake ..
-// make
-
 // TODO: develop abstraction for input data
 const char video1File[] = "video0.av1";
 const char video2File[] = "video1.av1";

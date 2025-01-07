@@ -140,9 +140,13 @@ window.onload = () => {
         }
       });
     document.getElementById(`remove-${index}`).addEventListener("click", () => {
+      // need to preserve settings before moving streams around
+      for (let i = 0; i < newStreamConfig.length; i++) {
+        // skip the one we're removing
+        if (i !== index) getStreamSettings(i);
+      }
       newStreamConfig.splice(index, 1);
       saveCallbacks.splice(index, 1);
-      console.log(newStreamConfig);
       loadStreamInputs();
     });
   };
@@ -258,6 +262,10 @@ window.onload = () => {
   });
 
   document.getElementById("new-stream").addEventListener("click", () => {
+    // need to preserve settings before moving streams around
+    for (let i = 0; i < newStreamConfig.length; i++) {
+      getStreamSettings(i);
+    }
     let stream = {
       name: null,
       type: null,
