@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "RadioMessage.h"
 
+#define TELEM_DEVICE_ID 3
+
 enum InputState
 {
   HANDSHAKE,
@@ -25,11 +27,17 @@ Message commandMsg;
 APRSConfig commandConfig = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
 uint16_t commandSize = 0;
 
-// Sample data variables
+// sample data variables
 uint32_t timer = millis();
 uint32_t timer2 = millis();
+uint32_t timerMetrics = millis();
 Message m;
 Message m2;
+
+// sample metrics implementation
+Message metricsMessage;
+Metrics telemMetrics(TELEM_DEVICE_ID);
+GSData metricsGSData(Metrics::type, 4, TELEM_DEVICE_ID);
 
 void setup()
 {
@@ -58,11 +66,11 @@ void setup()
   Message stageOneM2;
   stageOneM2.encode(&telem2);
 
-  GSData dataTest(APRSTelem::type, 1, stageOneM.buf, stageOneM.size);
+  GSData dataTest(APRSTelem::type, 1, TELEM_DEVICE_ID, stageOneM.buf, stageOneM.size);
 
   m.encode(&dataTest);
 
-  GSData dataTest2(APRSTelem::type, 2, stageOneM2.buf, stageOneM2.size);
+  GSData dataTest2(APRSTelem::type, 2, TELEM_DEVICE_ID, stageOneM2.buf, stageOneM2.size);
 
   m2.encode(&dataTest2);
   // ==========================================================
@@ -103,6 +111,8 @@ void loop()
         {
           // the handshake was successful
           handshakeSuccess = true;
+          // we will start sending data, so setup metrics
+          telemMetrics.setInitialTime(millis());
         }
         else if (strcmp(serialBuf, "handshake failed") == 0)
         {
@@ -164,8 +174,8 @@ void loop()
       if (commandMsg.size >= GSData::headerLen)
       {
         // we can decode the header
-        uint8_t type, id;
-        GSData::decodeHeader(commandMsg.buf, type, id, commandSize);
+        uint8_t type, id, deviceId = 0;
+        GSData::decodeHeader(commandMsg.buf, type, id, deviceId, commandSize);
         if (type != APRSCmd::type || id == 0 || commandSize == 0)
         {
           // this is not an APRSCmd, ignore it
@@ -212,11 +222,21 @@ void loop()
     {
       timer = millis();
       Serial.write(m.buf, m.size);
+      telemMetrics.update(m.size * 8, millis(), 0);
     }
     if (millis() - timer2 > 500)
     {
       timer2 = millis();
       Serial.write(m2.buf, m2.size);
+      telemMetrics.update(m2.size * 8, millis(), 0);
+    }
+    if (millis() - timerMetrics > 1000)
+    {
+      timerMetrics = millis();
+      metricsMessage.encode(&telemMetrics);
+      metricsGSData.fill(metricsMessage.buf, metricsMessage.size);
+      metricsMessage.encode(&metricsGSData);
+      Serial.write(metricsMessage.buf, metricsMessage.size);
     }
     // ==========================================================
   }

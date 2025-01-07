@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include <cstdint>
 #include <iostream>
+#include <ctime>
 
 // must be less than GSData::maxSize
 #define PACKET_SIZE 100
@@ -29,9 +30,12 @@ int main(int argc, char const *argv[])
     VideoData video2Data;
     Message video1;
     Message video2;
-    GSData muxTelemOut(APRSTelem::type, 1);
-    GSData muxVideo1Out(VideoData::type, 2);
-    GSData muxVideo2Out(VideoData::type, 3);
+    GSData muxTelemOut(APRSTelem::type, 1, 1);
+    GSData muxVideo1Out(VideoData::type, 2, 2);
+    GSData muxVideo2Out(VideoData::type, 3, 3);
+    Metrics device1Metrics(1);
+    Metrics device2Metrics(2);
+    Metrics device3Metrics(3);
 
     int telemFrequency = 1; // transmissions / second
 
@@ -105,10 +109,20 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
+    // write GSM header
+    char gsmHeader[GSData::gsmHeaderSize] = {0};
+    GSData::encodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, totalBitrate);
+    fwrite(gsmHeader, sizeof(char), GSData::gsmHeaderSize, out);
+
     muxTelemOut.fill(telem.buf, telem.size);
     telem.encode(&muxTelemOut);
 
     char buf[100];
+
+    // setup metrics to start logging bitrate
+    device1Metrics.setInitialTime(clock());
+    device2Metrics.setInitialTime(clock());
+    device3Metrics.setInitialTime(clock());
 
     while (feof(file1) == 0 || feof(file2) == 0)
     {
@@ -119,6 +133,7 @@ int main(int argc, char const *argv[])
             muxVideo1Out.fill((uint8_t *)buf, readBytes);
             video1.encode(&muxVideo1Out);
             fwrite(video1.buf, sizeof(char), video1.size, out);
+            device1Metrics.updateBitrate(video1.size * 8, clock());
         }
         if (video2MessageFrequency == 0 && feof(file2) == 0)
         {
@@ -127,6 +142,7 @@ int main(int argc, char const *argv[])
             muxVideo2Out.fill((uint8_t *)buf, readBytes);
             video2.encode(&muxVideo2Out);
             fwrite(video2.buf, sizeof(char), video2.size, out);
+            device2Metrics.updateBitrate(video2.size * 8, clock());
         }
         if (telemMessageFrequency == 0)
         {
@@ -151,6 +167,7 @@ int main(int argc, char const *argv[])
             telemCounter = 0;
             // write telem
             fwrite(telem.buf, sizeof(char), telem.size, out);
+            device3Metrics.updateBitrate(telem.size * 8, clock());
         }
 
         if (video1MessageFrequency > 0)
@@ -160,6 +177,21 @@ int main(int argc, char const *argv[])
         if (telemMessageFrequency > 0)
             telemCounter++;
     }
+
+    printf("finished\n");
+    printf("%ld, %ld, %ld\n", device1Metrics.averageBitrate, device2Metrics.averageBitrate, device3Metrics.averageBitrate);
+
+    // uint32_t decodedBitrate = 0;
+    // bool success = GSData::decodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, decodedBitrate);
+    // if (success)
+    // {
+    //     printf("successfully decoded gsm header\n");
+    //     printf("bitrate: %d\n", decodedBitrate);
+    // }
+    // else
+    // {
+    //     printf("failed to decode gsm header\n");
+    // }
 
     fclose(out);
     fclose(file1);

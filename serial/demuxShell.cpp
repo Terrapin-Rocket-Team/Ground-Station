@@ -88,6 +88,8 @@ int main(int argc, char **argv)
     uint8_t msgType = 0;
     // the index/id of the message from the header
     uint8_t msgIndex = 0;
+    // the deviceId of the message
+    uint8_t deviceId = 0;
     // the size of the message from the header
     uint16_t msgSize = 0;
 
@@ -499,7 +501,7 @@ int main(int argc, char **argv)
                     if (headerSize == GSData::headerLen)
                     {
                         // decode the header and check we got a valid header
-                        GSData::decodeHeader(header, msgType, msgIndex, msgSize);
+                        GSData::decodeHeader(header, msgType, msgIndex, deviceId, msgSize);
                         std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
                         if (msgType > 0 && msgIndex > 0 && msgSize > 0)
                         {
@@ -574,12 +576,14 @@ int main(int argc, char **argv)
                         m.decode(&rawData);
 
                         std::cout << "After decoding:" << std::endl;
-                        std::cout << rawData.buf << std::endl;
+                        std::cout << "Type: " << (int)rawData.dataType << " Index: " << (int)rawData.id << " Size: " << (int)rawData.size << std::endl;
 
                         // reset the output message
                         mOut.clear();
                         // add the GSData payload to the output message
                         mOut.fill(rawData.buf, rawData.size);
+                        mOut.write();
+                        std::cout << std::endl;
 
                         // determine the type of data
                         if (rawData.dataType == APRSTelem::type)
@@ -648,6 +652,24 @@ int main(int argc, char **argv)
                                 }
                             }
                         }
+                        if (rawData.dataType == Metrics::type)
+                        {
+                            // this is a Metrics message
+                            Metrics outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            {
+                                if (pipeDemuxIds[i] == rawData.id)
+                                {
+                                    memset(outStr, 0, sizeof(outStr));
+                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
+                                    strcat(outStr, "\n");
+                                    printf("%s", outStr);
+                                    pipes[i]->write(outStr, strlen(outStr));
+                                }
+                            }
+                        }
 
                         // reset
                         m.clear();
@@ -679,7 +701,7 @@ int main(int argc, char **argv)
                     mIn.clear();
                     mIn.encode(&inData);
                     // take the APRSCmd and place it in a GSData object for multiplexing
-                    GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], mIn.buf, mIn.size);
+                    GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], (uint8_t)id, mIn.buf, mIn.size);
                     mIn.clear();
                     mIn.encode(&inDataGS);
                     mIn.write();
