@@ -557,7 +557,7 @@ window.onload = () => {
     document.getElementById(idPrefix + "-strength").textContent =
       metric.getRSSI() + " dBm";
     document.getElementById(idPrefix + "-bitrate").textContent =
-      metric.getBitrate("k").toFixed(3) + " kbps"; // bitrate
+      metric.getBitrate("k").toFixed(2) + " kbps"; // bitrate
   };
 
   /// individual telemetry panel updates

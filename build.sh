@@ -5,6 +5,7 @@ SRC=0
 VIDEO=0
 SERIAL=0
 ICONS=0
+UTILS=0
 
 if [ $# = 0 ] || [ $1 = "help" ] ; then
     echo "Usage: $0 [build_ags...]"
@@ -14,6 +15,7 @@ if [ $# = 0 ] || [ $1 = "help" ] ; then
     echo "  coders  : build the video decoding dependencies"
     echo "  serial  : build the serial driver"
     echo "  icons   : build the icons"
+    echo "  utils   : build the utilities"
     echo "  help    : display this message and exit"
     exit 0
 fi
@@ -42,6 +44,10 @@ while [ $# -gt 0 ] ; do
         ICONS=1
         shift
         ;;
+    utils)
+        UTILS=1
+        shift
+        ;;
     *)
         echo "Unrecognized input, ignoring..."
         shift
@@ -49,7 +55,7 @@ while [ $# -gt 0 ] ; do
     esac
 done
 
-if [ $((($ALL + $SRC + $VIDEO + $SERIAL + $ICONS))) -gt 0 ] ; then
+if [ $((($ALL + $SRC + $VIDEO + $SERIAL + $ICONS + $UTILS))) -gt 0 ] ; then
 
 echo "Checking for build dependencies"
 if ! type gcc &> /dev/null ; then
@@ -101,15 +107,18 @@ chmod +x ../icons/build.sh
 chmod +x ../serial/build.sh
 chmod +x ../coders/build.sh
 chmod +x ../src/build.sh
+chmod +x ../utils/build.sh
 
 # build dependencies first
-
 if [ $ALL = 1 ] || [ $ICONS = 1 ] ; then ../icons/build.sh ; fi
 if [ $ALL = 1 ] || [ $SERIAL = 1 ] ; then ../serial/build.sh ; fi
 if [ $ALL = 1 ] || [ $VIDEO = 1 ] ; then ../coders/build.sh ; fi
 
 # then build main
 if [ $ALL = 1 ] || [ $SRC = 1 ] ; then ../src/build.sh ; fi
+
+# then build utils
+if [ $UTILS = 1 ] ; then ../utils/build.sh ; fi
 
 else
 
