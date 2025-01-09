@@ -37,10 +37,7 @@ class SerialCommandSink extends TextSink {
         "data",
         this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
       );
-      const logName = path.join(
-        "log",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".txt"
-      );
+      const logName = path.join("log", this.name + ".txt");
       this.dataFile = fs.createWriteStream(dataName);
       this.logFile = fs.createWriteStream(logName);
 
@@ -56,6 +53,7 @@ class SerialCommandSink extends TextSink {
   write(text) {
     // always write the JSON ouput
     // that's what the Message library on the driver side is expecting
+    // TODO: deviceId should not be hardcoded here
     let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
     if (!aprsCmd.loadCmd(text)) {
       log.err("Error parsing command");

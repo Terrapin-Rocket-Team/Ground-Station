@@ -48,6 +48,7 @@ window.onload = () => {
 
   const createStreamBox = (index, stream) => {
     mainContainer.innerHTML += `<div class="stream-box" id="stream-${index}">
+        <div id="stream-${index}-toggle" class="toggle" title="Enable stream"></div>
         <div class="stream-box-left">
           <span class="stream-input-label">Stream Name</span>
           <input type="text" class="stream-name" id="stream-${index}-name" />
@@ -101,6 +102,13 @@ window.onload = () => {
     document.getElementById(`stream-${index}-name`).value = stream.name;
     document.getElementById(`stream-${index}-id`).value = stream.id;
 
+    const toggle = document.getElementById(`stream-${index}-toggle`);
+    if (stream.enabled) setToggle(stream.enabled, toggle);
+
+    toggle.addEventListener("click", () => {
+      toggleToggle(toggle);
+    });
+
     const getStreamOptions = (idPrefix) => {
       setupStaticOptions(idPrefix, types, () => {
         return true;
@@ -149,6 +157,61 @@ window.onload = () => {
       saveCallbacks.splice(index, 1);
       loadStreamInputs();
     });
+  };
+
+  /**
+   * Sets the state of a custom toggle
+   * @param {Boolean} state The on or off state of the toggle
+   * @param {HTMLDivElement} toggle The toggle to be modified
+   */
+  const setToggle = (state, toggle) => {
+    // get the style (including that from external css sheets)
+    let style = getComputedStyle(toggle);
+    // convert the width in pixels to vw
+    let width = (parseInt(style.width) * 100) / window.innerWidth;
+    // get the current left offset (in vw)
+    let pos = parseFloat(style.getPropertyValue("--toggle-pos"));
+    // set the toggle to the right if it is not already there and desired state is true
+    if (state && pos < width / 2) {
+      toggle.style.setProperty("--toggle-pos", width * 0.5 + pos + 0.05 + "vw");
+      toggle.style.setProperty("background-color", "#ca0000");
+    }
+    // set the toggle to the left if it is not already there and desired state is false
+    if (!state && pos > width / 2) {
+      toggle.style.setProperty("--toggle-pos", pos - 0.5 * width - 0.05 + "vw");
+      toggle.style.setProperty("background-color", "lightgray");
+    }
+  };
+
+  // toggle the state of the current toggle, rather than setting it to a particular state
+  const toggleToggle = (toggle) => {
+    // get the style (including that from external css sheets)
+    let style = getComputedStyle(toggle);
+    // convert the width in pixels to vw
+    let width = (parseInt(style.width) * 100) / window.innerWidth;
+    // get the current left offset (in vw)
+    let pos = parseFloat(style.getPropertyValue("--toggle-pos"));
+    // set the toggle to the right if it is not already there and desired state is true
+    if (pos < width / 2) {
+      toggle.style.setProperty("--toggle-pos", width * 0.5 + pos + 0.05 + "vw");
+      toggle.style.setProperty("background-color", "#ca0000");
+    }
+    // set the toggle to the left if it is not already there and desired state is false
+    if (pos > width / 2) {
+      toggle.style.setProperty("--toggle-pos", pos - 0.5 * width - 0.05 + "vw");
+      toggle.style.setProperty("background-color", "lightgray");
+    }
+  };
+
+  // get the current state of the given toggle
+  const getToggleState = (toggle) => {
+    // get the style (including that from external css sheets)
+    let style = getComputedStyle(toggle);
+    // convert the width in pixels to vw
+    let width = (parseInt(style.width) * 100) / window.innerWidth;
+    // get the current left offset (in vw)
+    let pos = parseFloat(style.getPropertyValue("--toggle-pos"));
+    return !(pos < width / 2);
   };
 
   // custom dropdown setup
@@ -218,13 +281,18 @@ window.onload = () => {
     ).textContent;
     const idVal = document.getElementById(`stream-${i}-id`).value;
 
+    if (idVal && parseInt(idVal)) newStreamConfig[i].id = parseInt(idVal);
+
     typeVal = classes[types.indexOf(typeVal)];
 
     if (nameVal) newStreamConfig[i].name = nameVal;
     if (typeVal) {
       newStreamConfig[i].type = typeVal;
     }
-    if (idVal && parseInt(idVal)) newStreamConfig[i].id = parseInt(idVal);
+
+    newStreamConfig[i].enabled = getToggleState(
+      document.getElementById(`stream-${i}-toggle`)
+    );
   };
 
   const loadStreamInputs = () => {
@@ -248,6 +316,15 @@ window.onload = () => {
       // callback for saving settings
       saveCallbacks.push(() => {
         getStreamSettings(i);
+
+        // TODO: better input validation here
+        if (
+          newStreamConfig[i].name === null ||
+          newStreamConfig[i].type === null ||
+          newStreamConfig[i].id === null
+        ) {
+          newStreamConfig.splice(i, 1);
+        }
       });
     }
   };

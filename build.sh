@@ -118,7 +118,7 @@ if [ $ALL = 1 ] || [ $VIDEO = 1 ] ; then ../coders/build.sh ; fi
 if [ $ALL = 1 ] || [ $SRC = 1 ] ; then ../src/build.sh ; fi
 
 # then build utils
-if [ $UTILS = 1 ] ; then ../utils/build.sh ; fi
+if [ $ALL = 1 ] || [ $UTILS = 1 ] ; then ../utils/build.sh ; fi
 
 else
 

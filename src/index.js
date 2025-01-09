@@ -308,92 +308,100 @@ window.onload = () => {
 
   /// radio/commands
 
-  const commandList = APRSCmd.getCommandList();
-
   const commandArgs = document.getElementById("command-args");
   const previousCommands = document.getElementById("previous-commands");
 
   let commandValid = false;
+  // need to get the command list from the backend since it's being loaded from a file
+  api.getCommandList().then((list) => {
+    const commandList = APRSCmd.createCommandList(list);
 
-  //adds commands to custom dropdown
-  const getCommands = (idPrefix) => {
-    const commandCallback = (option) => {
-      // figure out what index in the list was selected
-      let index = commandList.findIndex((command) => {
-        return command.name === option;
-      });
-      document.getElementById("command-syntax").textContent =
-        commandList[index].abbrv + ": " + commandList[index].syntax;
-      document.getElementById("command-args").value =
-        commandList[index].abbrv + ": ";
+    //adds commands to custom dropdown
+    const getCommands = (idPrefix) => {
+      const commandCallback = (option) => {
+        // figure out what index in the list was selected
+        let index = commandList.findIndex((command) => {
+          return command.name === option;
+        });
+        document.getElementById("command-syntax").textContent =
+          commandList[index].abbrv + ": " + commandList[index].syntax.join(" ");
+        document.getElementById("command-args").value =
+          commandList[index].abbrv + ": ";
 
-      // check if syntax is valid (in case there are no args)
-      commandValid = commandList[index].validator(
-        commandList[index].abbrv + ": "
-      );
-      // if valid change color
-      if (commandValid) commandArgs.className = "valid";
-      // if invalid but valid command, show partially valid
-      else commandArgs.className = "part-valid";
-      return true;
+        // check if syntax is valid (in case there are no args)
+        commandValid = commandList[index].validator(
+          commandList[index].abbrv + ": "
+        );
+        // if valid change color
+        if (commandValid) commandArgs.className = "valid";
+        // if invalid but valid command, show partially valid
+        else commandArgs.className = "part-valid";
+        return true;
+      };
+
+      if (commandList.length > 0) {
+        setupStaticOptions(
+          idPrefix,
+          commandList.map((command) => {
+            return command.name;
+          }),
+          commandCallback
+        );
+      } else {
+        setupStaticOptions(idPrefix, ["No commands available"], () => {
+          return false;
+        });
+      }
     };
 
-    setupStaticOptions(
-      idPrefix,
-      commandList.map((command) => {
-        return command.name;
-      }),
-      commandCallback
-    );
-  };
+    // setup the commands dropdown
+    setupDropdown("command", getCommands, false);
 
-  // setup the commands dropdown
-  setupDropdown("command", getCommands, false);
+    // validation for the command text input
+    commandArgs.addEventListener("input", () => {
+      let commandText = commandArgs.value;
 
-  // validation for the command text input
-  commandArgs.addEventListener("input", () => {
-    let commandText = commandArgs.value;
+      if (commandText.length > 0) {
+        // see if text matches the command format
+        let cmdMatch = commandText.match(/[A-Z][A-Z][A-Z]?:( [A-z0-9])*/g);
 
-    if (commandText.length > 0) {
-      // see if text matches the command format
-      let cmdMatch = commandText.match(/[A-Z][A-Z][A-Z]?:( [A-z0-9])*/g);
-
-      if (cmdMatch) {
-        // if we fouond a match, figure out where the command abbreviation is
-        let command = cmdMatch[0];
-        let index = -1;
-        if ((index = commandText.search(":")) > 0) {
-          command = commandText.slice(0, index);
-        }
-
-        for (let i = 0; i < commandList.length; i++) {
-          let cmdName = commandList[i].abbrv;
-          // check if current abbreviation matches the input
-          if (cmdName === command) {
-            // update syntax and dropdown
-            document.getElementById("command-syntax").textContent =
-              commandList[i].abbrv + ": " + commandList[i].syntax;
-            document.getElementById("command-selected").textContent =
-              commandList[i].name;
-            // check if syntax is valid
-            commandValid = commandList[i].validator(commandText);
-            // if valid change color
-            if (commandValid) commandArgs.className = "valid";
-            // if invalid but valid command show partially valid
-            else commandArgs.className = "part-valid";
-            break;
+        if (cmdMatch) {
+          // if we fouond a match, figure out where the command abbreviation is
+          let command = cmdMatch[0];
+          let index = -1;
+          if ((index = commandText.search(":")) > 0) {
+            command = commandText.slice(0, index);
           }
+
+          for (let i = 0; i < commandList.length; i++) {
+            let cmdName = commandList[i].abbrv;
+            // check if current abbreviation matches the input
+            if (cmdName === command) {
+              // update syntax and dropdown
+              document.getElementById("command-syntax").textContent =
+                commandList[i].abbrv + ": " + commandList[i].syntax.join(" ");
+              document.getElementById("command-selected").textContent =
+                commandList[i].name;
+              // check if syntax is valid
+              commandValid = commandList[i].validator(commandText);
+              // if valid change color
+              if (commandValid) commandArgs.className = "valid";
+              // if invalid but valid command show partially valid
+              else commandArgs.className = "part-valid";
+              break;
+            }
+          }
+        } else {
+          // if no match the command is invalid
+          commandValid = false;
+          commandArgs.className = "invalid";
         }
       } else {
-        // if no match the command is invalid
+        // otherwise text box is empty
         commandValid = false;
-        commandArgs.className = "invalid";
+        commandArgs.className = "empty";
       }
-    } else {
-      // otherwise text box is empty
-      commandValid = false;
-      commandArgs.className = "empty";
-    }
+    });
   });
 
   // reset the dropdown, syntax display, and text box
@@ -425,6 +433,8 @@ window.onload = () => {
       "No command selected";
     commandArgs.value = "";
     document.getElementById("command-selected").textContent = "Select Command";
+    commandArgs.className = "empty";
+
     // add command to previous commands window
     const span = document.createElement("SPAN");
     span.className = "previous-command";
@@ -456,14 +466,12 @@ window.onload = () => {
 
   resizeGauges();
 
+  window.onresize = resizeGauges;
+
   /// update GUI when size changes
   api.on("fullscreen-change", (res) => {
     if (res.win === "main") {
       fullscreened = res.isFullscreen;
-      setTimeout(() => {
-        // need to resize gauges every time window size changes
-        resizeGauges();
-      }, 10);
     }
   });
 
@@ -593,7 +601,19 @@ window.onload = () => {
   const updateStage = (idPrefix, msg) => {
     // update the given stage element
     let stageEl = document.getElementById(idPrefix + "-stage");
-    stageEl.textContent = msg.getStage();
+    let stageNum = msg.getStateflag("Stage");
+    // TODO: define state list per stream
+    let stageNames = [
+      "Preflight",
+      "Powered Flight",
+      "Coast",
+      "Drogue Deploy",
+      "Main Parachute",
+      "Landed",
+    ];
+    if (stageNum !== null) {
+      stageEl.textContent = stageNames[stageNum];
+    }
   };
 
   /// update functions that are specific to different streams (can be passed to updateDisplays)
@@ -608,16 +628,25 @@ window.onload = () => {
       : "000.0000\u00b0W";
   };
   const updateTemp = (idPrefix, msg) => {
-    // TODO: implement updating temperature elements
-    // depends on parsing temp data from state flags in APRSTelem
+    let tempEl = document.getElementById(idPrefix + "-temp");
+    let tempNum = msg.getStateflag("Internal Temp");
+    if (tempNum !== null) {
+      tempEl.textContent = tempNum;
+    }
   };
   const updateFlapAngle = (idPrefix, msg) => {
-    // TODO: implement updating flap angle elements
-    // depends on parsing flap angle data from state flags in APRSTelem
+    let angleEl = document.getElementById(idPrefix + "-flap-angle");
+    let angleNum = msg.getStateflag("Flap Angle");
+    if (angleNum !== null) {
+      angleEl.textContent = angleNum;
+    }
   };
   const updatePredApogee = (idPrefix, msg) => {
-    // TODO: implement updating predicted apogee elements
-    // depends on parsing predicted apogee data from state flags in APRSTelem
+    let apogeeEl = document.getElementById(idPrefix + "-apogee");
+    let apogeeNum = msg.getStateflag("Predicted Apogee");
+    if (apogeeNum !== null) {
+      apogeeEl.textContent = apogeeNum;
+    }
   };
   const updateHeading = (idPrefix, msg) => {
     // update given heading element from message
@@ -753,7 +782,7 @@ window.onload = () => {
   /// updates for status bar (can be passed to updateDisplays)
   const updateT0 = (idPrefix, msg) => {
     // wait until the flight computer reports the stage is >0 (out of preflight)
-    if (msg.getStageNumber() > 0 && !t0Set) {
+    if (msg.getStateflag("Stage") > 0 && !t0Set) {
       // get the t0
       t0 = Date.now();
       // save the t0 for later
@@ -782,7 +811,7 @@ window.onload = () => {
     if (!loadedApogee) {
       // TODO: this can get messed up if the app is reloaded near apogee
       // if the current altitude is greater than the previous, and we're actually in the air (stage > 0)
-      if (msg.getAlt() >= lastAlt || msg.getStageNumber() == 0) {
+      if (msg.getAlt() >= lastAlt || msg.getStateflag("Stage") == 0) {
         lastAlt = msg.getAlt();
         // update the timer
         apogeeTime = Date.now();
@@ -790,7 +819,7 @@ window.onload = () => {
       // if the apogee hasn't yet been found, we're actually in the air, and the timer expires, we've found apogee
       if (
         !apogeeFound &&
-        msg.getStageNumber() > 0 &&
+        msg.getStateflag("Stage") > 0 &&
         Date.now() - apogeeTime > 6000
       ) {
         apogeeFound = true;

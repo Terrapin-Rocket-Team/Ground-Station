@@ -55,7 +55,8 @@
 		{
 			"name": "telem-avionics",
 			"type": "APRSTelem",
-			"id": 1
+			"id": 1,
+			"enabled": true
 		}
 	]
 }

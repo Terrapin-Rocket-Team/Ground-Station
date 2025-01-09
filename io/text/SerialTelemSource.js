@@ -40,10 +40,7 @@ class SerialTelemSource extends TextSource {
         "data",
         this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
       );
-      const logName = path.join(
-        "log",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".txt"
-      );
+      const logName = path.join("log", this.name + ".txt");
       this.dataFile = fs.createWriteStream(dataName);
       this.logFile = fs.createWriteStream(logName);
 
