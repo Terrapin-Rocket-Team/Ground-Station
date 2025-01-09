@@ -22,8 +22,9 @@ class APRSTelem {
   /**
    * @param {string|object} message the APRS message
    * @param {string} [stream] the name of the stream
+   * @param {Array<string>} [stateflagsFormat] the formatting of the state flags
    */
-  constructor(message, stream) {
+  constructor(message, stream, stateflagsFormat) {
     // log message time
     this.time = new Date();
     // check if stream was specified
@@ -46,9 +47,18 @@ class APRSTelem {
         parseFloat(message.data.orient[1]),
         parseFloat(message.data.orient[2]),
       ];
-      this.stateFlags = parseInt(message.data.stateFlags);
+      this.rawStateflags = parseInt(message.data.stateFlags);
+
+      // must find stateflags
+      if (stateflagsFormat) {
+        this.findStateflags(stateflagsFormat);
+      } else {
+        this.stateflagsFormat = [];
+        this.stateflags = [];
+      }
     } else {
       // assume the message is in this object's format
+      // basically copy constructor
       this.stream = message.stream;
 
       this.deviceId = parseInt(message.deviceId);
@@ -62,7 +72,47 @@ class APRSTelem {
         parseFloat(message.orientation[1]),
         parseFloat(message.orientation[2]),
       ];
-      this.stateFlags = parseInt(message.stateFlags);
+      this.rawStateflags = parseInt(message.rawStateflags);
+      this.stateflags = message.stateflags;
+      this.stateflagsFormat = message.stateflagsFormat;
+    }
+  }
+
+  findStateflags(stateflagsFormat) {
+    this.stateflagsFormat = stateflagsFormat;
+    this.stateflags = [];
+    // find the encoding
+    let encoding = [];
+    this.stateflagsFormat.forEach((flag) => {
+      let index = APRSTelem.stateflagList.findIndex((globalFlag) => {
+        return globalFlag.name === flag;
+      });
+
+      if (index >= 0) {
+        encoding.push(APRSTelem.stateflagList[index].width);
+      } else {
+        encoding.push(null);
+      }
+    });
+
+    // parse each flag
+    // find the total length in the encoding
+    const totalLength = encoding.reduce((sum, val) => {
+      return sum + val;
+    }, 0);
+
+    let lengthAdded = 0;
+    for (let i = 0; i < encoding.length; i++) {
+      // find each value and shift it to the right place
+      if (encoding[i]) {
+        this.stateflags.push(
+          (this.rawStateflags >>> (totalLength - lengthAdded - encoding[i])) &
+            ((1 << encoding[i]) - 1)
+        );
+        lengthAdded += encoding[i];
+      } else {
+        this.stateflags.push(null);
+      }
     }
   }
 
@@ -90,6 +140,15 @@ class APRSTelem {
     );
   }
 
+  static stateflagList = [];
+
+  static createStateflagList(list) {
+    // add each flag
+    // don't want to modify the passed array
+    APRSTelem.stateflagList = JSON.parse(JSON.stringify(list));
+    return APRSTelem.stateflagList;
+  }
+
   /**
    * @returns {Number} the orientation of the device as degrees about the Z axis
    */
@@ -109,13 +168,6 @@ class APRSTelem {
    * */
   getOrientationX() {
     return this.orientation[0];
-  }
-
-  /**
-   * @returns {Number} the flags of the device
-   * */
-  getFlags() {
-    return this.stateFlags;
   }
 
   /**
@@ -199,18 +251,18 @@ class APRSTelem {
   }
 
   /**
-   * @returns {String} the current stage in the form s(index), ex: s0
-   */
-  getStage() {
-    // stage is the first state flag (should probably be part of Message, leaving this here for now)
-    return this.stateFlags.toString()[0];
+   * @returns {Number} the flags of the device
+   * */
+  getRawFlags() {
+    return this.rawStateflags;
   }
 
-  /**
-   * @returns {Number} the current stage number
-   */
-  getStageNumber() {
-    return parseInt(this.stateFlags.toString()[0]);
+  getStateflag(flagName) {
+    let index = this.stateflagsFormat.findIndex((name) => {
+      return name === flagName;
+    });
+    if (index >= 0) return this.stateflags[index];
+    else return null;
   }
 
   /**

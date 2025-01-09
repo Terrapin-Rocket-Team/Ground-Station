@@ -324,6 +324,8 @@ class SerialDevice extends EventEmitter {
         stream.stream.write(data);
 
         log.debug("Wrote to stream " + name + ": " + data);
+      } else {
+        log.warn("Could not locate stream: " + name);
       }
     }
   }

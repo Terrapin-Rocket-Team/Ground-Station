@@ -13,6 +13,7 @@ const {
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
+const APRSCmd = require("./coders/APRSCmd");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
@@ -23,6 +24,7 @@ let windows = { main: null, video: null },
   videoSources = [],
   commandSinks = [],
   config,
+  cmdList,
   cacheMeta,
   closed,
   videoControls = {
@@ -59,7 +61,7 @@ try {
   log.debug("Config loaded");
 } catch (err) {
   // load defaults if no config file
-  log.warn('Failed to load config file, using defaults: "' + err.message + '"');
+  log.warn("Failed to load config file, using defaults: " + err.message);
   try {
     config = JSON.parse(
       fs.readFileSync(path.join(__dirname, "default-config.json"))
@@ -82,15 +84,33 @@ try {
         log.info("Config file successfully created");
       }
     } catch (err) {
-      log.err('Failed to create config file: "' + err.message + '"');
+      log.err("Failed to create config file: " + err.message);
     }
   } catch (err) {
-    log.err('Failed to load default config: "' + err.message + '"');
+    log.err("Failed to load default config: " + err.message);
   }
 }
 
 // need to setup after loading config
 serial.setupDriver();
+
+try {
+  // load command list and stateflags
+  cmdList = JSON.parse(fs.readFileSync("./commands.json"));
+
+  APRSCmd.createCommandList(cmdList);
+
+  stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
+
+  APRSTelem.createStateflagList(stateflags);
+
+  log.debug("Commands and stateflags loaded");
+} catch (err) {
+  log.warn(
+    "Failed to load commands or stateflags file, somme features will not be available: " +
+      err.message
+  );
+}
 
 try {
   // load cache metadata
@@ -147,55 +167,64 @@ const loadStreams = () => {
 
   // load streams from config
   config.streams.forEach((stream) => {
-    if (stream.type === "APRSTelem") {
-      telemSources.push(
-        new SerialTelemSource(`${stream.name}-${stream.id}`, {
-          parser: (data) => {
-            let telem = new APRSTelem(data, stream.name);
-            log.info(telem);
-            if (windows.main) windows.main.webContents.send("data", telem);
-            if (windows.video) windows.video.webContents.send("data", telem);
-          },
-          createLog: true,
-        })
-      );
-    }
-    if (stream.type === "APRSCmd") {
-      commandSinks.push(
-        new SerialCommandSink(`${stream.name}-${stream.id}`, {
-          createLog: true,
-        })
-      );
-    }
-    if (stream.type === "Metrics") {
-      telemSources.push(
-        new SerialTelemSource(`${stream.name}-${stream.id}`, {
-          parser: (data) => {
-            let telem = new Metrics(data, true);
-            log.info(telem);
-            if (windows.main) windows.main.webContents.send("metrics", telem);
-            if (windows.video) windows.video.webContents.send("metrics", telem);
-          },
-          isMetrics: true,
-          createLog: true,
-        })
-      );
-    }
-    if (stream.type === "video" && config.video.value) {
-      videoSources.push(
-        new SerialVideoSource(`${stream.name}-${stream.id}`, {
-          resolution: { width: 640, height: 832 },
-          framerate: 30,
-          rotation: "cw",
-          createLog: true,
-          createDecoderLog: config.debug.value,
-        })
-      );
-    } else if (stream.type === "video" && !config.video.value) {
-      log.warn(
-        "Not in video mode. Skipping video stream source for: " +
-          `${stream.name}-${stream.id}`
-      );
+    if (stream.enabled) {
+      if (stream.type === "APRSTelem") {
+        telemSources.push(
+          new SerialTelemSource(`${stream.name}-${stream.id}`, {
+            parser: (data) => {
+              let telem = new APRSTelem(
+                data,
+                stream.name,
+                stream.settings.stateflags
+              );
+              log.info(telem);
+              if (windows.main) windows.main.webContents.send("data", telem);
+              if (windows.video) windows.video.webContents.send("data", telem);
+            },
+            createLog: true,
+          })
+        );
+      }
+      if (stream.type === "APRSCmd") {
+        commandSinks.push(
+          new SerialCommandSink(`${stream.name}-${stream.id}`, {
+            createLog: true,
+          })
+        );
+      }
+      if (stream.type === "Metrics") {
+        telemSources.push(
+          new SerialTelemSource(`${stream.name}-${stream.id}`, {
+            parser: (data) => {
+              let telem = new Metrics(data, true);
+              log.info(telem);
+              if (windows.main) windows.main.webContents.send("metrics", telem);
+              if (windows.video)
+                windows.video.webContents.send("metrics", telem);
+            },
+            isMetrics: true,
+            createLog: true,
+          })
+        );
+      }
+      if (stream.type === "video" && config.video.value) {
+        videoSources.push(
+          new SerialVideoSource(`${stream.name}-${stream.id}`, {
+            resolution: { width: 640, height: 832 },
+            framerate: 30,
+            rotation: "cw",
+            createLog: true,
+            createDecoderLog: config.debug.value,
+          })
+        );
+      } else if (stream.type === "video" && !config.video.value) {
+        log.warn(
+          "Not in video mode. Skipping video stream source for: " +
+            `${stream.name}-${stream.id}`
+        );
+      }
+    } else {
+      log.debug("Ignoring disabled stream: " + `${stream.name}-${stream.id}`);
     }
   });
 };
@@ -373,6 +402,20 @@ ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
   // handle reloading main window
   if (win === "main") {
+    try {
+      // load command list and stateflags
+      cmdList = JSON.parse(fs.readFileSync("./commands.json"));
+
+      APRSCmd.createCommandList(cmdList);
+
+      stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
+
+      APRSTelem.createStateflagList(stateflags);
+
+      log.debug("Reloaded commands and stateflags");
+    } catch (err) {
+      log.warn("Failed to load commands or stateflags file: " + err.message);
+    }
     // close serial connection, but keep pipes and the driver running
     serial.reset();
     //if mainWin exists reload it
@@ -390,6 +433,7 @@ ipcMain.on("reload", (event, win, keepSettings) => {
   //handle reloading the video window separately
   if (win === "video") {
     if (windows.video) windows.video.webContents.reloadIgnoringCache();
+
     //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
     if (!keepSettings) {
       videoControls = {
@@ -421,6 +465,7 @@ ipcMain.on("send-command", (event, command, sinkId) => {
     if (command[i] === "") command[i] = 255;
   }
   if (commandSinks[sinkId]) commandSinks[sinkId].write(command);
+  else log.warn("Could not find command sink with id: " + sinkId);
 });
 
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
@@ -621,6 +666,10 @@ ipcMain.handle("get-streams", (event, args) => {
   return config.streams;
 });
 
+ipcMain.handle("get-command-list", (event, args) => {
+  return cmdList;
+});
+
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
@@ -734,6 +783,12 @@ if (config.dataDebug.value) {
             // make sure we got a valid line
             if (!closed && windows.main) {
               let aprsMsg = APRSTelem.fromCSV(data);
+              aprsMsg.findStateflags([
+                "Internal Temp",
+                "Battery Level",
+                "Ack",
+                "Stage",
+              ]);
               windows.main.webContents.send("data", aprsMsg);
               if (windows.video)
                 windows.video.webContents.send("data", aprsMsg);

@@ -51,9 +51,15 @@ int main(int argc, char **argv)
 
     // whether the pipe interface is ready
     bool ready = false;
+    // whether the gsm file has a valid header
+    bool validHeader = false;
+    // timer to throttle file reading
     clock_t timer = clock();
-    int bytesPerSecond = 62549;
+    // the target byte rate, taken from gsm
+    uint32_t bytesPerSecond = 0;
+    // used to keep track of number of bytes read for throttling purposes
     int bytesReadThisSecond = 0;
+    // how long to wait in between reads
     int timeToWait = 0;
     // seed the random number generator
     srand(time(0));
@@ -170,6 +176,34 @@ int main(int argc, char **argv)
                 {
                     pipeStatus->writeStr("Interrupt\n");
                     pipeStatus->writeStr("serial driver error: failed to open input file\n");
+                }
+                else
+                {
+                    char gsmHeader[GSData::gsmHeaderSize] = {0};
+                    // always seek to the beginning of the file
+                    fseek(input, 0, SEEK_SET);
+                    int read = fread(gsmHeader, sizeof(char), GSData::gsmHeaderSize, input);
+                    if (read == GSData::gsmHeaderSize)
+                    {
+                        bool success = GSData::decodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, bytesPerSecond);
+                        if (success)
+                        {
+                            std::cout << "successfully decoded gsm header" << std::endl;
+                            bytesPerSecond /= 8; // convert to bytes per second from bits per second
+                            std::cout << "Target byterate: " << bytesPerSecond << std::endl;
+                            validHeader = true;
+                        }
+                        else
+                        {
+                            std::cout << "failed to decode gsm header" << std::endl;
+                            validHeader = false;
+                        }
+                    }
+                    else
+                    {
+                        std::cout << "failed to read gsm header" << std::endl;
+                        validHeader = false;
+                    }
                 }
             }
             // check for data pipes command
@@ -294,7 +328,7 @@ int main(int argc, char **argv)
         }
 
         // if interface is ready and handshake was successful, then we can read from the device
-        if (ready && input && feof(input) == 0 && clock() - timer > timeToWait)
+        if (ready && input && validHeader && feof(input) == 0 && clock() - timer > timeToWait)
         {
             // try reading multiplexing data from the file
             x = fread(data, sizeof(char), MAX_DATA_LENGTH, input);
