@@ -8,19 +8,29 @@ div#main {
   height: calc(100vh - min(5vh, 40px));
 }
 
+.wrapper {
+  display: none;
+  height: 100%;
+}
+
+.wrapper.active {
+  display: block;
+}
+
 #stream-container {
-  height: 94%;
-  display: grid;
-  grid-template-columns: 100%;
-  grid-template-rows: repeat(auto-fill, 12%);
+  height: 92%;
+  /* display: grid; */
+  /* grid-template-columns: 100%; */
+  /* grid-template-rows: repeat(auto-fill, 12%); */
   overflow-y: auto;
 }
 
-#button-container {
-  height: 6%;
+#streams-button-container {
+  height: 8%;
   display: flex;
-  align-items: end;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2vw;
 }
 
 button {
@@ -29,15 +39,12 @@ button {
   border-radius: 5px;
   transition: 0.2s background-color linear;
   color: var(--top-text);
+  padding: 1vh 1vw;
 }
 
 button:hover {
   cursor: pointer;
   background-color: var(--top-hover);
-}
-
-#button-container button {
-  padding: 1vh 1vw;
 }
 
 input::-webkit-outer-spin-button,
@@ -48,7 +55,7 @@ input::-webkit-inner-spin-button {
 
 .stream-box {
   width: 100%;
-  height: 100%;
+  height: 12%;
   padding: 1vh 2vw;
   display: grid;
   grid-template-columns: 10% 70% 20%;
@@ -59,7 +66,7 @@ input::-webkit-inner-spin-button {
   height: 100%;
   width: 100%;
   display: grid;
-  grid-template-columns: 40% 40% 20%;
+  grid-template-columns: 30% 30% 20% 10%;
   grid-template-rows: 25% 60%;
   grid-auto-flow: column;
   column-gap: 1vw;
@@ -88,6 +95,51 @@ div.stream-box-left > * {
   padding: 1vh;
 }
 
+.configure-stream {
+  grid-row: 2;
+  height: 80%;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.configure-stream img {
+  height: 3vh;
+}
+
+.stateflags-config-box {
+  margin-bottom: 2vh;
+  padding: 2vw 1vh;
+}
+
+#stateflags-bits-used-container {
+  height: 30%;
+  width: calc(100% - 6vw);
+  margin: 2vh 3vw;
+}
+
+#stateflags-selected-container {
+  display: grid;
+  grid-template-columns: repeat(5, 20%);
+}
+
+.sf-button {
+  border-radius: 0;
+  background-color: inherit;
+  border: 1px solid transparent;
+  color: var(--main-text);
+}
+
+.sf-button.selected {
+  border: 1px solid black;
+}
+
+.sf-width {
+  color: darkgray;
+  margin-left: 0.7vw;
+}
+
 .stream-box-right > button {
   display: flex;
   align-items: center;
@@ -99,8 +151,127 @@ div.stream-box-left > * {
   width: 2.5vh;
 }
 
-.settings-box input {
-  padding: 1vh 1vw;
+#commands-stateflags-wrapper {
+  display: grid;
+  padding: 0 1vw;
+  grid-template-columns: 30% 35% 35%;
+  grid-template-rows: 8% 6% repeat(5, 10%) 6% repeat(3, 10%);
+}
+
+#cs-button-container {
+  grid-row: 1;
+  grid-column: 1 / span 3;
+  display: flex;
+  align-items: center;
+}
+
+.cs-title {
+  grid-column: 1 / span 3;
+  font-size: calc(2.5vh + 5px);
+}
+
+#commands-title {
+  grid-row: 2;
+}
+
+#command-create-drop {
+  grid-column: 1;
+  grid-row: 3;
+  width: 80%;
+  height: 70%;
+  align-self: center;
+  justify-self: center;
+}
+
+.bits-used-container {
+  width: 100%;
+  height: 100%;
+  grid-row: 3;
+  grid-column: 2 / span 2;
+}
+
+#command-name,
+#command-function-name {
+  grid-row: 4;
+  grid-column: 1;
+  margin: 2vh 0;
+  height: 70%;
+  width: 80%;
+  padding: 0 1vw;
+  margin-top: 3vh;
+  justify-self: center;
+}
+
+#command-function-name {
+  grid-row: 5;
+  grid-column: 1;
+}
+
+#command-configuration-wrapper {
+  grid-row: 4 / span 4;
+  grid-column: 2 / span 2;
+  overflow-y: auto;
+  padding-top: 1vh;
+}
+
+.arg-wrapper {
+  display: grid;
+  grid-template-columns: 40% 30% 30%;
+  grid-template-rows: 14% 43% 43%;
+  height: 46%;
+  padding: 0 2vw;
+  margin-top: 1vh;
+}
+
+.arg-wrapper input {
+  margin: 1vh 1vw;
+  padding: 0 1vw;
+  height: 80%;
+}
+
+.arg-title {
+  margin: 0 1vw;
+  font-size: calc(1.8vh + 3px);
+  grid-row: 1;
+  grid-column: 1 / span 3;
+}
+
+.arg-conversion-list {
+  grid-row: 3;
+  grid-column: 1 / span 3;
+}
+
+#stateflags-title {
+  grid-row: 8;
+}
+
+#stateflag-create-drop {
+  grid-column: 1;
+  grid-row: 9;
+  width: 80%;
+  height: 70%;
+  align-self: center;
+  justify-self: center;
+}
+
+#stateflag-input-cont {
+  grid-row: 10;
+  grid-column: 1 / span 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 0 7vw;
+  padding: 0 2vw;
+}
+
+#stateflag-name,
+#stateflag-width,
+#stateflag-function-name {
+  margin: 2vh 0;
+  height: 70%;
+  width: 80%;
+  padding: 0 1vw;
+  margin-top: 3vh;
 }
 
 .dropdown {

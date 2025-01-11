@@ -42,10 +42,64 @@
     </div>
     <!--Contains all elements besides the top bar-->
     <div id="main">
-      <div id="button-container">
-        <button id="new-stream">Create New Stream</button>
+      <div id="streams-wrapper" class="wrapper active">
+        <div id="streams-button-container">
+          <button id="export-config" class="util-button">Export Config</button>
+          <button id="new-stream" class="util-button">Create New Stream</button>
+          <button id="edit-config" class="util-button">
+            Edit Commands and Stateflags
+          </button>
+        </div>
+        <div id="stream-container"></div>
       </div>
-      <div id="stream-container"></div>
+      <div id="commands-stateflags-wrapper" class="wrapper">
+        <div id="cs-button-container">
+          <button id="go-back" class="util-button">Back to Streams</button>
+        </div>
+        <span id="commands-title" class="cs-title">Commands</span>
+        <div class="dropdown inactive" id="command-create-drop">
+          <!-- Custom dropdown -->
+          <span id="command-create-selected">Select Command</span>
+          <img
+            src="../images/arrow_right.svg"
+            alt=">"
+            id="command-create-arrow"
+            class="drop-arrow"
+          />
+          <div class="options" id="command-create-options"></div>
+        </div>
+        <div id="command-bits-used-container" class="bits-used-container">
+          <canvas id="command-bits-used" class="bits-used"></canvas>
+        </div>
+        <input type="text" id="command-name" placeholder="Name" />
+        <input
+          type="text"
+          id="command-function-name"
+          placeholder="Function Name"
+        />
+        <div id="command-configuration-wrapper"></div>
+        <span id="stateflags-title" class="cs-title">Stateflags</span>
+        <!-- Custom dropdown -->
+        <div class="dropdown inactive" id="stateflag-create-drop">
+          <span id="stateflag-create-selected">Select Stateflag</span>
+          <img
+            src="../images/arrow_right.svg"
+            alt=">"
+            id="stateflag-create-arrow"
+            class="drop-arrow"
+          />
+          <div class="options" id="stateflag-create-options"></div>
+        </div>
+        <div id="stateflag-input-cont">
+          <input type="text" id="stateflag-name" placeholder="Name" />
+          <input type="number" id="stateflag-width" placeholder="Width" />
+          <input
+            type="text"
+            id="stateflag-function-name"
+            placeholder="Function Name"
+          />
+        </div>
+      </div>
     </div>
   </body>
 </html>
