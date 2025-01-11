@@ -9,6 +9,8 @@
 /serial/*.bin
 
 config.json
+commands.json
+stateflags.json
 
 *.csv
 *.log

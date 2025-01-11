@@ -778,7 +778,7 @@ window.onload = () => {
         "#ca0000",
         "lightgray"
       );
-    } else {
+    } else if (commandIndex < newCommandList.length) {
       // load normally
       // reset total bits to 0
       thisCommandTotalBits = 0;
@@ -823,6 +823,14 @@ window.onload = () => {
       );
 
       activeCommandIndex = commandIndex;
+    } else {
+      console.warn(
+        "Developer warning: tried to load command at " +
+          commandIndex +
+          " that doesn't exist. Max is " +
+          (newCommandList.length - 1) +
+          "."
+      );
     }
   };
 
