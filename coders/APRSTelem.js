@@ -276,7 +276,7 @@ class APRSTelem {
     }, Speed: ${this.speed}, Heading: ${this.heading}, Orientation: [${
       this.orientation[0]
     },${this.orientation[1]},${this.orientation[2]}], State Flags: ${
-      this.stateFlags
+      this.rawStateflags
     }`;
   }
 
@@ -295,7 +295,7 @@ class APRSTelem {
     },${this.latitude},${this.longitude},${this.altitude},${this.speed},${
       this.heading
     },${this.orientation[0]},${this.orientation[1]},${this.orientation[2]},${
-      this.stateFlags
+      this.rawStateflags
     }\n`;
     return csv;
   }

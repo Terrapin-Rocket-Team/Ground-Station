@@ -111,6 +111,8 @@ try {
     "Failed to load commands or stateflags file, somme features will not be available: " +
       err.message
   );
+  cmdList = [];
+  stateflags = [];
 }
 
 try {
