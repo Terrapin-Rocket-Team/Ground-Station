@@ -96,6 +96,7 @@ class API extends EventEmitter {
     this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
     this.updateVideoControls = (controls) =>
       ipcRenderer.send("video-controls", controls);
+    this.exportStreamConfig = () => ipcRenderer.send("export-stream-config");
 
     // getters
     this.getPorts = () => ipcRenderer.invoke("get-ports");
@@ -104,12 +105,16 @@ class API extends EventEmitter {
     this.resetSettings = () => ipcRenderer.invoke("reset-settings");
     this.getStreams = () => ipcRenderer.invoke("get-streams");
     this.getCommandList = () => ipcRenderer.invoke("get-command-list");
+    this.getStateflagList = () => ipcRenderer.invoke("get-stateflag-list");
     this.getVideo = () => ipcRenderer.invoke("get-video");
 
     // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
     this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
+    this.setCommandList = (list) => ipcRenderer.send("set-command-list", list);
+    this.setStateflagList = (list) =>
+      ipcRenderer.send("set-stateflag-list", list);
   }
 }
 

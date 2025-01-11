@@ -25,6 +25,7 @@ let windows = { main: null, video: null },
   commandSinks = [],
   config,
   cmdList,
+  stateflags,
   cacheMeta,
   closed,
   videoControls = {
@@ -636,6 +637,57 @@ ipcMain.on("video-controls", (event, controls) => {
   } else log.warn("Failed setting video controls, new controls missing.");
 });
 
+ipcMain.on("export-stream-config", (event, args) => {
+  let exportedCommandConfig = [];
+  cmdList.forEach((cmd) => {
+    exportedCommandConfig.push({
+      num: cmd.num,
+      encoding: cmd.encoding,
+      functionName: cmd.functionName,
+    });
+  });
+
+  try {
+    fs.writeFileSync(
+      path.join(dataPath, "commands.json"),
+      JSON.stringify(exportedCommandConfig)
+    );
+  } catch (err) {
+    log.err("Failed to export commands: " + err.message);
+  }
+
+  config.streams.forEach((stream) => {
+    if (stream.type === "APRSTelem") {
+      let exportedStateflagsConfig = [];
+      stateflags.forEach((flag) => {
+        if (
+          stream.settings &&
+          stream.settings.stateflags &&
+          stream.settings.stateflags.includes(flag.name)
+        ) {
+          exportedStateflagsConfig.push({
+            width: flag.width,
+            functionName: flag.functionName,
+          });
+        }
+      });
+
+      try {
+        fs.writeFileSync(
+          path.join(dataPath, stream.name + "-stateflags.json"),
+          JSON.stringify(exportedStateflagsConfig)
+        );
+      } catch (err) {
+        log.err(
+          "Failed to export stateflags for " + stream.name + ": " + err.message
+        );
+      }
+    }
+  });
+
+  log.info("Successfully exported commands and stateflags");
+});
+
 // getters
 ipcMain.handle("get-ports", (event, args) => {
   if (!config.dataDebug.value && !config.driverDebug.value)
@@ -668,6 +720,10 @@ ipcMain.handle("get-streams", (event, args) => {
 
 ipcMain.handle("get-command-list", (event, args) => {
   return cmdList;
+});
+
+ipcMain.handle("get-stateflag-list", (event, args) => {
+  return stateflags;
 });
 
 ipcMain.handle("get-video", (event, args) => {
@@ -750,6 +806,35 @@ ipcMain.on("set-streams", (event, streams) => {
       log.debug("Successfully updated stream settings");
     } catch (err) {
       log.err('Failed to update stream settings: "' + err.message + '"');
+    }
+  }
+});
+
+ipcMain.on("set-command-list", (event, list) => {
+  if (list) {
+    cmdList = list;
+    APRSCmd.createCommandList(cmdList);
+    try {
+      // write the new settings to the file
+      fs.writeFileSync("./commands.json", JSON.stringify(list, null, "\t"));
+      log.debug("Successfully updated commands settings");
+    } catch (err) {
+      log.err('Failed to update commands settings: "' + err.message + '"');
+    }
+  }
+});
+
+ipcMain.on("set-stateflag-list", (event, list) => {
+  if (list) {
+    stateflags = list;
+
+    APRSTelem.createStateflagList(stateflags);
+    try {
+      // write the new settings to the file
+      fs.writeFileSync("./stateflags.json", JSON.stringify(list, null, "\t"));
+      log.debug("Successfully updated stateflags settings");
+    } catch (err) {
+      log.err('Failed to update stateflags settings: "' + err.message + '"');
     }
   }
 });

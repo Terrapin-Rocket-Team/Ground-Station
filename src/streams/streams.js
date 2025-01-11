@@ -1,10 +1,25 @@
 window.onload = () => {
   let fullscreened = false;
   let streamConfig, newStreamConfig;
+  let commandList, newCommandList;
+  let stateflagList, newStateflagList;
   let inputs = [];
   let saveCallbacks = [];
 
-  const mainContainer = document.getElementById("stream-container");
+  let activeCommandIndex = null;
+  let thisCommandTotalBits = 0;
+
+  let activeStateflagIndex = null;
+
+  let thisStateflagsTotalBits = 0;
+
+  const stateFlagsTotalBits = 32;
+  const commandTotalBits = 16;
+
+  const streamWrapper = document.getElementById("streams-wrapper");
+  const configWrapper = document.getElementById("commands-stateflags-wrapper");
+
+  const streamContainer = document.getElementById("stream-container");
 
   const types = ["Telemetry", "Command", "Metrics", "Video"];
   const classes = ["APRSTelem", "APRSCmd", "Metrics", "video"];
@@ -16,6 +31,18 @@ window.onload = () => {
     // check if the configs are equal
     if (!configEquals(streamConfig, newStreamConfig)) {
       api.setStreams(newStreamConfig);
+    }
+
+    saveCommand(activeCommandIndex);
+
+    if (!configEquals(commandList, newCommandList)) {
+      api.setCommandList(newCommandList);
+    }
+
+    saveStateflag(activeStateflagIndex);
+
+    if (!configEquals(stateflagList, newStateflagList)) {
+      api.setStateflagList(newStateflagList);
     }
   };
 
@@ -47,7 +74,7 @@ window.onload = () => {
   });
 
   const createStreamBox = (index, stream) => {
-    mainContainer.innerHTML += `<div class="stream-box" id="stream-${index}">
+    streamContainer.innerHTML += `<div class="stream-box" id="stream-${index}">
         <div id="stream-${index}-toggle" class="toggle" title="Enable stream"></div>
         <div class="stream-box-left">
           <span class="stream-input-label">Stream Name</span>
@@ -65,6 +92,9 @@ window.onload = () => {
           </div>
           <span class="stream-input-label">Stream ID</span>
           <input type="number" class="stream-id" id="stream-${index}-id" />
+          <button id="stream-${index}-configure" class="configure-stream">
+            <img src="../images/settings.svg" alt="Configure" />
+          </button>
         </div>
         <div class="stream-box-right">
           <button id="move-up-${index}" title="Move Up">
@@ -109,13 +139,145 @@ window.onload = () => {
       toggleToggle(toggle);
     });
 
+    let streamType = types[classes.indexOf(stream.type)];
     const getStreamOptions = (idPrefix) => {
-      setupStaticOptions(idPrefix, types, () => {
+      setupStaticOptions(idPrefix, types, (option) => {
+        streamType = option;
         return true;
       });
     };
 
     setupDropdown(`stream-${index}-type`, getStreamOptions, false);
+
+    let configOpen = false;
+    let div;
+    document
+      .getElementById(`stream-${index}-configure`)
+      .addEventListener("click", () => {
+        if (!configOpen) {
+          if (streamType === "Telemetry") {
+            div = document.createElement("DIV");
+            div.className = "stateflags-config-box";
+            div.innerHTML += `<div id="stateflags-bits-used-container" class="bits-used-container">
+            <canvas id="stateflags-bits-used" class="bits-used"></canvas>
+          </div>
+          <div id="stateflags-selected-container"></div>
+          `;
+            if (index + 1 < streamContainer.childNodes.length)
+              streamContainer.insertBefore(
+                div,
+                streamContainer.childNodes[index + 1]
+              );
+            else streamContainer.appendChild(div);
+
+            // setup fill bar
+            let stateFlagsBar = {
+              canvas: document.getElementById("stateflags-bits-used"),
+              ctx: document
+                .getElementById("stateflags-bits-used")
+                .getContext("2d"),
+              cont: document.getElementById("stateflags-bits-used-container"),
+            };
+
+            thisStateflagsTotalBits = 0;
+
+            resizeFillBar(
+              stateFlagsBar,
+              stateFlagsTotalBits,
+              thisStateflagsTotalBits
+            );
+
+            // setup buttons
+            const sfSeletedCont = document.getElementById(
+              "stateflags-selected-container"
+            );
+
+            // make sure the right object structure exists
+            if (!newStreamConfig[index].settings)
+              newStreamConfig[index].settings = { stateflags: [] };
+            if (!newStreamConfig[index].settings.stateflags)
+              newStreamConfig[index].settings.stateflags = [];
+
+            newStateflagList.forEach((sf) => {
+              const button = document.createElement("button");
+              button.textContent = sf.name + "\t"; // the \t is invisible
+              button.className = "sf-button";
+              const span = document.createElement("span");
+              span.textContent = sf.width; // but it allows us to separate the name and width later
+              span.className = "sf-width";
+              button.appendChild(span);
+
+              let isSelected = false;
+              for (
+                let i = 0;
+                i < newStreamConfig[index].settings.stateflags.length;
+                i++
+              ) {
+                if (sf.name === newStreamConfig[index].settings.stateflags[i]) {
+                  isSelected = true;
+                  button.classList.add("selected");
+                  thisStateflagsTotalBits += sf.width;
+                }
+              }
+
+              button.addEventListener("click", () => {
+                if (!isSelected) {
+                  if (
+                    thisStateflagsTotalBits + sf.width <
+                    stateFlagsTotalBits
+                  ) {
+                    button.classList.toggle("selected");
+                    thisStateflagsTotalBits += sf.width;
+                    setFillBarState(
+                      stateFlagsBar,
+                      stateFlagsTotalBits,
+                      thisStateflagsTotalBits,
+                      "#ca0000",
+                      "lightgray"
+                    );
+                    isSelected = true;
+                  }
+                } else {
+                  button.classList.toggle("selected");
+                  thisStateflagsTotalBits -= sf.width;
+                  setFillBarState(
+                    stateFlagsBar,
+                    stateFlagsTotalBits,
+                    thisStateflagsTotalBits,
+                    "#ca0000",
+                    "lightgray"
+                  );
+                  isSelected = false;
+                }
+              });
+
+              sfSeletedCont.appendChild(button);
+            });
+
+            // setup initial fill bar state
+            setFillBarState(
+              stateFlagsBar,
+              stateFlagsTotalBits,
+              thisStateflagsTotalBits,
+              "#ca0000",
+              "lightgray"
+            );
+            configOpen = true;
+          }
+        } else if (div) {
+          // save settings
+          const selectedEls = div.getElementsByClassName("selected");
+          newStreamConfig[index].settings.stateflags = [];
+          for (let i = 0; i < selectedEls.length; i++) {
+            newStreamConfig[index].settings.stateflags.push(
+              selectedEls[i].textContent.split("\t")[0]
+            );
+          }
+          console.log(newStreamConfig[index].settings.stateflags);
+          streamContainer.removeChild(div);
+          configOpen = false;
+        }
+      });
 
     document
       .getElementById(`move-up-${index}`)
@@ -296,8 +458,8 @@ window.onload = () => {
   };
 
   const loadStreamInputs = () => {
-    while (mainContainer.childElementCount > 0) {
-      mainContainer.removeChild(mainContainer.firstChild);
+    while (streamContainer.childElementCount > 0) {
+      streamContainer.removeChild(streamContainer.firstChild);
     }
 
     inputs = [];
@@ -338,6 +500,10 @@ window.onload = () => {
     loadStreamInputs();
   });
 
+  document.getElementById("export-config").addEventListener("click", () => {
+    api.exportStreamConfig();
+  });
+
   document.getElementById("new-stream").addEventListener("click", () => {
     // need to preserve settings before moving streams around
     for (let i = 0; i < newStreamConfig.length; i++) {
@@ -352,6 +518,481 @@ window.onload = () => {
     loadStreamInputs();
   });
 
+  document.getElementById("edit-config").addEventListener("click", () => {
+    streamWrapper.classList.toggle("active");
+    configWrapper.classList.toggle("active");
+  });
+
+  document.getElementById("go-back").addEventListener("click", () => {
+    streamWrapper.classList.toggle("active");
+    configWrapper.classList.toggle("active");
+  });
+
+  // edit commands section
+
+  let commandBar = {
+    canvas: document.getElementById("command-bits-used"),
+    ctx: document.getElementById("command-bits-used").getContext("2d"),
+    cont: document.getElementById("command-bits-used-container"),
+  };
+
+  let commandNumSlots = commandTotalBits;
+
+  const resizeFillBar = (bar, numSlots, filled) => {
+    bar.ctx.clearRect(0, 0, bar.canvas.width, bar.canvas.height);
+    bar.canvas.width = bar.cont.offsetWidth;
+    bar.canvas.height = bar.cont.offsetHeight;
+
+    setFillBarState(bar, numSlots, filled, "#ca0000", "lightgray");
+  };
+
+  const setFillBarState = (bar, numSlots, filled, onColor, offColor) => {
+    let verticalBuffer = bar.cont.offsetHeight * 0.1;
+    let slotWidth = bar.cont.offsetWidth / (2 * numSlots + 1);
+    let slotHeight = bar.cont.offsetHeight - 2 * verticalBuffer;
+    bar.ctx.clearRect(0, 0, bar.canvas.width, bar.canvas.height);
+
+    for (let i = 0; i < numSlots; i++) {
+      if (i < filled) {
+        bar.ctx.fillStyle = onColor;
+        bar.ctx.fillRect(
+          slotWidth + 2 * i * slotWidth,
+          verticalBuffer,
+          slotWidth,
+          slotHeight
+        );
+      } else {
+        bar.ctx.fillStyle = offColor;
+        bar.ctx.fillRect(
+          slotWidth + 2 * i * slotWidth,
+          verticalBuffer,
+          slotWidth,
+          slotHeight
+        );
+      }
+    }
+  };
+
+  const handleResize = () => {
+    resizeFillBar(commandBar, commandNumSlots, thisCommandTotalBits);
+  };
+
+  handleResize();
+
+  window.onresize = handleResize;
+
+  // command handling variables and functions
+
+  const commandName = document.getElementById("command-name");
+  const commandFunctionName = document.getElementById("command-function-name");
+  const commandSyntaxArgs = [];
+  const commandWidthArgs = [];
+  const commandTypeArgs = [];
+  const commandConversionListArgs = [];
+
+  const createArgConfig = (container, index) => {
+    container.innerHTML += `<div id="arg-${index}-wrapper" class="arg-wrapper">
+            <span class="arg-title">Argument ${index}</span>
+            <input
+              type="text"
+              id="arg-${index}-syntax"
+              class="arg-syntax"
+              placeholder="Syntax"
+            />
+            <input
+              type="number"
+              id="arg-${index}-width"
+              class="arg-width"
+              placeholder="Width"
+            />
+            <input
+              type="text"
+              id="arg-${index}-type"
+              class="arg-type"
+              placeholder="Type"
+            />
+            <input
+              type="text"
+              id="arg-${index}-conversion-list"
+              class="arg-conversion-list"
+              placeholder="Conversion List (string type only)"
+              disabled
+            />
+          </div>`;
+  };
+
+  const setupArgConfig = (index) => {
+    // event listeners
+    commandWidthArgs[index].addEventListener("input", () => {
+      let newWidth = commandWidthArgs[index].value;
+      if (newWidth) {
+        thisCommandTotalBits = parseInt(newWidth);
+        for (
+          let i = 0;
+          i < newCommandList[activeCommandIndex].encoding.length;
+          i++
+        ) {
+          if (i !== index)
+            thisCommandTotalBits +=
+              newCommandList[activeCommandIndex].encoding[i];
+        }
+
+        setFillBarState(
+          commandBar,
+          commandNumSlots,
+          thisCommandTotalBits,
+          "#ca0000",
+          "lightgray"
+        );
+      }
+    });
+
+    commandTypeArgs[index].addEventListener("input", () => {
+      let newType = commandTypeArgs[index].value;
+      if (newType === "string") {
+        commandConversionListArgs[index].disabled = false;
+      } else {
+        commandConversionListArgs[index].disabled = true;
+      }
+    });
+  };
+
+  const saveCommand = (commandIndex) => {
+    if (commandIndex !== null) {
+      let name = commandName.value;
+      // cannot save if no name or encoding too long
+      if (!name) {
+        // removing the name will delete the command
+        newCommandList.splice(commandIndex, 1);
+        // otherwise we just won't save it
+      } else if (thisCommandTotalBits <= commandTotalBits) {
+        // otherwise can save
+        // TODO: better input validation here
+        newCommandList[commandIndex].name = name;
+        newCommandList[commandIndex].functionName = commandFunctionName.value;
+
+        for (let i = 0; i < commandTotalBits; i++) {
+          let syntax = commandSyntaxArgs[i].value;
+          let width = commandWidthArgs[i].value;
+          let type = commandTypeArgs[i].value;
+          if (type === "string") {
+            let conversionListStr = commandConversionListArgs[i].value;
+            if (syntax && width && type && conversionListStr) {
+              // then this is a valid arg
+              // trim whitespace from each arg
+              let newConversionList = conversionListStr.split(",");
+              for (let i = 0; i < newConversionList.length; i++) {
+                newConversionList[i] = newConversionList[i].trim();
+              }
+              // filter out empty strings
+              newConversionList = newConversionList.filter((entry) => {
+                return entry != "";
+              });
+              if (i < newCommandList[commandIndex].syntax.length) {
+                // we are updating and existing arg, so just set
+                newCommandList[commandIndex].syntax[i] = syntax;
+                newCommandList[commandIndex].encoding[i] = parseInt(width);
+                newCommandList[commandIndex].type[i] = type;
+                newCommandList[commandIndex].conversionList[i] =
+                  newConversionList;
+              } else {
+                // we are adding a new arg so we need to push
+                newCommandList[commandIndex].syntax.push(syntax);
+                newCommandList[commandIndex].encoding.push(parseInt(width));
+                newCommandList[commandIndex].type.push(type);
+                // create new array as necessary
+                if (!newCommandList[commandIndex].conversionList)
+                  newCommandList[commandIndex].conversionList = [];
+                newCommandList[commandIndex].conversionList.push(
+                  newConversionList
+                );
+              }
+            }
+          } else {
+            if (syntax && width && type) {
+              // then this is a valid arg
+              if (i < newCommandList[commandIndex].syntax.length) {
+                // we are updating and existing arg, so just set
+                newCommandList[commandIndex].syntax[i] = syntax;
+                newCommandList[commandIndex].encoding[i] = parseInt(width);
+                newCommandList[commandIndex].type[i] = type;
+                // don't need a conversion list
+              } else {
+                // we are adding a new arg so we need to push
+                newCommandList[commandIndex].syntax.push(syntax);
+                newCommandList[commandIndex].encoding.push(parseInt(width));
+                newCommandList[commandIndex].type.push(type);
+                // don't need a conversion list
+              }
+            }
+          }
+        }
+
+        // set non manually input settings
+        let abbreviation = "";
+        name.split(" ").forEach((word) => {
+          abbreviation += word.toUpperCase()[0];
+        });
+        newCommandList[commandIndex].abbrv = abbreviation;
+        newCommandList[commandIndex].num = commandIndex;
+      }
+    }
+  };
+
+  const loadCommand = (commandIndex) => {
+    // always everything to empty string
+    commandName.value = "";
+    commandFunctionName.value = "";
+    commandSyntaxArgs.forEach((el) => {
+      el.value = "";
+    });
+    commandWidthArgs.forEach((el) => {
+      el.value = "";
+    });
+    commandTypeArgs.forEach((el) => {
+      el.value = "";
+    });
+    commandConversionListArgs.forEach((el) => {
+      el.value = "";
+    });
+
+    if (commandIndex === null) {
+      // update active command and add new command to array
+      activeCommandIndex = newCommandList.length;
+      newCommandList.push({
+        name: "",
+        abbrv: "",
+        num: null,
+        syntax: [],
+        encoding: [],
+        type: [],
+        functionName: "",
+      });
+
+      // update fill bar
+      thisCommandTotalBits = 0;
+      setFillBarState(
+        commandBar,
+        commandNumSlots,
+        thisCommandTotalBits,
+        "#ca0000",
+        "lightgray"
+      );
+    } else {
+      // load normally
+      // reset total bits to 0
+      thisCommandTotalBits = 0;
+
+      // set name and function name
+      commandName.value = newCommandList[commandIndex].name;
+      commandFunctionName.value = newCommandList[commandIndex].functionName;
+
+      // set all args
+      for (let i = 0; i < newCommandList[commandIndex].syntax.length; i++) {
+        commandSyntaxArgs[i].value = newCommandList[commandIndex].syntax[i];
+      }
+      for (let i = 0; i < newCommandList[commandIndex].encoding.length; i++) {
+        commandWidthArgs[i].value = newCommandList[commandIndex].encoding[i];
+        thisCommandTotalBits += newCommandList[commandIndex].encoding[i];
+      }
+      for (let i = 0; i < newCommandList[commandIndex].type.length; i++) {
+        commandTypeArgs[i].value = newCommandList[commandIndex].type[i];
+        if (newCommandList[commandIndex].type[i] === "string")
+          commandConversionListArgs[i].disabled = false;
+        else commandConversionListArgs[i].disabled = true;
+      }
+      // make sure the conversion list exists
+      if (newCommandList[commandIndex].conversionList) {
+        for (
+          let i = 0;
+          i < newCommandList[commandIndex].conversionList.length;
+          i++
+        ) {
+          commandConversionListArgs[i].value =
+            newCommandList[commandIndex].conversionList[i].join(", ");
+        }
+      }
+
+      // set the fill bar to represent total number of bits
+      setFillBarState(
+        commandBar,
+        commandNumSlots,
+        thisCommandTotalBits,
+        "#ca0000",
+        "lightgray"
+      );
+
+      activeCommandIndex = commandIndex;
+    }
+  };
+
+  const loadCommands = () => {
+    const commandContainer = document.getElementById(
+      "command-configuration-wrapper"
+    );
+
+    // remove all elements
+    while (commandContainer.childElementCount > 0) {
+      commandContainer.removeChild(commandContainer.firstChild);
+    }
+
+    for (let i = 0; i < commandTotalBits; i++) {
+      createArgConfig(commandContainer, i);
+    }
+
+    for (let i = 0; i < commandTotalBits; i++) {
+      commandSyntaxArgs.push(document.getElementById(`arg-${i}-syntax`));
+      commandWidthArgs.push(document.getElementById(`arg-${i}-width`));
+      commandTypeArgs.push(document.getElementById(`arg-${i}-type`));
+      commandConversionListArgs.push(
+        document.getElementById(`arg-${i}-conversion-list`)
+      );
+      setupArgConfig(i);
+    }
+
+    const getAvailCommands = (idPrefix) => {
+      // remove existing elements
+      const options = document.getElementById(idPrefix + "-options");
+      while (options.childElementCount > 0) {
+        options.removeChild(options.firstChild);
+      }
+
+      const selected = document.getElementById(idPrefix + "-selected");
+      // add option to create new command
+      const span = document.createElement("SPAN");
+      span.className = idPrefix;
+      span.textContent = "Create new command";
+      span.addEventListener("click", () => {
+        selected.textContent = "New Command";
+        // save existing settings
+        saveCommand(activeCommandIndex);
+        // set all values to empty
+        loadCommand(null);
+      });
+      options.appendChild(span);
+      // add existing commands
+      for (let i = 0; i < newCommandList.length; i++) {
+        // create a new option in the dropdown for this port
+        const span = document.createElement("SPAN");
+        span.className = idPrefix;
+        span.textContent = i + ": " + newCommandList[i].name;
+        span.addEventListener("click", () => {
+          selected.textContent = i + ": " + newCommandList[i].name;
+          // save existing settings
+          saveCommand(activeCommandIndex);
+          // put current settings in
+          loadCommand(i);
+        });
+        options.appendChild(span);
+      }
+    };
+
+    setupDropdown("command-create", getAvailCommands, true);
+  };
+
+  // load commands
+  api.getCommandList().then((list) => {
+    commandList = list;
+    // need to copy the config otherwise config and newConfig will always be the same
+    newCommandList = JSON.parse(JSON.stringify(commandList));
+
+    loadCommands();
+  });
+
+  // stateflags
+
+  const sfName = document.getElementById("stateflag-name");
+  const sfWidth = document.getElementById("stateflag-width");
+  const sfFunctionName = document.getElementById("stateflag-function-name");
+
+  const saveStateflag = (index) => {
+    if (index !== null) {
+      // get all settings
+      let name = sfName.value;
+      let width = sfWidth.value;
+      let functionName = sfFunctionName.value;
+
+      if (name && width && functionName) {
+        // save the settings
+        newStateflagList[index].name = name;
+        newStateflagList[index].width = parseInt(width);
+        newStateflagList[index].functionName = functionName;
+      } else {
+        // otherwise remove the state valid (invalid input)
+        newStateflagList.splice(index, 1);
+      }
+    }
+  };
+
+  const loadStateflag = (index) => {
+    sfName.value = "";
+    sfWidth.value = "";
+    sfFunctionName.value = "";
+    if (index === null) {
+      activeStateflagIndex = newStateflagList.length;
+      newStateflagList.push({
+        name: "",
+        width: null,
+        functionName: "",
+      });
+    } else {
+      sfName.value = newStateflagList[index].name;
+      sfWidth.value = newStateflagList[index].width;
+      sfFunctionName.value = newStateflagList[index].functionName;
+
+      activeStateflagIndex = index;
+    }
+  };
+
+  const loadStateflags = () => {
+    const getAvailStateflags = (idPrefix) => {
+      // remove existing elements
+      const options = document.getElementById(idPrefix + "-options");
+      while (options.childElementCount > 0) {
+        options.removeChild(options.firstChild);
+      }
+
+      const selected = document.getElementById(idPrefix + "-selected");
+      // add option to create new command
+      const span = document.createElement("SPAN");
+      span.className = idPrefix;
+      span.textContent = "Create new stateflag";
+      span.addEventListener("click", () => {
+        selected.textContent = "New Stateflag";
+        // save existing settings
+        saveStateflag(activeStateflagIndex);
+        // set all values to empty
+        loadStateflag(null);
+      });
+      options.appendChild(span);
+      // add existing commands
+      for (let i = 0; i < newStateflagList.length; i++) {
+        // create a new option in the dropdown for this port
+        const span = document.createElement("SPAN");
+        span.className = idPrefix;
+        span.textContent = i + ": " + newStateflagList[i].name;
+        span.addEventListener("click", () => {
+          selected.textContent = i + ": " + newStateflagList[i].name;
+          // save existing settings
+          saveStateflag(activeStateflagIndex);
+          // put current settings in
+          loadStateflag(i);
+        });
+        options.appendChild(span);
+      }
+    };
+
+    setupDropdown("stateflag-create", getAvailStateflags, true);
+  };
+
+  api.getStateflagList().then((list) => {
+    stateflagList = list;
+    // need to copy the config otherwise config and newConfig will always be the same
+    newStateflagList = JSON.parse(JSON.stringify(stateflagList));
+
+    loadStateflags();
+  });
+
   // compares to given config objects
   const configEquals = (config1, config2) => {
     // objects should always have the same keys
@@ -361,7 +1002,13 @@ window.onload = () => {
       const keyListLen = keyList.length;
       for (let i = 0; i < keyListLen; i++) {
         try {
-          if (config1[j][keyList[i]] !== config2[j][keyList[i]]) return false;
+          if (
+            // without this check this function returns false every time
+            // typeof config1[j][keyList[i]] !== "object" &&
+            JSON.stringify(config1[j][keyList[i]]) !==
+            JSON.stringify(config2[j][keyList[i]])
+          )
+            return false;
         } catch (err) {
           // should really only happen if somehow one config has an attribute another doesn't
           console.error("Failed to compare configs: " + err.message);
