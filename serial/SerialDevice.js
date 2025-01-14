@@ -93,19 +93,14 @@ class SerialDevice extends EventEmitter {
    */
   setupDriver() {
     // logic for starting the driver program
-    // TODO: fix these names
     if (os.platform() === "win32") {
       if (!this.useDebug)
-        this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
-      else
-        this.driver = spawn(
-          path.join(serialDriverPath, "DriverShellForReal.exe")
-        );
+        this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
+      else this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
     } else if (os.platform() === "linux") {
       if (!this.useDebug)
-        this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
-      else
-        this.driver = spawn(path.join(serialDriverPath, "DriverShellForReal"));
+        this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
+      else this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +

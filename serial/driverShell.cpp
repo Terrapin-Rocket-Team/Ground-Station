@@ -4,14 +4,14 @@
 //
 
 #ifdef WINDOWS
-#include <WinSerialPort.h>
 #include <WinNamedPipe.h>
 #include <windows.h>
 #elif LINUX
 #include <LinuxNamedPipe.h>
-#include <LinuxSerialPort.h>
 #include <unistd.h>
 #endif
+
+#include <SerialPort.h>
 
 #include <cstring>
 #include <iostream>
