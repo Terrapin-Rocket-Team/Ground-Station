@@ -273,7 +273,6 @@ window.onload = () => {
               selectedEls[i].textContent.split("\t")[0]
             );
           }
-          console.log(newStreamConfig[index].settings.stateflags);
           streamContainer.removeChild(div);
           configOpen = false;
         }

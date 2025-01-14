@@ -217,7 +217,7 @@ window.onload = () => {
 
   const updateT0 = (idPrefix, msg) => {
     // wait until the flight computer reports the stage is >0 (out of preflight)
-    if (msg.getStageNumber() > 0 && !t0Set) {
+    if (msg.getStateflag("Stage") > 0 && !t0Set) {
       // get the t0
       t0 = Date.now();
       // save the t0 for later
@@ -382,7 +382,7 @@ window.onload = () => {
       let ff = document.getElementById("fun-facts-container");
       let ffTitle = document.getElementById("fun-fact-title");
       let ffText = document.getElementById("fun-fact-text");
-      let sn = msg.getStageNumber();
+      let sn = msg.getStateflag("Stage");
       let percents = [5, 15, 25, 45, 80, 90];
       let stageNames = [
         "On the Pad",

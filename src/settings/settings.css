@@ -12,6 +12,7 @@ div#main {
   display: grid;
   grid-template-columns: 50% 50%;
   grid-template-rows: repeat(auto-fill, 12%);
+  height: 88%;
 }
 
 input::-webkit-outer-spin-button,
@@ -98,6 +99,7 @@ input::-webkit-inner-spin-button {
   align-items: center;
   justify-content: center;
   column-gap: 10%;
+  height: 12%;
 }
 
 #reset-box button {
