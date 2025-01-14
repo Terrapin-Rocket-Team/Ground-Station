@@ -7,6 +7,8 @@ set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/definitions.cmake)
 
+message("Building for target: " ${BUILD_ENV})
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/RadioMessage/CMakeLists.txt)
 include(${CMAKE_CURRENT_SOURCE_DIR}/NamedPipe/CMakeLists.txt)
 include(${CMAKE_CURRENT_SOURCE_DIR}/SerialPort/CMakeLists.txt)
@@ -23,12 +25,12 @@ target_include_directories(DriverShell PUBLIC "${PROJECT_INCLUDE}")
 target_sources(SerialDriver PUBLIC "${CMAKE_CURRENT_LIST_DIR}/serialDriver.cpp")
 target_sources(DriverShell PUBLIC "${CMAKE_CURRENT_LIST_DIR}/driverShell.cpp")
 
-if (${BUILD_ENV} STREQUAL "WINDOWS")
+if ("${BUILD_ENV}" STREQUAL "WINDOWS")
     set(CMAKE_CXX_FLAGS "-fPIC -static -static-libgcc -static-libstdc++")
     target_compile_definitions(SerialDriver PUBLIC WINDOWS=1)
     target_compile_definitions(DriverShell PUBLIC WINDOWS=1)
 
-elseif (${BUILD_ENV} STREQUAL "LINUX")
+elseif ("${BUILD_ENV}" STREQUAL "LINUX")
 
     target_compile_definitions(SerialDriver PUBLIC LINUX=1)
     target_compile_definitions(DriverShell PUBLIC LINUX=1)
