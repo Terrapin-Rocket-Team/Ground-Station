@@ -312,8 +312,13 @@ int main(int argc, char **argv)
                     {
                         pipeStatus->writeStr("connected");
                     }
-                    else if (device == nullptr || !device->isConnected())
+                    else if (device == nullptr)
                     {
+                        pipeStatus->writeStr("no active serial connection");
+                    }
+                    else if (device != nullptr && !device->isConnected())
+                    {
+                        std::cout << "here" << std::endl;
                         pipeStatus->writeStr("connection failed");
                     }
                     else if (!handshakeSuccess)
@@ -401,8 +406,13 @@ int main(int argc, char **argv)
                             {
                                 pipeStatus->writeStr("connected");
                             }
-                            else if (device == nullptr || !device->isConnected())
+                            else if (device == nullptr)
                             {
+                                pipeStatus->writeStr("no active serial connection");
+                            }
+                            else if (device != nullptr && !device->isConnected())
+                            {
+                                std::cout << "here1" << std::endl;
                                 pipeStatus->writeStr("connection failed");
                             }
                             else if (!handshakeSuccess)
@@ -449,8 +459,13 @@ int main(int argc, char **argv)
                     {
                         pipeStatus->writeStr("connected");
                     }
-                    else if (device == nullptr || !device->isConnected())
+                    else if (device == nullptr)
                     {
+                        pipeStatus->writeStr("no active serial connection");
+                    }
+                    else if (device != nullptr && !device->isConnected())
+                    {
+                        std::cout << "here2" << std::endl;
                         pipeStatus->writeStr("connection failed");
                     }
                     else if (!handshakeSuccess)
