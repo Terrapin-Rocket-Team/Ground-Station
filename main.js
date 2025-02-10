@@ -746,7 +746,7 @@ ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
     // convert user interface friendly string to more generic string for the serial driver
     if (config.driverDebug.value && portConfig.path === "Begin driver debug")
-      portConfig.path === "begin debug";
+      portConfig.path = "begin debug";
 
     if (!config.dataDebug.value) {
       // try to connect to the given port, log any errors

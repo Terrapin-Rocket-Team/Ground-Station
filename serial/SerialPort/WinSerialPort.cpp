@@ -6,8 +6,11 @@ WinSerialPort::WinSerialPort(const char *portName) : SerialPort(portName)
 {
   this->connected = false;
 
+  char portPath[60] = "\\\\.\\";
+  strcat(portPath, portName);
+
   this->handler =
-      CreateFileA(static_cast<LPCSTR>(portName), GENERIC_READ | GENERIC_WRITE,
+      CreateFileA(static_cast<LPCSTR>(portPath), GENERIC_READ | GENERIC_WRITE,
                   0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (this->handler == INVALID_HANDLE_VALUE)
   {
