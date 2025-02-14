@@ -2,7 +2,7 @@
 
 ALL=0
 SRC=0
-VIDEO=0
+CODERS=0
 SERIAL=0
 ICONS=0
 UTILS=0
@@ -32,8 +32,8 @@ while [ $# -gt 0 ] ; do
         SRC=1
         shift
         ;;
-    video)
-        VIDEO=1
+    coders)
+        CODERS=1
         shift
         ;;
     serial)
@@ -55,7 +55,7 @@ while [ $# -gt 0 ] ; do
     esac
 done
 
-if [ $((($ALL + $SRC + $VIDEO + $SERIAL + $ICONS + $UTILS))) -gt 0 ] ; then
+if [ $((($ALL + $SRC + $CODERS + $SERIAL + $ICONS + $UTILS))) -gt 0 ] ; then
 
 echo "Checking for build dependencies"
 if ! type gcc &> /dev/null ; then
@@ -112,7 +112,7 @@ chmod +x ../utils/build.sh
 # build dependencies first
 if [ $ALL = 1 ] || [ $ICONS = 1 ] ; then ../icons/build.sh ; fi
 if [ $ALL = 1 ] || [ $SERIAL = 1 ] ; then ../serial/build.sh ; fi
-if [ $ALL = 1 ] || [ $VIDEO = 1 ] ; then ../coders/build.sh ; fi
+if [ $ALL = 1 ] || [ $CODERS = 1 ] ; then ../coders/build.sh ; fi
 
 # then build main
 if [ $ALL = 1 ] || [ $SRC = 1 ] ; then ../src/build.sh ; fi
