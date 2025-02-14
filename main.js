@@ -977,7 +977,7 @@ if (config.dataDebug.value) {
             rotation: "cw",
             createDecoderLog: config.debug.value,
           },
-          "video0"
+          "video0-0"
         );
         videoSources.push(vs1);
         // start the video
@@ -995,7 +995,7 @@ if (config.dataDebug.value) {
             rotation: "cw",
             createDecoderLog: config.debug.value,
           },
-          "video1"
+          "video1-0"
         );
         videoSources.push(vs2);
         // start the video

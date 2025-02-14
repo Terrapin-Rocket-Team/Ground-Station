@@ -20,7 +20,7 @@ if ! type ffmpeg &> /dev/null ; then
     if ! type dav1d &> /dev/null ; then
         echo "Unable to locate dav1d, will build and install"
         mkdir -p dav1d-1.4.2/build && cd dav1d-1.4.2/build && meson setup -Denable_tools=false -Denable_tests=false --default-library=static .. && ninja && ninja install
-        cd ../../ffmpeg-7.0.1 && ./configure --enable-libdav1d  --disable-avdevice --extra-cflags="-I/mingw64/include" --extra-ldflags="-L/mingw64/lib"
+        cd ../../ffmpeg-7.0.1 && ./configure --enable-libdav1d --disable-avdevice --disable-autodetect --extra-cflags="-I/mingw64/include" --extra-ldflags="-L/mingw64/lib"
         make -j $CORES
     fi
 fi
