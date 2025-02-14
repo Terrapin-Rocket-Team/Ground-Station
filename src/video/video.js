@@ -400,7 +400,7 @@ window.onload = () => {
         "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
         "The rocket lands back on the ground, completing its flight.",
       ];
-      if (sn >= 0) {
+      if (sn >= 0 && sn !== null) {
         prog.textContent = percents[sn] + "%";
         prog.setAttribute("value", percents[sn]);
         document.getElementById("s" + sn).className = "stage active";
