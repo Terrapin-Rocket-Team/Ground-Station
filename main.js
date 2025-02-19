@@ -96,22 +96,32 @@ try {
 serial.setupDriver();
 
 try {
-  // load command list and stateflags
+  // load command list
   cmdList = JSON.parse(fs.readFileSync("./commands.json"));
 
   APRSCmd.createCommandList(cmdList);
 
+  log.debug("Commands loaded");
+} catch (err) {
+  log.warn(
+    "Failed to load commands file, somme features will not be available: " +
+      err.message
+  );
+  cmdList = [];
+}
+
+try {
+  // load stateflags
   stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
 
   APRSTelem.createStateflagList(stateflags);
 
-  log.debug("Commands and stateflags loaded");
+  log.debug("Stateflags loaded");
 } catch (err) {
   log.warn(
-    "Failed to load commands or stateflags file, somme features will not be available: " +
+    "Failed to load stateflags file, somme features will not be available: " +
       err.message
   );
-  cmdList = [];
   stateflags = [];
 }
 
@@ -626,7 +636,7 @@ ipcMain.on("clear-tile-cache", (event, args) => {
 });
 
 ipcMain.on("video-controls", (event, controls) => {
-  log.debug("Updating video controls");
+  log.debug("Updating video controls: " + JSON.stringify(controls));
 
   //make sure we actually got a controls object
   if (controls) {
