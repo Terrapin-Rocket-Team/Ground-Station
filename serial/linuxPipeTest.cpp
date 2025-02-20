@@ -8,8 +8,8 @@
 
 int main() {
     std::string pipePath = "testing_pipe";
-    LinuxNamedPipe outLinPipe = LinuxNamedPipe(pipePath.c_str(), true);
-    LinuxNamedPipe inLinPipe = LinuxNamedPipe(pipePath.c_str(), false);
+    LinuxNamedPipe outLinPipe = LinuxNamedPipe(pipePath.c_str(), true, true);
+    LinuxNamedPipe inLinPipe = LinuxNamedPipe(pipePath.c_str(), true, false);
 
     NamedPipe* outPipe = &outLinPipe;
     NamedPipe* inPipe = &inLinPipe;
