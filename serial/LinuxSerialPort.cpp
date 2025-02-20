@@ -70,14 +70,9 @@ if (cfsetospeed(&tty, B19200) != 0) {
   //tty.c_ospeed = 600000;
 
   // Save tty settings, also checking for error
-<<<<<<< Updated upstream
-  if (ioctl(portHandle, TCSANOW, &tty) != 0) {
-    std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
-=======
   // if (ioctl(portHandle, TCSETSW, &tty) != 0) {
   if (tcsetattr(portHandle, TCSAFLUSH, &tty) != 0) {
     std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
->>>>>>> Stashed changes
               << "\n";
     connected = false;
   }
@@ -101,14 +96,9 @@ void LinuxSerialPort::closeSerial() {
   if (connected) {
     // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-<<<<<<< Updated upstream
-    if (ioctl(portHandle, TCSANOW, &backup) != 0) {
-      std::cerr << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
-=======
     // if (ioctl(portHandle, TCSETSW, &backup) != 0) {
     if (tcsetattr(portHandle, TCSAFLUSH, &backup) != 0) {
       std::cout << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
->>>>>>> Stashed changes
                 << "\n";
       connected = false;
     }
