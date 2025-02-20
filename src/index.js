@@ -225,12 +225,14 @@ window.onload = () => {
 
     setupStaticOptions(idPrefix, video0Options, (option) => {
       // video0 and video1 can't be set to the same thing
-      if (option !== videoControls.video1) {
+      let newSetting;
+      if (option == "Input 0") newSetting = "live-video-0";
+      if (option == "Input 1") newSetting = "live-video-1";
+      if (option == "Charts") newSetting = "charts";
+      if (option == "None") newSetting = "none-0";
+      if (newSetting !== videoControls.video1) {
         // figure out what value the option text corresponds to
-        if (option == "Input 0") videoControls.video0 = "live-video-0";
-        if (option == "Input 1") videoControls.video0 = "live-video-1";
-        if (option == "Charts") videoControls.video0 = "charts";
-        if (option == "None") videoControls.video0 = "none-0";
+        videoControls.video0 = newSetting;
         return true;
       }
       return false;
@@ -241,12 +243,14 @@ window.onload = () => {
 
     setupStaticOptions(idPrefix, video1Options, (option) => {
       // video1 and video0 can't be set to the same thing
-      if (option !== videoControls.video0) {
+      let newSetting;
+      if (option == "Input 0") newSetting = "live-video-0";
+      if (option == "Input 1") newSetting = "live-video-1";
+      if (option == "Charts") newSetting = "charts";
+      if (option == "None") newSetting = "none-0";
+      if (newSetting !== videoControls.video0) {
         // figure out what value the option text corresponds to
-        if (option == "Input 1") videoControls.video1 = "live-video-1";
-        if (option == "Input 0") videoControls.video1 = "live-video-0";
-        if (option == "Charts") videoControls.video1 = "charts";
-        if (option == "None") videoControls.video1 = "none-0";
+        videoControls.video1 = newSetting;
         return true;
       }
       return false;
