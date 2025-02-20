@@ -156,9 +156,7 @@ class SerialDevice extends EventEmitter {
                     this.port = "";
                   }
                   if (strings[i + 1].includes("serial driver error")) {
-                    log.debug(
-                      "Error starting serial driver: " + strings[i + 1]
-                    );
+                    log.debug("Error with serial driver: " + strings[i + 1]);
                     this.close();
                   }
                 }
