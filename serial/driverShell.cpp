@@ -176,6 +176,7 @@ int main(int argc, char **argv)
                 {
                     pipeStatus->writeStr("Interrupt\n");
                     pipeStatus->writeStr("serial driver error: failed to open input file\n");
+                    std::cout << "failed to open input file" << std::endl;
                 }
                 else
                 {
