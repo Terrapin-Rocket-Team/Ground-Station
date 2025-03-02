@@ -14,7 +14,7 @@ class PipeStream {
     // get the right pipe path based on platform
     if (os.platform() === "win32") {
       pipePathBase = "\\\\.\\pipe\\"; // windows named pipe path
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
       // pipePathBase = '\0'; // abstract unix pipe prefix
       pipePathBase =
         path.join(__dirname, "../", "build", "serial", "pipes") + "/"; // temp store on file system since electron breaks abstract pipes

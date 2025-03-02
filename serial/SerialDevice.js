@@ -97,7 +97,7 @@ class SerialDevice extends EventEmitter {
       if (!this.useDebug)
         this.driver = spawn(path.join(serialDriverPath, "SerialDriver.exe"));
       else this.driver = spawn(path.join(serialDriverPath, "DriverShell.exe"));
-    } else if (os.platform() === "linux") {
+    } else if (os.platform() === "linux" || os.platform() === "darwin") {
       if (!this.useDebug)
         this.driver = spawn(path.join(serialDriverPath, "SerialDriver"));
       else this.driver = spawn(path.join(serialDriverPath, "DriverShell"));
@@ -198,6 +198,7 @@ class SerialDevice extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
+    log.debug(port);
     return new Promise((res, rej) => {
       // serial driver must be ready to connect
       if (this.ready) {
@@ -211,9 +212,11 @@ class SerialDevice extends EventEmitter {
         }
 
         // setup the driver with serial settings
+        log.debug("here1");
         this.control.stream.write("reset\n");
         this.control.stream.write(port + "\n");
         this.control.stream.write(baudRate.toString() + "\n");
+        log.debug("here2");
 
         // request whether the driver successfully connected
         this.control.stream.write("connected\n");

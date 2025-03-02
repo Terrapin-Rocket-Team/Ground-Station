@@ -70,7 +70,7 @@ if ! type nasm &> /dev/null ; then
     echo "ERROR: Unable to locate nasm"
     exit 1
 fi
-if ! type python &> /dev/null ; then
+if ! type python3 &> /dev/null ; then
     echo "ERROR: Unable to locate python"
     exit 1
 fi

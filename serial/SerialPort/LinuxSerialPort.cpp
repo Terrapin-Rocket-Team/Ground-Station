@@ -18,9 +18,14 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
     return;
   }
 
+#ifdef __APPLE__
+  struct termios tty;
+  #endif
+#ifdef __linux__
   struct termios2 tty;
+#endif
 
-  if (ioctl(portHandle, TCGETS, &tty) != 0)
+  if (tcgetattr(portHandle, &tty) == -1) // (ioctl(portHandle, TCGETS, &tty) != 0)
   {
     std::cout << "Error " << errno << " from ioctl TCGETS " << strerror(errno)
               << "\n";
@@ -59,20 +64,31 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
                         // as any data is received.
   tty.c_cc[VMIN] = 0;
 
-  tty.c_cflag &= ~CBAUD;
-  tty.c_cflag |= BOTHER;
-  tty.c_ispeed = 600000;
-  tty.c_ospeed = 600000;
+  // tty.c_cflag &= ~CBAUD;
+  // tty.c_cflag |= BOTHER;
+  // tty.c_ispeed = 600000;
+  // tty.c_ospeed = 600000;
 
-  // Save tty settings, also checking for error
-  if (ioctl(portHandle, TCSETSW, &tty) != 0)
-  {
-    std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
-              << "\n";
-    connected = false;
-  }
+  // test
+  #ifdef _BSD_SOURCE
+    ::cfsetspeed(&options, baud);
+#else
+    ::cfsetispeed(&tty, B115200);
+    ::cfsetospeed(&tty, B115200);
+#endif
 
-  connected = true;
+//   // Save tty settings, also checking for error
+//   if (ioctl(portHandle, TCSETSW, &tty) != 0)
+//   {
+//     std::cout << "Error " << errno << " from ioctl TCSETSW " << strerror(errno)
+//               << "\n";
+//     connected = false;
+//   }
+
+//   connected = true;
+
+// test
+::tcsetattr (portHandle, TCSANOW, &tty);
 }
 
 bool LinuxSerialPort::writeSerialPort(void *buffer, unsigned int buf_size)
@@ -95,7 +111,7 @@ void LinuxSerialPort::closeSerial()
   {
     // apparently changing serial port settings persist after the process ends,
     // so it's a good idea to restore to the backup to clean up
-    if (ioctl(portHandle, TCSETSW, &backup) != 0)
+    if (::tcsetattr (portHandle, TCSANOW, &backup) != 0) //(ioctl(portHandle, TCSETSW, &backup) != 0)
     {
       std::cout << "Error " << errno << " from ioctl TCSANOW " << strerror(errno)
                 << "\n";

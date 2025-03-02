@@ -1,9 +1,18 @@
-cmake_minimum_required(VERSION 3.10.0)
-set(CMAKE_CXX_COMPILER g++)
+cmake_minimum_required(VERSION 3.20.0)
 
 project(SerialDriver)
 
+#set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+#set(CMAKE_C_COMPILER "/usr/bin/gcc")
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-force_load,${CMAKE_CURRENT_BINARY_DIR}/libMessage.a")
+
+#set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
+
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be the path to the include directory of the project
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default")
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/definitions.cmake)
 
@@ -24,6 +33,8 @@ target_include_directories(DriverShell PUBLIC "${PROJECT_INCLUDE}")
 
 target_sources(SerialDriver PUBLIC "${CMAKE_CURRENT_LIST_DIR}/serialDriver.cpp")
 target_sources(DriverShell PUBLIC "${CMAKE_CURRENT_LIST_DIR}/driverShell.cpp")
+
+set(CMAKE_CXX_FLAGS "-g")
 
 if ("${BUILD_ENV}" STREQUAL "WINDOWS")
     set(CMAKE_CXX_FLAGS "-fPIC -static -static-libgcc -static-libstdc++")

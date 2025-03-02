@@ -21,7 +21,7 @@ LinuxNamedPipe::LinuxNamedPipe(const char *name, bool create) : NamedPipe(name)
         return;
     }
     memset(&addr, 0, sizeof(sockaddr_un));
-    addr.sun_family = AF_UNIX;
+    addr.sun_family = PF_UNIX;
     // Use for abstract sockets
     // addr.sun_path[0] = 0; // always abstract socket
     // strncpy(addr.sun_path + 1, name, strlen(name));
@@ -32,11 +32,12 @@ LinuxNamedPipe::LinuxNamedPipe(const char *name, bool create) : NamedPipe(name)
     {
         // not needed for abstract sockets
         remove(addr.sun_path);
-        if ((sockFd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+        if ((sockFd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
         {
             std::cerr << "Error creating named pipe: " << name << std::endl;
             std::cerr << "This is most likely because the pipe already exists. If so, ignore this error." << std::endl;
         }
+        setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, 0, 1);
 
         if ((bind(sockFd, (sockaddr *)&addr, sizeof(addr.sun_family) + strlen(name) + 1) < 0))
         {
@@ -74,7 +75,7 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize)
             .events = POLLIN,
         };
         poll(&fds, 1, 0);
-        if (fds.revents & POLLIN)
+        if (fds.revents & POLLIN){}
             handle = accept4(sockFd, NULL, NULL, SOCK_NONBLOCK);
     }
     if (handle != -1 && (bytesRead = ::read(handle, buffer, bufferSize)) < 0)

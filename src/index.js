@@ -104,6 +104,7 @@ window.onload = () => {
               img.setAttribute("title", "Connecting...");
 
               // try to connect to the port
+              console.log(port.path);
               api.setPort({ idPrefix, path: port.path }).then((success) => {
                 // set dropdown depending on whether we successfully connected
                 if (success) {

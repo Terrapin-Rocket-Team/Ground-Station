@@ -6,7 +6,7 @@ mkdir -p serial
 cd serial
 
 # rm -f CMakeCache.txt
-cmake ../../serial
+cmake ../../serial -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   mkdir -p pipes
 fi

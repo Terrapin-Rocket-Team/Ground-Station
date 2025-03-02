@@ -753,6 +753,7 @@ ipcMain.handle("get-video", (event, args) => {
 
 // setters
 ipcMain.handle("set-port", (event, portConfig) => {
+  log.debug(portConfig.path);
   return new Promise((res, rej) => {
     // convert user interface friendly string to more generic string for the serial driver
     if (config.driverDebug.value && portConfig.path === "Begin driver debug")
