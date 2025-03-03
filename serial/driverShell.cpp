@@ -586,7 +586,8 @@ int main(int argc, char **argv)
     std::cout << "Exit" << std::endl;
 
     // properly delete everything
-    fclose(input);
+    if (input)
+        fclose(input);
 
     if (pipes != nullptr)
     {
