@@ -104,7 +104,7 @@ try {
   log.debug("Commands loaded");
 } catch (err) {
   log.warn(
-    "Failed to load commands file, somme features will not be available: " +
+    "Failed to load commands file, some features will not be available: " +
       err.message
   );
   cmdList = [];
@@ -119,7 +119,7 @@ try {
   log.debug("Stateflags loaded");
 } catch (err) {
   log.warn(
-    "Failed to load stateflags file, somme features will not be available: " +
+    "Failed to load stateflags file, some features will not be available: " +
       err.message
   );
   stateflags = [];
