@@ -20,6 +20,7 @@
 #include <cstdlib>
 
 #include "RadioMessage.h"
+#include "rs.h"
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
 
@@ -66,6 +67,14 @@ int main(int argc, char **argv)
     uint8_t handshakeNumAttempts = 0;
     // seed the random number generator
     srand(time(0));
+
+    // Reed solomon
+    // Reed solomon decoding object
+    RS rs;
+    // dummary array to pass for erasures since we don't know where they are
+    int erasureDummyArr[16] = {};
+    // TEMP: setting to enable/disable reed solomon on video streams
+    bool enableRS = true;
 
     // create the status and control pipes
 #ifdef WINDOWS
@@ -626,7 +635,36 @@ int main(int argc, char **argv)
                             {
                                 if (pipeDemuxIds[i] == rawData.id)
                                 {
-                                    pipes[i]->write(mOut.buf, mOut.size);
+                                    if (enableRS)
+                                    {
+                                        // assume 255 byte block size
+                                        const uint8_t blockSize = 255;
+                                        uint8_t correctedData[blockSize] = {};
+                                        // assume message made up of an integer number of blocks
+                                        for (int j = 0; j < mOut.size / blockSize; j++)
+                                        {
+                                            // loop through each block
+                                            std::cout << "on video block " << j << std::endl;
+                                            rs.decode_data(mOut.buf + (blockSize * j), blockSize);
+                                            // check for errors
+                                            int syn = rs.check_syndrome();
+                                            if (syn != 0)
+                                            {
+                                                // if errors try to correct them
+                                                std::cout << "Errors in video block, syndrome = " << syn << std::endl;
+                                                // TODO: can only correct errors for now, not erasures
+                                                int result = rs.correct_errors_erasures(mOut.buf + (blockSize * j), blockSize, 0, erasureDummyArr);
+                                                std::cout << "Attempted correction, result = " << result << std::endl;
+                                                // TODO: what to do if we can't correct errors
+                                            }
+                                            // write the data (minus parity bits)
+                                            pipes[i]->write(mOut.buf + (blockSize * j), blockSize - NPAR);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        pipes[i]->write(mOut.buf, mOut.size);
+                                    }
                                 }
                             }
                         }
