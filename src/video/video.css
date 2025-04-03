@@ -34,6 +34,7 @@ body {
   background-color: gray;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 #video-sources {
@@ -114,6 +115,7 @@ body {
   padding-right: 2vw;
   background-color: var(--main-bg);
   position: relative;
+  overflow: hidden;
 }
 
 #main.two-video {
@@ -166,6 +168,7 @@ body {
   position: absolute;
   display: flex;
   align-items: center;
+  top: 0;
 }
 
 #team-name-container::after {
@@ -372,7 +375,7 @@ span#spd-text {
 }
 
 #stage-container {
-  width: 100vw;
+  width: 100%;
   height: 10vh;
   position: absolute;
   bottom: 0;

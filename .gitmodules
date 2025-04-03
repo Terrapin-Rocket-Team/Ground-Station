@@ -1,0 +1,3 @@
+[submodule "serial/RadioMessage"]
+	path = serial/RadioMessage
+	url = https://github.com/erodarob/RadioMessage.git
