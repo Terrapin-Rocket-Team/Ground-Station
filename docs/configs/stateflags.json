@@ -1,0 +1,37 @@
+[
+    {
+        "name": "Internal Temp",
+        "width": 7,
+        "functionName": "getInternalTemp"
+    },
+    {
+        "name": "Flap Angle",
+        "width": 5,
+        "functionName": "getFlapAngle"
+    },
+    {
+        "name": "Predicted Apogee",
+        "width": 15,
+        "functionName": "getPredApo"
+    },
+    {
+        "name": "Battery Level",
+        "width": 7,
+        "functionName": "getBatLevel"
+    },
+    {
+        "name": "Ack",
+        "width": 1,
+        "functionName": "getAck"
+    },
+    {
+        "name": "Query Response",
+        "width": 16,
+        "functionName": "getResponse"
+    },
+    {
+        "name": "Stage",
+        "width": 4,
+        "functionName": "getStage"
+    }
+]  

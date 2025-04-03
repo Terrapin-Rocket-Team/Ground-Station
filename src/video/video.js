@@ -1,3 +1,5 @@
+// TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
+
 window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
@@ -9,6 +11,19 @@ window.onload = () => {
 
   const video0 = document.getElementById("video-0"),
     video1 = document.getElementById("video-1");
+
+  // get colors from css
+  const t1Color = getComputedStyle(document.body).getPropertyValue(
+      "--t1-color"
+    ),
+    t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
+    t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
+
+  const chartsConfig = [
+    { name: "Avionics", color: t1Color },
+    { name: "Airbrake", color: t2Color },
+    { name: "Payload", color: t3Color },
+  ];
 
   //app control button listeners
   document.getElementById("reload").addEventListener("click", () => {
@@ -55,8 +70,8 @@ window.onload = () => {
     none0 = document.getElementById("none-0"),
     none1 = document.getElementById("none-1");
 
-  let altG = createChart("alt-graph", "Altitude", "s", "ft", 1, 1),
-    spdG = createChart("spd-graph", "Speed", "s", "ft/s", 1, 1),
+  let altG = createChart("alt-graph", "min", "ft", 1, 1, chartsConfig),
+    spdG = createChart("spd-graph", "min", "ft/s", 1, 1, chartsConfig),
     altwr = document.getElementById("alt-wrapper"),
     spdwr = document.getElementById("spd-wrapper");
 
@@ -73,18 +88,22 @@ window.onload = () => {
       thisFrame.forEach((video) => {
         if (video) {
           //temporary name
-          if (video.name.charAt(video.name.length - 1) == '2') {
+          if (video.name === "video1") {
             LV1.frame.y.bytes = video.data.y;
             LV1.frame.u.bytes = video.data.u;
             LV1.frame.v.bytes = video.data.v;
             LV1.ctx.drawFrame(LV1.frame);
           }
           //temporary name
-          else {
+          else if (video.name === "video0") {
             LV0.frame.y.bytes = video.data.y;
             LV0.frame.u.bytes = video.data.u;
             LV0.frame.v.bytes = video.data.v;
             LV0.ctx.drawFrame(LV0.frame);
+          } else {
+            console.warn(
+              "Unrecognized video name " + video.name + ", ignoring"
+            );
           }
         }
       });
@@ -121,6 +140,7 @@ window.onload = () => {
       layout = "telemetry-only";
 
     if (layout === "two-video") {
+      // need to move speed gauge to the bottom of the telemetry div for this layout
       telemetry.appendChild(document.getElementById("spd-gauge-container"));
       video0.appendChild(none0);
       video1.appendChild(none1);
@@ -129,13 +149,15 @@ window.onload = () => {
       videoSources.appendChild(charts);
     }
     if (layout === "one-video") {
+      // need to move max alt and speed text to bottom of telemetry div for this layout
       telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(none0);
-      videoSources.appendChild(LV0, canvas);
+      videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
     }
     if (layout === "telemetry-only") {
+      // need to move max alt and speed text to bottom of telemetry div for this layout
       telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(charts);
       videoSources.appendChild(LV0.canvas);
@@ -153,17 +175,30 @@ window.onload = () => {
   let maxAlt = 0,
     maxSpd = 0,
     lastStage = 0,
-    tPlusSet = false,
+    t0Set = false,
     chartState = "seconds";
 
   // load previous data if it exists
   {
-    altG.data.datasets[0].data = sessionStorage.getItem("altData")
-      ? JSON.parse(sessionStorage.getItem("altData"))
-      : [];
-    spdG.data.datasets[0].data = sessionStorage.getItem("spdData")
-      ? JSON.parse(sessionStorage.getItem("spdData"))
-      : [];
+    let chartDataIds = ["t1", "t2", "t3"];
+    // get chart data for each stream
+    chartDataIds.forEach((idPrefix) => {
+      let index = parseInt(idPrefix.split("t")[1]) - 1;
+
+      altG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-altData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
+        : [];
+      spdG.data.datasets[index].data = sessionStorage.getItem(
+        idPrefix + "-spdData"
+      )
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
+        : [];
+    });
+
+    altG.update();
+    spdG.update();
 
     if (
       sessionStorage.getItem("max-alt") &&
@@ -180,174 +215,216 @@ window.onload = () => {
         parseInt(sessionStorage.getItem("max-spd")) + " ft/s";
   }
 
-  api.on("data", (data) => {
-    let msg = new APRSMessage(data);
-
-    //set T+
-    //TODO: display T+?
-    if (!tPlusSet && msg.getStageNumber() > 0) {
-      let time = Date.now() - msg.getT0ms();
-
-      tPlusSet = true;
-      let ts = time / 1000;
-
-      if (altG.data.datasets[0].data.length === 0)
-        altG.data.datasets[0].data = [{ x: ts, y: null }];
-      if (spdG.data.datasets[0].data.length === 0)
-        spdG.data.datasets[0].data = [{ x: ts, y: null }];
+  const updateT0 = (idPrefix, msg) => {
+    // wait until the flight computer reports the stage is >0 (out of preflight)
+    if (msg.getStateflag("Stage") > 0 && !t0Set) {
+      // get the t0
+      t0 = Date.now();
+      // save the t0 for later
+      sessionStorage.setItem("t0", t0);
+      t0Set = true;
+      // need to add empty element so the chart scale doesn't look weird
+      // hardcoded for 3 streams for now
+      for (let i = 0; i < 3; i++) {
+        if (altG.data.datasets[i].data.length === 0)
+          altG.data.datasets[i].data = [{ x: 0, y: null }];
+        if (spdG.data.datasets[i].data.length === 0)
+          spdG.data.datasets[i].data = [{ x: 0, y: null }];
+      }
     }
-    if (tPlusSet) {
+  };
+  const updateCharts = (idPrefix, msg) => {
+    // get the index in the charts dataset
+    let index = parseInt(idPrefix.split("t")[1]) - 1;
+    // wait to put data on the chart until t0
+    if (t0Set) {
       //update charts
-      let time = Date.now() - msg.getT0ms();
+      let time = Date.now() - t0;
       let ts = time / 1000;
 
+      // if more than 120 seconds have passed, change the chart scale to minutes
       if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
-        let altData = altG.data.datasets[0].data;
-        let spdData = spdG.data.datasets[0].data;
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
         let altLabels = altG.data.labels;
         let spdLabels = spdG.data.labels;
 
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "min", "ft", 1 / 60, 1);
-        spdG = createChart("spd-graph", "Speed", "min", "ft/s", 1 / 60, 1);
-        altG.data.datasets[0].data = altData;
-        spdG.data.datasets[0].data = spdData;
+        altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, chartsConfig);
+        spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, chartsConfig);
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
         spdG.data.labels = spdLabels;
         chartState = "minutes";
+
+        // if more than 120 minutes have passed, change the chart scale to hours
       } else if (ts > 120 * 60 && chartState != "hours") {
-        let altData = altG.data.datasets[0].data;
-        let spdData = spdG.data.datasets[0].data;
+        let altData = altG.data.datasets[index].data;
+        let spdData = spdG.data.datasets[index].data;
         let altLabels = altG.data.labels;
         let spdLabels = spdG.data.labels;
 
         altwr.innerHTML = '<canvas id="alt-graph" class="chart"></canvas>';
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
-        altG = createChart("alt-graph", "Altitude", "hrs", "ft", 1 / 3600, 1);
-        spdG = createChart("spd-graph", "Speed", "hrs", "ft/s", 1 / 3600, 1);
-        altG.data.datasets[0].data = altData;
-        spdG.data.datasets[0].data = spdData;
+        altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, chartsConfig);
+        spdG = createChart(
+          "spd-graph",
+          "hr",
+          "ft/s",
+          1 / 3600,
+          1,
+          chartsConfig
+        );
+        altG.data.datasets[index].data = altData;
+        spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
         spdG.data.labels = spdLabels;
         chartState = "hours";
       }
 
+      // time is store in seconds, so need to multiply by a factor based on the scale
       let factor =
-        chartState == "minutes" ? 30 : chartState == "hours" ? 320 : 1;
+        chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
 
+      // interval between grid lines
       let interval = parseInt(
-        (ts - altG.data.datasets[0].data[0].x + 5 * factor) / 4
+        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
       );
 
+      // get each grid line
       let arrL = [];
       for (let i = 0; i < 5; i++) {
-        arrL[i] = Math.floor(altG.data.datasets[0].data[0].x) + i * interval;
+        arrL[i] =
+          Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
       }
 
+      // set min and max for x scale
       altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
       spdG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
       altG.options.scales.x.suggestedMax = ts + 10 * factor;
       spdG.options.scales.x.suggestedMax = ts + 10 * factor;
 
+      // set labels of x axis (grid lines)
       altG.data.labels = JSON.parse(JSON.stringify(arrL));
       spdG.data.labels = JSON.parse(JSON.stringify(arrL));
 
-      altG.data.datasets[0].data.push({
+      // add new data to the graph
+      altG.data.datasets[index].data.push({
         x: ts,
         y: msg.getAlt() ? msg.getAlt() : 0,
       });
-      spdG.data.datasets[0].data.push({
+      spdG.data.datasets[index].data.push({
         x: ts,
         y: msg.getSpeed() ? msg.getSpeed() : 0,
       });
 
+      // store new data to be retreived later
       sessionStorage.setItem(
-        "altData",
-        JSON.stringify(altG.data.datasets[0].data)
+        idPrefix + "-altData",
+        JSON.stringify(altG.data.datasets[index].data)
       );
       sessionStorage.setItem(
-        "spdData",
-        JSON.stringify(spdG.data.datasets[0].data)
+        idPrefix + "-spdData",
+        JSON.stringify(spdG.data.datasets[index].data)
       );
 
+      // force update of the charts
       altG.update();
       spdG.update();
     }
+  };
 
-    //update gauges
-    if (msg.getAlt() || msg.getAlt() === 0) {
-      alt.setAttribute("data-value-text", msg.getAlt());
-      alt.setAttribute("data-value", msg.getAlt() / 1000);
-      document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
-    } else {
-      alt.setAttribute("data-value-text", "\u2014");
-    }
-    if (msg.getSpeed() || msg.getSpeed() === 0) {
-      spd.setAttribute("data-value-text", msg.getSpeed());
-      spd.setAttribute("data-value", msg.getSpeed() / 100);
-      document.getElementById("spd-text").textContent =
-        msg.getSpeed() + " ft/s";
-    } else {
-      spd.setAttribute("data-value-text", "\u2014");
-    }
+  api.on("data", (data) => {
+    let msg = new APRSTelem(data);
 
-    //update max altitude and speed
-    if (msg.getAlt() > maxAlt) {
-      maxAlt = msg.getAlt();
-      maxAltEl.textContent = maxAlt + " ft";
-      sessionStorage.setItem("max-alt", maxAlt);
-    }
+    if (msg.stream === "telem-avionics") {
+      //set T+
+      //TODO: display T+?
+      updateT0("t1", msg);
+      updateCharts("t1", msg);
 
-    if (msg.getSpeed() > maxSpd) {
-      maxSpd = msg.getSpeed();
-      maxSpdEl.textContent = maxSpd + " ft/s";
-      sessionStorage.setItem("max-spd", maxSpd);
-    }
-
-    //update stage
-    let prog = document.getElementById("stage");
-    let ff = document.getElementById("fun-facts-container");
-    let ffTitle = document.getElementById("fun-fact-title");
-    let ffText = document.getElementById("fun-fact-text");
-    let sn = msg.getStageNumber();
-    let percents = [5, 15, 25, 45, 80, 90];
-    let stageNames = [
-      "On the Pad",
-      "Powered Flight",
-      "Coast",
-      "Drogue Deploy",
-      "Main Parachute",
-      "Landed",
-    ];
-    let stageFunFacts = [
-      "The rocket is on the pad with all systems ready for flight.",
-      "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
-      "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
-      "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
-      "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
-      "The rocket lands back on the ground, completing its flight.",
-    ];
-    if (sn >= 0) {
-      prog.textContent = percents[sn] + "%";
-      prog.setAttribute("value", percents[sn]);
-      document.getElementById("s" + sn).className = "stage active";
-      if (sn > 0)
-        document.getElementById("s" + (sn - 1)).className = "stage active";
-      for (let i = lastStage; i < sn; i++) {
-        document.getElementById("s" + i).className = "stage active";
+      //update gauges
+      if (msg.getAlt() || msg.getAlt() === 0) {
+        alt.setAttribute("data-value-text", msg.getAlt());
+        alt.setAttribute("data-value", msg.getAlt() / 1000);
+        document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
+      } else {
+        alt.setAttribute("data-value-text", "\u2014");
       }
-      if (sn > lastStage) {
-        ff.className = "hide";
-        ffTitle.textContent = stageNames[sn];
-        ffText.textContent = stageFunFacts[sn];
-        setTimeout(() => {
-          ff.className = "";
-        }, 500);
-        lastStage = sn;
+      if (msg.getSpeed() || msg.getSpeed() === 0) {
+        spd.setAttribute("data-value-text", msg.getSpeed());
+        spd.setAttribute("data-value", msg.getSpeed() / 100);
+        document.getElementById("spd-text").textContent =
+          msg.getSpeed() + " ft/s";
+      } else {
+        spd.setAttribute("data-value-text", "\u2014");
       }
+
+      //update max altitude and speed
+      if (msg.getAlt() > maxAlt) {
+        maxAlt = msg.getAlt();
+        maxAltEl.textContent = maxAlt + " ft";
+        sessionStorage.setItem("max-alt", maxAlt);
+      }
+
+      if (msg.getSpeed() > maxSpd) {
+        maxSpd = msg.getSpeed();
+        maxSpdEl.textContent = maxSpd + " ft/s";
+        sessionStorage.setItem("max-spd", maxSpd);
+      }
+
+      //update stage
+      let prog = document.getElementById("stage");
+      let ff = document.getElementById("fun-facts-container");
+      let ffTitle = document.getElementById("fun-fact-title");
+      let ffText = document.getElementById("fun-fact-text");
+      let sn = msg.getStateflag("Stage");
+      let percents = [5, 15, 25, 45, 80, 90];
+      let stageNames = [
+        "On the Pad",
+        "Powered Flight",
+        "Coast",
+        "Drogue Deploy",
+        "Main Parachute",
+        "Landed",
+      ];
+      let stageFunFacts = [
+        "The rocket is on the pad with all systems ready for flight.",
+        "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
+        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
+        "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
+        "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
+        "The rocket lands back on the ground, completing its flight.",
+      ];
+      if (sn >= 0 && sn !== null) {
+        prog.textContent = percents[sn] + "%";
+        prog.setAttribute("value", percents[sn]);
+        document.getElementById("s" + sn).className = "stage active";
+        if (sn > 0)
+          document.getElementById("s" + (sn - 1)).className = "stage active";
+        for (let i = lastStage; i < sn; i++) {
+          document.getElementById("s" + i).className = "stage active";
+        }
+        if (sn > lastStage) {
+          ff.className = "hide";
+          ffTitle.textContent = stageNames[sn];
+          ffText.textContent = stageFunFacts[sn];
+          setTimeout(() => {
+            ff.className = "";
+          }, 500);
+          lastStage = sn;
+        }
+      }
+    }
+    if (msg.stream === "telem-airbrake") {
+      updateCharts("t2", msg);
+    }
+    if (msg.stream === "telem-payload") {
+      updateCharts("t3", msg);
     }
   });
 

@@ -1,6 +1,6 @@
 @echo off
 
-rem Mingw package dependencies: pacman -S gcc nasm mingw-w64-x86_64-python3 mingw-w64-x86_64-meson diffutils make
+rem Mingw package dependencies: pacman -S gcc nasm mingw-w64-x86_64-python3 mingw-w64-x86_64-meson diffutils make cmake
 
 if "%~1"=="" goto no_args
 

@@ -1,0 +1,63 @@
+{
+	"version": "2.0.0",
+	"scale": {
+		"name": "Main Window Scale",
+		"description": "Changes the scale of the debug window for different sized screens.",
+		"value": 1,
+		"type": "dropdown",
+		"range": [0.50,0.75,1.00,1.25,1.50,1.75,2.00]
+	},
+	"debug": {
+		"name": "Debug Mode",
+		"description": "Turn on debug mode to log debug statements and open the devtools with each window.",
+		"value": false,
+		"type": "toggle"
+	},
+	"dataDebug": {
+		"name": "Debug Data Input",
+		"description": "Read input data from local data files. The normal Serial connection will be non-functional with this setting on.",
+		"value": false,
+		"type": "toggle"
+	},
+	"driverDebug": {
+		"name": "Serial Driver Debug",
+		"description": "Use the debug serial driver to input data from a Ground Station Muxer file. The normal Serial connection will be non-functional with this setting on.",
+		"value": false,
+		"type": "toggle"
+	},
+	"video": {
+		"name": "Video Mode",
+		"description": "Turn on to switch the ground station to video streaming mode.",
+		"value": false,
+		"type": "toggle"
+	},
+	"tileCache": {
+		"name": "Toggle Tile Caching (Not Implemented)",
+		"description": "Turn off caching of map tiles to the disk. If disabled, the map may not work when offline.",
+		"value": true,
+		"type": "toggle"
+	},
+	"cacheMaxSize": { 
+		"name": "Map Cache Size (bytes)",
+		"description": "The maximum size of the cache for loading tiles offline.",
+		"value": 100000000,
+		"type": "number",
+		"range": [0, -1]
+	},
+	"baudRate": {
+		"name": "Serial Port Baud Rate",
+		"description": "The baud rate used when connecting to the radio receiver over serial.",
+		"value": 115200,
+		"type": "number",
+		"range": [0, -1]
+	},
+	"streams": [
+		{
+			"name": "telem-avionics",
+			"type": "APRSTelem",
+			"id": 1,
+			"enabled": true,
+            "settings": {}
+		}
+	]
+}

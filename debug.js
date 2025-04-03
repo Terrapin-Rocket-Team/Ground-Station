@@ -12,6 +12,7 @@ const getLogPrefix = (level) => {
   let stackArr = e.stack.split("\n")[4].split(path.sep);
   let info = stackArr[stackArr.length - 1].split(":");
   return (
+    // (level == "error" ? e.stack + "\n" : "") +
     "[" +
     info[0] +
     ":" +
@@ -60,10 +61,14 @@ class Debug {
    */
   println(message, level) {
     message = getLogPrefix(level) + message;
+    if ((level === "debug" && this.useDebug) || level !== "debug") {
+      console.log(message);
 
-    console.log(message);
+      if (this.win) this.win.webContents.send("print", message + "\n", level);
+    }
+
+    // always write to log file
     this.ws.write(message + "\n");
-    if (this.win) this.win.webContents.send("print", message + "\n", level);
   }
 
   /**
@@ -71,7 +76,7 @@ class Debug {
    * @param {string} message the message to be logged
    */
   debug(message) {
-    if (this.useDebug) this.println(message, "debug");
+    this.println(message, "debug");
   }
 
   /**

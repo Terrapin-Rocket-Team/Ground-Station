@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; script-src 'self' https://cdn.jsdelivr.net/npm/chart.js; img-src * data: blob:; style-src 'self' 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <link rel="stylesheet" href="streams.css" />
+    <script src="streams.js"></script>
+    <title>Streams</title>
+  </head>
+  <body>
+    <!--Application top bar-->
+    <div id="top-bar">
+      <!--Name and logo-->
+      <div id="top-left">
+        <img src="../images/logo.svg" alt="Logo" />
+        <span>Terp Rockets Ground Station</span>
+      </div>
+      <!--Buttons and application control-->
+      <div id="top-right">
+        <a href="../index.html" id="home" class="top-button"
+          ><img src="../images/home.svg" alt="Home"
+        /></a>
+        <button id="fullscreen" class="top-button" title="Fullscreen">
+          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+        </button>
+        <button id="reload" class="top-button" title="Reload">
+          <img src="../images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="../images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="../images/close.svg" alt="Close" />
+        </button>
+      </div>
+    </div>
+    <!--Contains all elements besides the top bar-->
+    <div id="main">
+      <div id="streams-wrapper" class="wrapper active">
+        <div id="streams-button-container">
+          <button id="export-config" class="util-button">Export Config</button>
+          <button id="new-stream" class="util-button">Create New Stream</button>
+          <button id="edit-config" class="util-button">
+            Edit Commands and Stateflags
+          </button>
+        </div>
+        <div id="stream-container"></div>
+      </div>
+      <div id="commands-stateflags-wrapper" class="wrapper">
+        <div id="cs-button-container">
+          <button id="go-back" class="util-button">Back to Streams</button>
+        </div>
+        <span id="commands-title" class="cs-title">Commands</span>
+        <div class="dropdown inactive" id="command-create-drop">
+          <!-- Custom dropdown -->
+          <span id="command-create-selected">Select Command</span>
+          <img
+            src="../images/arrow_right.svg"
+            alt=">"
+            id="command-create-arrow"
+            class="drop-arrow"
+          />
+          <div class="options" id="command-create-options"></div>
+        </div>
+        <div id="command-bits-used-container" class="bits-used-container">
+          <canvas id="command-bits-used" class="bits-used"></canvas>
+        </div>
+        <input type="text" id="command-name" placeholder="Name" />
+        <input
+          type="text"
+          id="command-function-name"
+          placeholder="Function Name"
+        />
+        <div id="command-configuration-wrapper"></div>
+        <span id="stateflags-title" class="cs-title">Stateflags</span>
+        <!-- Custom dropdown -->
+        <div class="dropdown inactive" id="stateflag-create-drop">
+          <span id="stateflag-create-selected">Select Stateflag</span>
+          <img
+            src="../images/arrow_right.svg"
+            alt=">"
+            id="stateflag-create-arrow"
+            class="drop-arrow"
+          />
+          <div class="options" id="stateflag-create-options"></div>
+        </div>
+        <div id="stateflag-input-cont">
+          <input type="text" id="stateflag-name" placeholder="Name" />
+          <input type="number" id="stateflag-width" placeholder="Width" />
+          <input
+            type="text"
+            id="stateflag-function-name"
+            placeholder="Function Name"
+          />
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
