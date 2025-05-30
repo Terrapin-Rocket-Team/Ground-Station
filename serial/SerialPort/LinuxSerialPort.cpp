@@ -8,7 +8,7 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
-LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
+LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
 {
   portHandle = open(portName, O_RDWR);
   if (portHandle < 0)
@@ -61,8 +61,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName) : SerialPort(portName)
 
   tty.c_cflag &= ~CBAUD;
   tty.c_cflag |= BOTHER;
-  tty.c_ispeed = 600000;
-  tty.c_ospeed = 600000;
+  tty.c_ispeed = baud;
+  tty.c_ospeed = baud;
 
   // Save tty settings, also checking for error
   if (ioctl(portHandle, TCSETSW, &tty) != 0)

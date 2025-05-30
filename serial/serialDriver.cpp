@@ -65,6 +65,10 @@ int main(int argc, char **argv)
     const uint8_t handshakeMaxAttempts = 5;
     // the current number of handshake attempts
     uint8_t handshakeNumAttempts = 0;
+    // handshake response string
+    char handshakeResp[6 + 1] = {0};
+    // handshake response string length
+    uint8_t handshakeRespLen = 0;
     // seed the random number generator
     srand(time(0));
 
@@ -200,9 +204,9 @@ int main(int argc, char **argv)
 
                 // create a new serial connection
 #ifdef WINDOWS
-                device = new WinSerialPort(portBuf);
+                device = new WinSerialPort(portBuf, atoi(baudRate));
 #elif LINUX
-                device = new LinuxSerialPort(portBuf);
+                device = new LinuxSerialPort(portBuf, atoi(baudRate));
 #endif
             }
             // check for data pipes command
@@ -361,6 +365,10 @@ int main(int argc, char **argv)
                 handshakePending = true;
                 std::cout << "attempting handshake" << std::endl;
 
+                // reset handshake resp string
+                memset(handshakeResp, 0, sizeof(handshakeResp));
+                handshakeRespLen = 0;
+
                 // reset multiplexing message in case it caused the handshake attempt
                 mOut.clear();
                 // start timeout
@@ -387,58 +395,72 @@ int main(int argc, char **argv)
                 // if we received data
                 if (x > 0)
                 {
+                    bool hasNewline = false;
                     // make sure data is null terminated
-                    data[x] = 0;
-                    std::cout << "Sequence: " << handshakeSequence;
-                    std::cout << "Data: ";
                     for (int i = 0; i < x; i++)
                     {
-                        std::cout << data[i];
-                    }
-                    std::cout << std::endl;
-                    // check if the handshake sequence matches
-                    if (strcmp(handshakeSequence, (char *)data) == 0)
-                    {
-                        // if it matches then the handshake has succeeded
-                        std::cout << "handshake attempt succeeded" << std::endl;
-                        // tell the device the handshake has succeeded
-                        device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
-                        // set flags
-                        handshakeSuccess = true;
-                        handshakeAttempt = false;
-                        handshakePending = false;
-
-                        // report connection status if requested
-                        if (checkConnectionAfterHandshake)
+                        if (data[i] != '\n' && handshakeRespLen < sizeof(handshakeResp))
+                            handshakeResp[handshakeRespLen++] = data[i];
+                        else
                         {
-                            if ((device != nullptr && device->isConnected() && handshakeSuccess))
-                            {
-                                pipeStatus->writeStr("connected");
-                            }
-                            else if (device == nullptr)
-                            {
-                                pipeStatus->writeStr("no active serial connection");
-                            }
-                            else if (device != nullptr && !device->isConnected())
-                            {
-                                std::cout << "here1" << std::endl;
-                                pipeStatus->writeStr("connection failed");
-                            }
-                            else if (!handshakeSuccess)
-                            {
-                                pipeStatus->writeStr("handshake failed");
-                            }
-                            checkConnectionAfterHandshake = false;
+                            handshakeRespLen = 0;
+                            hasNewline = true;
+                            break;
                         }
                     }
-                    else
+                    if (hasNewline)
                     {
-                        std::cout << "handshake failed" << std::endl;
+                        std::cout << "Sequence: " << handshakeSequence;
+                        std::cout << "Data: ";
+                        for (int i = 0; i < x; i++)
+                        {
+                            std::cout << data[i];
+                        }
+                        std::cout << std::endl;
+                        // check if the handshake sequence matches
+                        if (strcmp(handshakeSequence, (char *)data) == 0)
+                        {
+                            // if it matches then the handshake has succeeded
+                            std::cout << "handshake attempt succeeded" << std::endl;
+                            // tell the device the handshake has succeeded
+                            device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
+                            // set flags
+                            handshakeSuccess = true;
+                            handshakeAttempt = false;
+                            handshakePending = false;
+
+                            // report connection status if requested
+                            if (checkConnectionAfterHandshake)
+                            {
+                                if ((device != nullptr && device->isConnected() && handshakeSuccess))
+                                {
+                                    pipeStatus->writeStr("connected");
+                                }
+                                else if (device == nullptr)
+                                {
+                                    pipeStatus->writeStr("no active serial connection");
+                                }
+                                else if (device != nullptr && !device->isConnected())
+                                {
+                                    std::cout << "here1" << std::endl;
+                                    pipeStatus->writeStr("connection failed");
+                                }
+                                else if (!handshakeSuccess)
+                                {
+                                    pipeStatus->writeStr("handshake failed");
+                                }
+                                checkConnectionAfterHandshake = false;
+                            }
+                        }
+                        else
+                        {
+                            std::cout << "handshake failed" << std::endl;
+                        }
                     }
                 }
 
                 // make sure we still have an active handshake attempt (in case there was a successful handshake we don't want to override that)
-                if (handshakeAttempt && clock() - handshakeStart > 10) // 10ms timeout
+                if (handshakeAttempt && clock() - handshakeStart > 50) // 50ms timeout
                 {
                     // the connection failed
                     std::cout << "handshake attempt timeout" << std::endl;
