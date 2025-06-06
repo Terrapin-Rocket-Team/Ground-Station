@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     // dummary array to pass for erasures since we don't know where they are
     int erasureDummyArr[16] = {};
     // TEMP: setting to enable/disable reed solomon on video streams
-    bool enableRS = true;
+    bool enableRS = false;
 
     // create the status and control pipes
 #ifdef WINDOWS
@@ -399,11 +399,13 @@ int main(int argc, char **argv)
                     // make sure data is null terminated
                     for (int i = 0; i < x; i++)
                     {
-                        if (data[i] != '\n' && handshakeRespLen < sizeof(handshakeResp))
-                            handshakeResp[handshakeRespLen++] = data[i];
-                        else
+                        if (handshakeRespLen < sizeof(handshakeResp))
                         {
-                            handshakeRespLen = 0;
+                            handshakeResp[handshakeRespLen++] = data[i];
+                            std::cout << data[i] << std::endl;
+                        }
+                        if (data[i] == '\n')
+                        {
                             hasNewline = true;
                             break;
                         }
@@ -412,13 +414,13 @@ int main(int argc, char **argv)
                     {
                         std::cout << "Sequence: " << handshakeSequence;
                         std::cout << "Data: ";
-                        for (int i = 0; i < x; i++)
+                        for (int i = 0; i < handshakeRespLen; i++)
                         {
-                            std::cout << data[i];
+                            std::cout << handshakeResp[i];
                         }
                         std::cout << std::endl;
                         // check if the handshake sequence matches
-                        if (strcmp(handshakeSequence, (char *)data) == 0)
+                        if (strcmp(handshakeSequence, handshakeResp) == 0)
                         {
                             // if it matches then the handshake has succeeded
                             std::cout << "handshake attempt succeeded" << std::endl;
