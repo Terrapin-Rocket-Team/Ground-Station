@@ -111,17 +111,15 @@ body {
   max-width: 1920px;
   max-height: 1080px;
   display: grid;
-  column-gap: 50px;
-  padding-right: 2vw;
+  column-gap: 30px;
+  padding: 0 1.5vw;
   background-color: var(--main-bg);
   position: relative;
   overflow: hidden;
 }
 
 #main.two-video {
-  grid-template-columns:
-    max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px)
-    640px 640px;
+  grid-template-columns: 1fr 720px 720px;
 }
 
 #main.one-video {
@@ -195,15 +193,6 @@ body {
   font-weight: 600;
 }
 
-/* #team-name::after {
-  padding-left: 2vw;
-  color: var(--top-text);
-  font-size: 2.2vh;
-  font-family: "Arial Narrow Bold", sans-serif;
-  content: "Honu";
-  font-weight: normal;
-} */
-
 #fun-facts-container {
   background-color: var(--dark-highlight);
   border-bottom: 5px solid var(--highlight-color);
@@ -255,7 +244,7 @@ body {
   height: 100vh;
   max-height: 1080px;
   display: grid;
-  padding: 10vh 0 10vh 0;
+  padding: 8vh 0;
   grid-template-rows: 45% 10% 45%;
   justify-content: center;
 }
@@ -309,7 +298,7 @@ span#spd-text {
   font-size: 3vh;
   transform: translateX(-50%);
   color: var(--main-text);
-  top: calc(max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px) * 0.6);
+  top: 205px;
   left: 50%;
 }
 
@@ -318,6 +307,7 @@ span#spd-text {
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
 }
 
 #video-0 > *,
@@ -329,6 +319,8 @@ span#spd-text {
 .live-video {
   position: relative;
   z-index: 1;
+  width: 720px;
+  height: 920px;
 }
 
 #charts {
@@ -346,8 +338,8 @@ span#spd-text {
 .no-signal {
   color: var(--main-text);
   font-size: 2vh;
-  height: 832px;
-  width: 640px;
+  height: 920px;
+  width: 720px;
   border: 1px solid gray;
   background-color: var(--dark-highlight);
   display: flex;
