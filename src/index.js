@@ -586,18 +586,33 @@ window.onload = () => {
 
     // update altitude and speed if given in the message
     if (msg.getAlt() || msg.getAlt() === 0) {
-      alt.setAttribute("data-value-text", msg.getAlt());
-      alt.setAttribute("data-value", msg.getAlt() / 1000);
-      document.getElementById(idPrefix + "-alt-text").textContent =
-        msg.getAlt() + " ft";
+      const altValue = msg.getAlt();
+      alt.setAttribute("data-value-text", altValue);
+      alt.setAttribute("data-value", altValue / 1000);
+      
+      // Set the altitude text and track digit length for responsive font sizing
+      const altText = document.getElementById(idPrefix + "-alt-text");
+      altText.textContent = altValue + " ft";
+      
+      // Add a data attribute to track the number of digits for CSS responsive font sizing
+      const digitLength = altValue.toString().length;
+      altText.setAttribute("data-length", digitLength);
     } else {
       alt.setAttribute("data-value-text", "\u2014");
     }
+    
     if (msg.getSpeed() || msg.getSpeed() === 0) {
-      spd.setAttribute("data-value-text", msg.getSpeed());
-      spd.setAttribute("data-value", msg.getSpeed());
-      document.getElementById(idPrefix + "-spd-text").textContent =
-        msg.getSpeed() + " ft/s";
+      const spdValue = msg.getSpeed();
+      spd.setAttribute("data-value-text", spdValue);
+      spd.setAttribute("data-value", spdValue);
+      
+      // Set the speed text and track digit length for responsive font sizing
+      const spdText = document.getElementById(idPrefix + "-spd-text");
+      spdText.textContent = spdValue + " ft/s";
+      
+      // Add a data attribute to track the number of digits for CSS responsive font sizing
+      const digitLength = spdValue.toString().length;
+      spdText.setAttribute("data-length", digitLength);
     } else {
       spd.setAttribute("data-value-text", "\u2014");
     }
@@ -605,7 +620,9 @@ window.onload = () => {
   const updateStage = (idPrefix, msg) => {
     // update the given stage element
     let stageEl = document.getElementById(idPrefix + "-stage");
+    // Try to get stage number, checking both "Stage" and "State Flags" fields
     let stageNum = msg.getStateflag("Stage");
+    
     // TODO: define state list per stream
     let stageNames = [
       "Preflight",
@@ -615,7 +632,8 @@ window.onload = () => {
       "Main Parachute",
       "Landed",
     ];
-    if (stageNum !== null) {
+    
+    if (stageNum !== null && stageNum < stageNames.length) {
       stageEl.textContent = stageNames[stageNum];
     }
   };
