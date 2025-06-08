@@ -204,7 +204,7 @@ body {
 #fun-facts-container {
   background-color: var(--dark-highlight);
   border-bottom: 5px solid var(--highlight-color);
-  height: 8vh;
+  height: 7vh;
   width: max-content;
   position: absolute;
   top: 0;
@@ -231,8 +231,8 @@ body {
 
 #fun-fact-title {
   display: inline-block;
-  padding-left: 4vw;
-  margin-right: 2vw;
+  padding-left: 3vw;
+  margin-right: 1.5vw;
   font-size: 2vh;
   font-family: "Arial Narrow Bold", sans-serif;
   font-weight: 600;
@@ -242,7 +242,7 @@ body {
 
 #fun-fact-text {
   display: inline-block;
-  width: 31vw;
+  width: 25vw;
   margin-right: 1vw;
   color: var(--top-text);
   font-size: 1.5vh;
@@ -319,6 +319,27 @@ span#spd-text {
   top: 50%;
   left: 50%;
   margin-top: 7vh;
+  min-width: 150px; /* Prevent collapse with small values */
+  text-align: center; /* Center the text */
+  white-space: nowrap; /* Prevent text from wrapping */
+}
+
+/* Responsive font sizing for large numbers */
+@media screen and (max-width: 1920px) {
+  span#alt-text,
+  span#spd-text {
+    font-size: calc(2vh + 4px); /* Base size */
+  }
+  
+  span#alt-text:has(+ span[data-length="4"]),
+  span#spd-text:has(+ span[data-length="4"]) {
+    font-size: calc(1.8vh + 4px); /* Slightly smaller for 4 digits */
+  }
+  
+  span#alt-text:has(+ span[data-length="5"]),
+  span#spd-text:has(+ span[data-length="5"]) {
+    font-size: calc(1.6vh + 4px); /* Even smaller for 5 digits */
+  }
 }
 
 #video-0,
@@ -403,7 +424,7 @@ span#spd-text {
   transform-origin: 0% 50%;
   transform: translate(-1vh, 0) rotate(-10deg);
   position: absolute;
-  bottom: 4vh;
+  bottom: 3.5vh; /* Moved closer to the progress bar */
   text-align: left;
   font-size: 1.7vh;
   z-index: 998;
@@ -424,9 +445,10 @@ span#spd-text {
   -webkit-border-radius: 50%;
   height: 1vh;
   width: 1vh;
-  position: relative;
-  bottom: -1.8vh;
-  left: -0.3vh;
+  position: absolute; /* Changed from relative to absolute for better placement */
+  bottom: -2.5vh; /* Position the marker to sit directly on the progress bar */
+  left: 0; /* Aligned with the text */
+  z-index: 999; /* Ensure markers appear above the progress bar */
 }
 
 .stage.active::before {
