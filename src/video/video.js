@@ -412,7 +412,7 @@ window.onload = () => {
       let stageFunFacts = [
         "The rocket is on the pad with all systems ready for flight.",
         "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
-        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
+        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 30,000ft.",
         "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
         "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
         "The rocket lands back on the ground, completing its flight.",
