@@ -118,7 +118,7 @@ window.onload = () => {
   const sizeGauges = () => {
     let size =
       telemetry.offsetWidth *
-      0.75 *
+      0.85 *
       (!main.classList.contains("two-video") ? 0.5 : 1);
 
     alt.setAttribute("data-width", size);
