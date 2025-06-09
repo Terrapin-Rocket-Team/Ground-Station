@@ -349,17 +349,33 @@ window.onload = () => {
 
       //update gauges
       if (msg.getAlt() || msg.getAlt() === 0) {
-        alt.setAttribute("data-value-text", msg.getAlt());
-        alt.setAttribute("data-value", msg.getAlt() / 1000);
-        document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
+        const altValue = msg.getAlt();
+        alt.setAttribute("data-value-text", altValue);
+        alt.setAttribute("data-value", altValue / 1000);
+        
+        // Set the altitude text and track digit length for responsive font sizing
+        const altText = document.getElementById("alt-text");
+        altText.textContent = altValue + " ft";
+        
+        // Add a data attribute to track the number of digits for CSS responsive font sizing
+        const digitLength = altValue.toString().length;
+        altText.setAttribute("data-length", digitLength);
       } else {
         alt.setAttribute("data-value-text", "\u2014");
       }
+      
       if (msg.getSpeed() || msg.getSpeed() === 0) {
-        spd.setAttribute("data-value-text", msg.getSpeed());
-        spd.setAttribute("data-value", msg.getSpeed() / 100);
-        document.getElementById("spd-text").textContent =
-          msg.getSpeed() + " ft/s";
+        const spdValue = msg.getSpeed();
+        spd.setAttribute("data-value-text", spdValue);
+        spd.setAttribute("data-value", spdValue / 100);
+        
+        // Set the speed text and track digit length for responsive font sizing
+        const spdText = document.getElementById("spd-text");
+        spdText.textContent = spdValue + " ft/s";
+        
+        // Add a data attribute to track the number of digits for CSS responsive font sizing
+        const digitLength = spdValue.toString().length;
+        spdText.setAttribute("data-length", digitLength);
       } else {
         spd.setAttribute("data-value-text", "\u2014");
       }
@@ -382,8 +398,9 @@ window.onload = () => {
       let ff = document.getElementById("fun-facts-container");
       let ffTitle = document.getElementById("fun-fact-title");
       let ffText = document.getElementById("fun-fact-text");
+      // Try to get stage number using the updated getStateflag method that handles both "Stage" and "State Flags"
       let sn = msg.getStateflag("Stage");
-      let percents = [5, 15, 25, 45, 80, 90];
+      let percents = [5.5, 17, 31, 49, 76, 100];    // think these percents work better for 1080p, but may need to be checked
       let stageNames = [
         "On the Pad",
         "Powered Flight",
@@ -395,20 +412,26 @@ window.onload = () => {
       let stageFunFacts = [
         "The rocket is on the pad with all systems ready for flight.",
         "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
-        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
+        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 30,000ft.",
         "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
         "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
         "The rocket lands back on the ground, completing its flight.",
       ];
-      if (sn >= 0 && sn !== null) {
+      // Check if we have a valid stage number and it's within our array bounds
+      if (sn !== null && sn >= 0 && sn < stageNames.length) {
+        // Update progress bar
         prog.textContent = percents[sn] + "%";
         prog.setAttribute("value", percents[sn]);
+        
+        // Mark current stage as active
         document.getElementById("s" + sn).className = "stage active";
-        if (sn > 0)
-          document.getElementById("s" + (sn - 1)).className = "stage active";
-        for (let i = lastStage; i < sn; i++) {
+        
+        // Make sure all previous stages are also marked as active
+        for (let i = 0; i <= sn; i++) {
           document.getElementById("s" + i).className = "stage active";
         }
+        
+        // Show fun facts if we've moved to a new stage
         if (sn > lastStage) {
           ff.className = "hide";
           ffTitle.textContent = stageNames[sn];

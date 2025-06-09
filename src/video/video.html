@@ -15,14 +15,11 @@
     <title>Video Window</title>
   </head>
   <body>
-    <!--Application top bar-->
     <div id="top-bar">
-      <!--Name and logo-->
       <div id="top-left">
         <img src="../images/logo.svg" alt="Logo" />
         <span>TRGS Video Stream</span>
       </div>
-      <!--Buttons and application control-->
       <div id="top-right">
         <button id="fullscreen" class="top-button" title="Fullscreen">
           <img src="../images/fullscreen.svg" alt="Fullscreen" />
@@ -38,10 +35,8 @@
         </button>
       </div>
     </div>
-    <!--Contains all elements besides the top bar-->
     <div id="main" class="two-video">
       <div id="telemetry">
-        <!--Top banners, positioned abosolutely-->
         <div id="team-name-container">
           <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" /><span
             id="team-name"
@@ -52,24 +47,23 @@
           <span id="fun-fact-title">Powered Flight</span>
           <span id="fun-fact-text"></span>
         </div>
-        <!--gauge.js custom gauge-->
         <div id="alt-gauge-container">
           <canvas
             id="altitude"
             data-type="radial-gauge"
-            data-width="300"
-            data-height="300"
+            data-width="280"
+            data-height="280"
             data-units="ft x 1000"
             data-title="Altitude"
             data-value="0"
             data-value-text="&#8212;"
             data-min-value="0"
-            data-max-value="12"
-            data-major-ticks="0,2,4,6,8,10,12"
+            data-max-value="36"
+            data-major-ticks="0,6,12,18,24,30,36"
             data-minor-ticks="5"
             data-stroke-ticks="true"
             data-highlights='[
-    {"from": 10, "to": 12, "color": "#ca0000cc"}
+    {"from": 30, "to": 36, "color": "#ca0000cc"}
 ]'
             data-color-plate="var(--main-bg)"
             data-color-major-ticks="#999"
@@ -103,24 +97,23 @@
           <span id="max-alt">0 ft</span>
           <span id="max-spd">0 ft/s</span>
         </div>
-        <!--gauge.js custom gauge-->
         <div id="spd-gauge-container">
           <canvas
             id="speed"
             data-type="radial-gauge"
-            data-width="300"
-            data-height="300"
+            data-width="280"
+            data-height="280"
             data-units="ft/s x 100"
             data-title="Speed"
             data-value="0"
             data-value-text="&#8212;"
             data-min-value="0"
-            data-max-value="10"
-            data-major-ticks="0,2,4,6,8,10"
+            data-max-value="25"
+            data-major-ticks="0,5,10,15,20,25"
             data-minor-ticks="5"
             data-stroke-ticks="true"
             data-highlights='[
-    {"from": 8, "to": 10, "color": "#ca0000cc"}
+    {"from": 20, "to": 25, "color": "#ca0000cc"}
 ]'
             data-color-plate="var(--main-bg)"
             data-color-major-ticks="#999"
@@ -152,16 +145,12 @@
         </div>
       </div>
 
-      <!--Video display panels-->
       <div id="video-0"></div>
       <div id="video-1"></div>
 
-      <!--Hidden element where all video sources start, they are moved to a display panel to actually be displayed-->
       <div id="video-sources">
-        <!--Live video elements-->
-        <canvas id="live-video-0"></canvas>
-        <canvas id="live-video-1"></canvas>
-        <!--charts element-->
+        <canvas id="live-video-0" class="live-video"></canvas>
+        <canvas id="live-video-1" class="live-video"></canvas>
         <div id="charts">
           Altitude
           <div id="alt-wrapper">
@@ -172,7 +161,6 @@
             <canvas id="spd-graph" class="chart"></canvas>
           </div>
         </div>
-        <!--no signal elements-->
         <div id="none-0" class="no-signal"><span> Video Source 0 </span></div>
         <div id="none-1" class="no-signal"><span> Video Source 1 </span></div>
       </div>
@@ -187,7 +175,6 @@
         <progress id="stage" value="0" max="100">0%</progress>
       </div>
     </div>
-    <!--3rd party libraries must be loaded after rest of document-->
     <script src="../libraries/charts/dist/chart.umd.js"></script>
     <script src="../libraries/charts.js"></script>
     <script src="video.js"></script>

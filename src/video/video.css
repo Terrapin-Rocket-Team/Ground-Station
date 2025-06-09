@@ -1,3 +1,5 @@
+@import url('../fonts/roboto.css');
+
 :root {
   --top-bg: #111;
   --top-text: #bbb;
@@ -16,7 +18,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-family: Verdana, Geneva, Tahoma,'Roboto', sans-serif;
 }
 
 *:focus {
@@ -111,17 +113,15 @@ body {
   max-width: 1920px;
   max-height: 1080px;
   display: grid;
-  column-gap: 50px;
-  padding-right: 2vw;
+  column-gap: 20px;
+  padding: 0 1vw;
   background-color: var(--main-bg);
   position: relative;
   overflow: hidden;
 }
 
 #main.two-video {
-  grid-template-columns:
-    max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px)
-    640px 640px;
+  grid-template-columns: 1fr 720px 720px;
 }
 
 #main.one-video {
@@ -134,12 +134,20 @@ body {
 
 #main.one-video #telemetry {
   grid-template-columns: 45% 45%;
-  padding-top: 15vh;
+  padding-top: 12vh;
 }
 
 #main.one-video #small-text-container {
-  margin-top: 10vh;
+  margin-top: 8vh;
   width: 45vw;
+}
+
+/* Specific rule to stack max values vertically in the two-video layout */
+#main.two-video #small-text-container {
+  flex-direction: column;
+  gap: 2.5vh;
+  align-items: center;
+  margin-top: 0;
 }
 
 #main.telemetry-only #telemetry {
@@ -162,8 +170,8 @@ body {
 
 #team-name-container {
   background-color: var(--dark-highlight);
-  border-bottom: 5px solid var(--highlight-color);
-  height: 7vh;
+  border-bottom: 3px solid var(--highlight-color);
+  height: 5vh;
   width: max-content;
   position: absolute;
   display: flex;
@@ -177,37 +185,28 @@ body {
   top: 2px;
   transform: rotate(180deg);
   content: "";
-  border-top: 7vh solid var(--main-bg);
-  border-right: 70px solid transparent;
+  border-top: 5vh solid var(--main-bg);
+  border-right: 60px solid transparent;
 }
 
 #team-name-container img {
-  height: 5vh;
+  height: 3.5vh;
   padding-left: 1vw;
 }
 
 #team-name {
   padding-left: 1vw;
-  margin-right: 4vw;
+  margin-right: 3vw;
   color: var(--top-text);
-  font-size: 3.2vh;
-  font-family: "Arial Narrow Bold", sans-serif;
+  font-size: 2.8vh;
+  font-family: 'Roboto', sans-serif;
   font-weight: 600;
 }
-
-/* #team-name::after {
-  padding-left: 2vw;
-  color: var(--top-text);
-  font-size: 2.2vh;
-  font-family: "Arial Narrow Bold", sans-serif;
-  content: "Honu";
-  font-weight: normal;
-} */
 
 #fun-facts-container {
   background-color: var(--dark-highlight);
   border-bottom: 5px solid var(--highlight-color);
-  height: 8vh;
+  height: 7vh;
   width: max-content;
   position: absolute;
   top: 0;
@@ -234,10 +233,10 @@ body {
 
 #fun-fact-title {
   display: inline-block;
-  padding-left: 4vw;
-  margin-right: 2vw;
+  padding-left: 3vw;
+  margin-right: 1.5vw;
   font-size: 2vh;
-  font-family: "Arial Narrow Bold", sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-weight: 600;
   color: var(--top-text);
   text-align: center;
@@ -245,7 +244,7 @@ body {
 
 #fun-fact-text {
   display: inline-block;
-  width: 31vw;
+  width: 25vw;
   margin-right: 1vw;
   color: var(--top-text);
   font-size: 1.5vh;
@@ -255,16 +254,17 @@ body {
   height: 100vh;
   max-height: 1080px;
   display: grid;
-  padding: 10vh 0 10vh 0;
-  grid-template-rows: 45% 10% 45%;
+  padding: 7vh 0 14vh 0;
+  grid-template-rows: 42% 16% 42%;
   justify-content: center;
+  align-items: center; /* This vertically centers the content in each grid row */
 }
 
 #small-text-container {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   flex-direction: row;
   gap: 5vw;
@@ -272,45 +272,76 @@ body {
 
 #small-text-container > span {
   color: var(--main-text);
-  font-size: 3vh;
+  font-size: 2.8vh;
   position: relative;
-  top: 0;
+  text-align: center;
+  padding: 0 1vw;
+  white-space: nowrap;
 }
 
 #max-alt::after {
   display: block;
   color: var(--dull-text);
-  font-size: 1.5vh;
+  font-size: 1.4vh;
   content: "Maximum Altitude";
+  white-space: nowrap;
 }
 
 #max-spd::after {
   display: block;
   color: var(--dull-text);
-  font-size: 1.5vh;
+  font-size: 1.4vh;
   content: "Maximum Speed";
+  white-space: nowrap;
 }
 
 #alt-gauge-container,
 #spd-gauge-container {
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 #altitude,
 #speed {
   position: absolute;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   left: 50%;
+  top: 50%;
 }
 
 span#alt-text,
 span#spd-text {
   position: absolute;
   font-size: 3vh;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   color: var(--main-text);
-  top: calc(max(calc(min(100vw, 1920px) - calc(1380px + 2vw)), 200px) * 0.6);
+  top: 50%;
   left: 50%;
+  margin-top: 7vh;
+  min-width: 150px; /* Prevent collapse with small values */
+  text-align: center; /* Center the text */
+  white-space: nowrap; /* Prevent text from wrapping */
+}
+
+/* Responsive font sizing for large numbers */
+@media screen and (max-width: 1920px) {
+  span#alt-text,
+  span#spd-text {
+    font-size: calc(2vh + 4px); /* Base size */
+  }
+  
+  span#alt-text:has(+ span[data-length="4"]),
+  span#spd-text:has(+ span[data-length="4"]) {
+    font-size: calc(1.8vh + 4px); /* Slightly smaller for 4 digits */
+  }
+  
+  span#alt-text:has(+ span[data-length="5"]),
+  span#spd-text:has(+ span[data-length="5"]) {
+    font-size: calc(1.6vh + 4px); /* Even smaller for 5 digits */
+  }
 }
 
 #video-0,
@@ -318,6 +349,8 @@ span#spd-text {
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
+  padding: 8vh 0 14vh 0;
 }
 
 #video-0 > *,
@@ -329,6 +362,9 @@ span#spd-text {
 .live-video {
   position: relative;
   z-index: 1;
+  width: 720px;
+  height: 900px;
+  margin: 0 auto;
 }
 
 #charts {
@@ -346,14 +382,15 @@ span#spd-text {
 .no-signal {
   color: var(--main-text);
   font-size: 2vh;
-  height: 832px;
-  width: 640px;
+  height: 900px;
+  width: 720px;
   border: 1px solid gray;
   background-color: var(--dark-highlight);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  margin: 0 auto;
 }
 
 .no-signal span {
@@ -376,19 +413,20 @@ span#spd-text {
 
 #stage-container {
   width: 100%;
-  height: 10vh;
+  height: 12vh;
   position: absolute;
   bottom: 0;
   left: 0;
   display: grid;
+  padding-bottom: 2vh;
 }
 
 .stage {
   display: block;
   transform-origin: 0% 50%;
-  transform: translate(-1.5vh, 0) rotate(-20deg);
+  transform: translate(-1vh, 0) rotate(-10deg);
   position: absolute;
-  bottom: 1.3vh;
+  bottom: 3.5vh; /* Moved closer to the progress bar */
   text-align: left;
   font-size: 1.7vh;
   z-index: 998;
@@ -409,9 +447,10 @@ span#spd-text {
   -webkit-border-radius: 50%;
   height: 1vh;
   width: 1vh;
-  position: relative;
-  bottom: -1.8vh;
-  left: -0.3vh;
+  position: absolute; /* Changed from relative to absolute for better placement */
+  bottom: -2.5vh; /* Position the marker to sit directly on the progress bar */
+  left: 0; /* Aligned with the text */
+  z-index: 999; /* Ensure markers appear above the progress bar */
 }
 
 .stage.active::before {
@@ -424,19 +463,19 @@ span#spd-text {
 }
 
 #s1 {
-  left: 15%;
+  left: 17%;
 }
 
 #s2 {
-  left: 25%;
+  left: 30%;
 }
 
 #s3 {
-  left: 45%;
+  left: 48%;
 }
 
 #s4 {
-  left: 80%;
+  left: 75%;
 }
 
 #s5 {
@@ -447,6 +486,7 @@ progress {
   height: calc(1vh + 7px);
   width: 100%;
   -webkit-appearance: none;
+  margin-bottom: 1vh;
 }
 
 progress::-webkit-progress-bar {
