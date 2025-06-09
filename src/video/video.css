@@ -315,31 +315,35 @@ body {
 span#alt-text,
 span#spd-text {
   position: absolute;
-  font-size: 3vh;
+  /* font-size: 3vh; */ /* Base font size is handled by the media query below */
   transform: translate(-50%, -50%);
   color: var(--main-text);
-  top: 50%;
+  top: 50%; /* Adjusted for better vertical centering with title/units */
   left: 50%;
-  margin-top: 7vh;
+  /* margin-top: 7vh; */ /* REMOVED: This was pushing text down for the needle */
   min-width: 150px; /* Prevent collapse with small values */
   text-align: center; /* Center the text */
   white-space: nowrap; /* Prevent text from wrapping */
+  font-weight: 500; /* Slightly bolder for prominence */
+  z-index: 10; /* Ensure it's above any canvas-rendered elements if needed */
 }
 
 /* Responsive font sizing for large numbers */
-@media screen and (max-width: 1920px) {
+@media screen and (max-width: 1920px) { /* This effectively acts as the default style for these elements */
   span#alt-text,
   span#spd-text {
     font-size: calc(2vh + 4px); /* Base size */
   }
   
-  span#alt-text:has(+ span[data-length="4"]),
-  span#spd-text:has(+ span[data-length="4"]) {
+  /* These selectors should be span#alt-text[data-length="4"], etc. */
+  /* The JS already adds data-length, so this should work if corrected */
+  span#alt-text[data-length="4"],
+  span#spd-text[data-length="4"] {
     font-size: calc(1.8vh + 4px); /* Slightly smaller for 4 digits */
   }
   
-  span#alt-text:has(+ span[data-length="5"]),
-  span#spd-text:has(+ span[data-length="5"]) {
+  span#alt-text[data-length="5"],
+  span#spd-text[data-length="5"] {
     font-size: calc(1.6vh + 4px); /* Even smaller for 5 digits */
   }
 }

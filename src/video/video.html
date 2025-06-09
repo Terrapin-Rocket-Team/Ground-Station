@@ -56,42 +56,43 @@
             data-units="ft x 1000"
             data-title="Altitude"
             data-value="0"
-            data-value-text="&#8212;"
+            data-value-text="—" /* Initial value, JS updates. Will be transparent */
             data-min-value="0"
             data-max-value="36"
             data-major-ticks="0,6,12,18,24,30,36"
-            data-minor-ticks="5"
+            data-minor-ticks="2" /* Reduced for cleaner look */
             data-stroke-ticks="true"
             data-highlights='[
-    {"from": 30, "to": 36, "color": "#ca0000cc"}
-]'
-            data-color-plate="var(--main-bg)"
-            data-color-major-ticks="#999"
-            data-color-minor-ticks="#999"
+              {"from": 30, "to": 36, "color": "#ca0000cc"}
+            ]'
+            data-color-plate="transparent" /* Transparent background */
+            data-color-major-ticks="#888"
+            data-color-minor-ticks="#555"
             data-color-title="#ddd"
             data-color-units="#999"
-            data-color-numbers="#ddd"
-            data-color-value-text="#ddd"
+            data-color-numbers="#aaa"
+            data-color-value-text="transparent" /* Make gauge's own value text invisible */
             data-borders="false"
-            data-needle-type="arrow"
-            data-needle-width="2"
-            data-needle-circle-size="7"
-            data-needle-circle-outer="true"
-            data-needle-circle-inner="false"
-            data-animation-duration="1500"
+            data-needle="false" /* Remove needle */
+            data-animation-duration="1000" /* Slightly faster animation */
             data-animation-rule="linear"
             data-value-box="false"
             data-value-text-shadow="false"
-            data-value-int="5"
-            data-value-dec="0"
-            data-value-box-border-radius="0"
-            data-color-value-box-rect="#fff"
-            data-color-value-box-rect-end="#fff"
-            data-color-value-box-shadow="false"
-            data-color-value-box-background="#fff"
+            /* data-value-int and data-value-dec are less relevant as value text is transparent */
             data-border-shadow-width="0"
+            /* Progress bar specific attributes */
+            data-bar-width="12" /* Width of the progress bar */
+            data-color-bar-progress="#ddd" /* Color of the filled part of the bar (e.g., main text color) */
+            data-color-bar="#444" /* Color of the unfilled part of the bar (track) */
+            /* Font settings for gauge's internal text (title, units, numbers) */
+            data-font-title="Roboto"
+            data-font-units="Roboto"
+            data-font-numbers="Roboto"
+            data-font-title-size="18" /* Adjust as needed */
+            data-font-units-size="14"  /* Adjust as needed */
+            data-font-numbers-size="12" /* Adjust as needed */
           ></canvas>
-          <span id="alt-text">&#8212;</span>
+          <span id="alt-text">—</span>
         </div>
         <div id="small-text-container">
           <span id="max-alt">0 ft</span>
@@ -106,42 +107,43 @@
             data-units="ft/s x 100"
             data-title="Speed"
             data-value="0"
-            data-value-text="&#8212;"
+            data-value-text="—" /* Initial value, JS updates. Will be transparent */
             data-min-value="0"
             data-max-value="25"
             data-major-ticks="0,5,10,15,20,25"
-            data-minor-ticks="5"
+            data-minor-ticks="2" /* Reduced for cleaner look */
             data-stroke-ticks="true"
             data-highlights='[
-    {"from": 20, "to": 25, "color": "#ca0000cc"}
-]'
-            data-color-plate="var(--main-bg)"
-            data-color-major-ticks="#999"
-            data-color-minor-ticks="#999"
+              {"from": 20, "to": 25, "color": "#ca0000cc"}
+            ]'
+            data-color-plate="transparent" /* Transparent background */
+            data-color-major-ticks="#888"
+            data-color-minor-ticks="#555"
             data-color-title="#ddd"
             data-color-units="#999"
-            data-color-numbers="#ddd"
-            data-color-value-text="#ddd"
+            data-color-numbers="#aaa"
+            data-color-value-text="transparent" /* Make gauge's own value text invisible */
             data-borders="false"
-            data-needle-type="arrow"
-            data-needle-width="2"
-            data-needle-circle-size="7"
-            data-needle-circle-outer="true"
-            data-needle-circle-inner="false"
-            data-animation-duration="1500"
+            data-needle="false" /* Remove needle */
+            data-animation-duration="1000" /* Slightly faster animation */
             data-animation-rule="linear"
             data-value-box="false"
             data-value-text-shadow="false"
-            data-value-int="5"
-            data-value-dec="0"
-            data-value-box-border-radius="0"
-            data-color-value-box-rect="#fff"
-            data-color-value-box-rect-end="#fff"
-            data-color-value-box-shadow="false"
-            data-color-value-box-background="#fff"
+            /* data-value-int and data-value-dec are less relevant as value text is transparent */
             data-border-shadow-width="0"
+            /* Progress bar specific attributes */
+            data-bar-width="12" /* Width of the progress bar */
+            data-color-bar-progress="#ddd" /* Color of the filled part of the bar (e.g., main text color) */
+            data-color-bar="#444" /* Color of the unfilled part of the bar (track) */
+            /* Font settings for gauge's internal text (title, units, numbers) */
+            data-font-title="Roboto"
+            data-font-units="Roboto"
+            data-font-numbers="Roboto"
+            data-font-title-size="18" /* Adjust as needed */
+            data-font-units-size="14"  /* Adjust as needed */
+            data-font-numbers-size="12" /* Adjust as needed */
           ></canvas>
-          <span id="spd-text">&#8212;</span>
+          <span id="spd-text">—</span>
         </div>
       </div>
 
