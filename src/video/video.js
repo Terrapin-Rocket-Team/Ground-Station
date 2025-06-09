@@ -349,7 +349,7 @@ window.onload = () => {
 
       //update gauges
       if (msg.getAlt() || msg.getAlt() === 0) {
-        const altValue = msg.getAlt();
+        const altValue = Math.max(msg.getAlt() || 0, 0);
         alt.setAttribute("data-value-text", altValue);
         alt.setAttribute("data-value", altValue / 1000);
         
@@ -365,7 +365,7 @@ window.onload = () => {
       }
       
       if (msg.getSpeed() || msg.getSpeed() === 0) {
-        const spdValue = msg.getSpeed();
+        const spdValue = Math.max(msg.getSpeed() || 0, 0)
         spd.setAttribute("data-value-text", spdValue);
         spd.setAttribute("data-value", spdValue / 100);
         
@@ -382,13 +382,13 @@ window.onload = () => {
 
       //update max altitude and speed
       if (msg.getAlt() > maxAlt) {
-        maxAlt = msg.getAlt();
+        maxAlt = Math.max(msg.getAlt() || 0, 0)
         maxAltEl.textContent = maxAlt + " ft";
         sessionStorage.setItem("max-alt", maxAlt);
       }
 
       if (msg.getSpeed() > maxSpd) {
-        maxSpd = msg.getSpeed();
+        maxSpd = Math.max(msg.getSpeed() || 0, 0);
         maxSpdEl.textContent = maxSpd + " ft/s";
         sessionStorage.setItem("max-spd", maxSpd);
       }
