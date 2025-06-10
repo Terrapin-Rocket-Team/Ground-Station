@@ -1,5 +1,5 @@
-// TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
 
+// TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
 window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
@@ -470,5 +470,54 @@ window.onload = () => {
     if (controls.layout === "two-video")
       video1.appendChild(document.getElementById(controls.video1));
   });
+
+
+  const loadBabylon = async (canvas) => {
+    const BABYLON = await import('babylonjs');
+    const engine = new BABYLON.Engine(canvas, true);
+
+    const createScene = async () => {
+        const scene = new BABYLON.Scene(engine);
+        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent background
+
+        const camera = new BABYLON.ArcRotateCamera("cam",
+            BABYLON.Tools.ToRadians(135), BABYLON.Tools.ToRadians(65),
+            15, BABYLON.Vector3.Zero(), scene);
+        camera.attachControl(canvas, true);
+
+        new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
+        const result = await BABYLON.SceneLoader.ImportMeshAsync(
+            "",                    
+            "/models/",                
+            "rocket.obj",              
+            scene
+        );
+
+        const rocket = result.meshes[0]; // top-level node
+        rocket.scaling.setAll(2);        // optional
+
+        // Enable quaternion-based rotation
+        rocket.rotationQuaternion = new BABYLON.Quaternion();
+
+        // Wire in telemetry-based orientation
+        const d2r = BABYLON.Angle.FromDegrees;
+        api.on("data", (msg) => {
+          if (msg.stream !== "telem-avionics") return;
+          rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
+              d2r(msg.getOrientationX()).radians(),
+              d2r(msg.getOrientationY()).radians(),
+              d2r(msg.getOrientationZ()).radians()
+          );
+        });
+
+        return scene;
+    };
+
+    createScene().then(scene => {
+        engine.runRenderLoop(() => scene.render());
+    });
+    window.addEventListener("resize", () => engine.resize());
+  };
+  loadBabylon(document.getElementById("3d-visualization"));
   
 };

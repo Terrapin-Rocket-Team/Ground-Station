@@ -16,6 +16,7 @@
   "author": "Joseph Hauerstein",
   "license": "ISC",
   "dependencies": {
+    "babylonjs": "^8.11.0",
     "electron-squirrel-startup": "^1.0.0",
     "serialport": "^12.0.0",
     "yuv-canvas": "^1.2.11"
@@ -25,8 +26,7 @@
       "packagerConfig": {
         "icon": "build/icons/logo"
       },
-      "makers": [
-      ]
+      "makers": []
     }
   },
   "devDependencies": {
@@ -37,7 +37,7 @@
     "@electron-forge/maker-zip": "^7.6.0",
     "@fiahfy/icns": "^0.0.7",
     "electron": "^33.2.1",
-    "svg-render": "^2.0.0",
-    "png-to-ico": "^2.1.8"
+    "png-to-ico": "^2.1.8",
+    "svg-render": "^2.0.0"
   }
 }
