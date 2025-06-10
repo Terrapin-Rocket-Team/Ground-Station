@@ -384,6 +384,18 @@ span#spd-text {
   text-align: center;
 }
 
+.viz-3d {
+  position: relative;
+  z-index: 78;
+  width: 720px;
+  height: 900px;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
+  background-color: #0066cc;
+  /* border: 2px solid #444; */
+}
+
 .no-signal {
   color: var(--main-text);
   font-size: 2vh;
@@ -512,21 +524,3 @@ progress::-webkit-progress-value {
   -webkit-transform-origin: bottom left;
 }
 
-.viz-3d {
-  width: 720px;
-  height: 900px;
-  background-color: #0066cc;
-  border: 2px solid #444;
-  border-radius: 4px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 24px;
-  font-family: 'Roboto', sans-serif;
-}
-
-.viz-3d::after {
-  content: "3D Visualization";
-}
