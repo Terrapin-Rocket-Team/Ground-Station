@@ -467,4 +467,28 @@ window.onload = () => {
     if (controls.layout === "two-video")
       video1.appendChild(document.getElementById(controls.video1));
   });
+  
+  // Initialize 3D visualization canvas
+  const init3DVisualization = () => {
+    const canvas = document.getElementById('3d-visualization');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    canvas.width = 720;
+    canvas.height = 900;
+    
+    // Fill with blue color
+    ctx.fillStyle = '#0066cc';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add text to indicate it's the 3D visualization
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px Roboto';
+    ctx.textAlign = 'center';
+    ctx.fillText('3D Visualization', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('Coming Soon...', canvas.width / 2, canvas.height / 2 + 40);
+  };
+  
+  // Initialize the 3D visualization
+  init3DVisualization();
 };

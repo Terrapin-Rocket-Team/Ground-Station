@@ -333,19 +333,19 @@ span#spd-text {
 @media screen and (max-width: 1920px) { /* This effectively acts as the default style for these elements */
   span#alt-text,
   span#spd-text {
-    font-size: calc(2.4vh + 4px); /* Base size */
+    font-size: calc(2.6vh + 4px); /* Base size */
   }
   
   /* These selectors should be span#alt-text[data-length="4"], etc. */
   /* The JS already adds data-length, so this should work if corrected */
   span#alt-text[data-length="4"],
   span#spd-text[data-length="4"] {
-    font-size: calc(2.2vh + 4px); /* Slightly smaller for 4 digits */
+    font-size: calc(2.3vh + 4px); /* Slightly smaller for 4 digits */
   }
   
   span#alt-text[data-length="5"],
   span#spd-text[data-length="5"] {
-    font-size: calc(2vh + 4px); /* Even smaller for 5 digits */
+    font-size: calc(2.1vh + 4px); /* Even smaller for 5 digits */
   }
 }
 
@@ -510,4 +510,23 @@ progress::-webkit-progress-value {
   left: 0;
   bottom: 0;
   -webkit-transform-origin: bottom left;
+}
+
+.viz-3d {
+  width: 720px;
+  height: 900px;
+  background-color: #0066cc;
+  border: 2px solid #444;
+  border-radius: 4px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.viz-3d::after {
+  content: "3D Visualization";
 }

@@ -221,7 +221,7 @@ window.onload = () => {
     });
   };
   const getVideo0Displays = (idPrefix) => {
-    const video0Options = ["Input 0", "Input 1", "Charts", "None"];
+    const video0Options = ["Input 0", "Input 1", "Charts", "3D Visualization", "None"];
 
     setupStaticOptions(idPrefix, video0Options, (option) => {
       // video0 and video1 can't be set to the same thing
@@ -229,6 +229,7 @@ window.onload = () => {
       if (option == "Input 0") newSetting = "live-video-0";
       if (option == "Input 1") newSetting = "live-video-1";
       if (option == "Charts") newSetting = "charts";
+      if (option == "3D Visualization") newSetting = "3d-visualization";
       if (option == "None") newSetting = "none-0";
       if (newSetting !== videoControls.video1) {
         // figure out what value the option text corresponds to
@@ -239,7 +240,7 @@ window.onload = () => {
     });
   };
   const getVideo1Displays = (idPrefix) => {
-    const video1Options = ["Input 1", "Input 0", "Charts", "None"];
+    const video1Options = ["Input 1", "Input 0", "Charts", "3D Visualization", "None"];
 
     setupStaticOptions(idPrefix, video1Options, (option) => {
       // video1 and video0 can't be set to the same thing
@@ -247,6 +248,7 @@ window.onload = () => {
       if (option == "Input 0") newSetting = "live-video-0";
       if (option == "Input 1") newSetting = "live-video-1";
       if (option == "Charts") newSetting = "charts";
+      if (option == "3D Visualization") newSetting = "3d-visualization";
       if (option == "None") newSetting = "none-0";
       if (newSetting !== videoControls.video0) {
         // figure out what value the option text corresponds to
@@ -280,14 +282,18 @@ window.onload = () => {
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
     document.getElementById("video-layout-selected").textContent = option;
+    
     if (videoControls.video0 === "live-video-0") option = "Input 0";
     if (videoControls.video0 === "live-video-1") option = "Input 1";
     if (videoControls.video0 === "charts") option = "Charts";
+    if (videoControls.video0 === "3d-visualization") option = "3D Visualization";
     if (videoControls.video0 === "none-0") option = "None";
     document.getElementById("video-0-selected").textContent = option;
+    
     if (videoControls.video1 === "live-video-1") option = "Input 1";
     if (videoControls.video1 === "live-video-0") option = "Input 0";
     if (videoControls.video1 === "charts") option = "Charts";
+    if (videoControls.video1 === "3d-visualization") option = "3D Visualization";
     if (videoControls.video1 === "none-0") option = "None";
     document.getElementById("video-1-selected").textContent = option;
   });
