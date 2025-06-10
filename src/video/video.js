@@ -68,7 +68,8 @@ window.onload = () => {
     LV1 = setupVideoCanvas("live-video-1"),
     charts = document.getElementById("charts"),
     none0 = document.getElementById("none-0"),
-    none1 = document.getElementById("none-1");
+    none1 = document.getElementById("none-1"),
+    viz3d = document.getElementById("3d-visualization");
 
   let altG = createChart("alt-graph", "min", "ft", 1, 1, chartsConfig),
     spdG = createChart("spd-graph", "min", "ft/s", 1, 1, chartsConfig),
@@ -147,6 +148,7 @@ window.onload = () => {
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
     }
     if (layout === "one-video") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
@@ -155,6 +157,7 @@ window.onload = () => {
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
     }
     if (layout === "telemetry-only") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
@@ -468,27 +471,4 @@ window.onload = () => {
       video1.appendChild(document.getElementById(controls.video1));
   });
   
-  // Initialize 3D visualization canvas
-  const init3DVisualization = () => {
-    const canvas = document.getElementById('3d-visualization');
-    const ctx = canvas.getContext('2d');
-    
-    // Set canvas size
-    canvas.width = 720;
-    canvas.height = 900;
-    
-    // Fill with blue color
-    ctx.fillStyle = '#0066cc';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Add text to indicate it's the 3D visualization
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '24px Roboto';
-    ctx.textAlign = 'center';
-    ctx.fillText('3D Visualization', canvas.width / 2, canvas.height / 2);
-    ctx.fillText('Coming Soon...', canvas.width / 2, canvas.height / 2 + 40);
-  };
-  
-  // Initialize the 3D visualization
-  init3DVisualization();
 };
