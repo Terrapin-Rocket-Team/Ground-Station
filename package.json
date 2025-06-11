@@ -16,6 +16,7 @@
   "author": "Joseph Hauerstein",
   "license": "ISC",
   "dependencies": {
+    "@babylonjs/core": "^8.11.0",
     "babylonjs": "^8.11.0",
     "electron-squirrel-startup": "^1.0.0",
     "serialport": "^12.0.0",

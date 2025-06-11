@@ -1,5 +1,4 @@
 const { ipcRenderer, contextBridge } = require("electron");
-
 // custom event emitter class so event listeners can be added to the electron api in the renderer
 // all methods must be attributes due to how electron handles objects
 class EventEmitter {

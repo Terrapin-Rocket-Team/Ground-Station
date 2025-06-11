@@ -1,4 +1,5 @@
-import('babylonjs').then((BABYLON) => {
-    console.log(BABYLON);
-  console.log('Babylon.js version:', BABYLON.Engine.Version);
-});
+let BABYLON = require('babylonjs');
+
+console.log("YES");
+console.log(BABYLON); // Log the entire BABYLON object
+console.log(BABYLON.Engine);
