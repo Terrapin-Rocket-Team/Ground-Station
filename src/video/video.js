@@ -482,35 +482,49 @@ window.onload = () => {
     const scene = new BABYLON.Scene(babylonEngine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent background
 
-    const camera = new BABYLON.ArcRotateCamera("cam",
-        BABYLON.Tools.ToRadians(135), BABYLON.Tools.ToRadians(65),
-        15, BABYLON.Vector3.Zero(), scene);
-    camera.attachControl(canvas, true);
+    const camera = new BABYLON.ArcRotateCamera(
+      "cam",
+      BABYLON.Tools.ToRadians(0),    // α = 0° → side-on
+      BABYLON.Tools.ToRadians(100),   // β = 90° → horizontal
+      1000,          
+      new BABYLON.Vector3(0, 255, 0),
+      scene
+    );
+    // camera.attachControl(canvas, true);
 
     new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
 
-    const result = await BABYLON.LoadAssetContainerAsync(                    
-        "../../models/rocket.obj",      
-        scene
+
+    BABYLON.SceneLoader.ImportMesh(
+      null,                   // import all meshes
+      "../../models/",
+      "rocket.obj",
+      scene,
+      function(meshes) {
+        console.log("Imported OBJ:", meshes);
+
+        // Grab your rocket (e.g. the first mesh)
+        const rocket = meshes[0];
+
+        // Now it's safe to set properties on it:
+        rocket.position = BABYLON.Vector3.Zero();
+        rocket.scaling.setAll(2);
+
+        // Enable quaternion-based rotation
+        rocket.rotationQuaternion = new BABYLON.Quaternion();
+
+        // You can now wire up your telem hook here, or elsewhere:
+        const d2r = BABYLON.Angle.FromDegrees;
+        api.on("data", (msg) => {
+            if (msg.stream !== "telem-avionics") return;
+            rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
+                d2r(msg.orientation[0]).radians(),
+                d2r(msg.orientation[1]).radians(),
+                d2r(msg.orientation[2]).radians()
+            );
+        });
+      }
     );
-
-    const rocket = result.meshes[0]; // top-level node
-    rocket.scaling.setAll(2);        // optional
-
-    // Enable quaternion-based rotation
-    rocket.rotationQuaternion = new BABYLON.Quaternion();
-
-    // Wire in telemetry-based orientation
-    const d2r = BABYLON.Angle.FromDegrees;
-    api.on("data", (msg) => {
-        if (msg.stream !== "telem-avionics") return;
-        rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
-            d2r(msg.orientation[0]).radians(),
-            d2r(msg.orientation[1]).radians(),
-            d2r(msg.orientation[2]).radians()
-        );
-    });
-
     return scene;
   };
 
