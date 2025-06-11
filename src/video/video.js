@@ -1,4 +1,4 @@
-
+// import * as BABYLON from "@babylonjs/core";
 // TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
 window.onload = () => {
   let frameQueue = [];
@@ -472,52 +472,55 @@ window.onload = () => {
   });
 
 
-  const loadBabylon = async (canvas) => {
-    const BABYLON = await import('babylonjs');
-    const engine = new BABYLON.Engine(canvas, true);
+  console.log("Babylon.js core modules and OBJ loader imported successfully.");
+  canvas = document.getElementById("3d-visualization");
+  babylonEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+  console.log("Babylon.js Engine created.");
+  console.log(BABYLON.Engine.isSupported());
 
-    const createScene = async () => {
-        const scene = new BABYLON.Scene(engine);
-        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent background
+  const createScene = async () => {
+    const scene = new BABYLON.Scene(babylonEngine);
+    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent background
 
-        const camera = new BABYLON.ArcRotateCamera("cam",
-            BABYLON.Tools.ToRadians(135), BABYLON.Tools.ToRadians(65),
-            15, BABYLON.Vector3.Zero(), scene);
-        camera.attachControl(canvas, true);
+    const camera = new BABYLON.ArcRotateCamera("cam",
+        BABYLON.Tools.ToRadians(135), BABYLON.Tools.ToRadians(65),
+        15, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
 
-        new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
-        const result = await BABYLON.SceneLoader.ImportMeshAsync(
-            "",                    
-            "/models/",                
-            "rocket.obj",              
-            scene
+    new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
+    // Print the current file route/directory
+    console.log("Current file route/directory:", window.location.pathname);
+    // 🔁 Replace this with your actual CAD model
+    const result = await BABYLON.LoadAssetContainerAsync(                    
+        "../../models/rocket.obj",              // your rocket file
+        scene
+    );
+
+    const rocket = result.meshes[0]; // top-level node
+    rocket.scaling.setAll(2);        // optional
+
+    // Enable quaternion-based rotation
+    rocket.rotationQuaternion = new BABYLON.Quaternion();
+
+    // Wire in telemetry-based orientation
+    const d2r = BABYLON.Angle.FromDegrees;
+    api.on("data", (msg) => {
+        if (msg.stream !== "telem-avionics") return;
+        rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
+            d2r(msg.getOrientationX()).radians(),
+            d2r(msg.getOrientationY()).radians(),
+            d2r(msg.getOrientationZ()).radians()
         );
-
-        const rocket = result.meshes[0]; // top-level node
-        rocket.scaling.setAll(2);        // optional
-
-        // Enable quaternion-based rotation
-        rocket.rotationQuaternion = new BABYLON.Quaternion();
-
-        // Wire in telemetry-based orientation
-        const d2r = BABYLON.Angle.FromDegrees;
-        api.on("data", (msg) => {
-          if (msg.stream !== "telem-avionics") return;
-          rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
-              d2r(msg.getOrientationX()).radians(),
-              d2r(msg.getOrientationY()).radians(),
-              d2r(msg.getOrientationZ()).radians()
-          );
-        });
-
-        return scene;
-    };
-
-    createScene().then(scene => {
-        engine.runRenderLoop(() => scene.render());
     });
-    window.addEventListener("resize", () => engine.resize());
+
+    return scene;
   };
-  loadBabylon(document.getElementById("3d-visualization"));
+
+  createScene().then(scene => {
+      babylonEngine.runRenderLoop(() => scene.render());
+  });
+  window.addEventListener("resize", () => babylonEngine.resize());
+
+  console.log("Babylon.js initialization complete. Render loop started.");
   
 };
