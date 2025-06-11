@@ -488,11 +488,9 @@ window.onload = () => {
     camera.attachControl(canvas, true);
 
     new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
-    // Print the current file route/directory
-    console.log("Current file route/directory:", window.location.pathname);
-    // 🔁 Replace this with your actual CAD model
+
     const result = await BABYLON.LoadAssetContainerAsync(                    
-        "../../models/rocket.obj",              // your rocket file
+        "../../models/rocket.obj",      
         scene
     );
 
@@ -507,9 +505,9 @@ window.onload = () => {
     api.on("data", (msg) => {
         if (msg.stream !== "telem-avionics") return;
         rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
-            d2r(msg.getOrientationX()).radians(),
-            d2r(msg.getOrientationY()).radians(),
-            d2r(msg.getOrientationZ()).radians()
+            d2r(msg.orientation[0]).radians(),
+            d2r(msg.orientation[1]).radians(),
+            d2r(msg.orientation[2]).radians()
         );
     });
 
