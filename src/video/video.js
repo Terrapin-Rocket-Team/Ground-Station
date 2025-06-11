@@ -507,21 +507,42 @@ window.onload = () => {
         const rocket = meshes[0];
 
         // Now it's safe to set properties on it:
-        rocket.position = BABYLON.Vector3.Zero();
+        rocket.position = new BABYLON.Vector3(0, -40, 0); 
         rocket.scaling.setAll(2);
 
-        // Enable quaternion-based rotation
-        rocket.rotationQuaternion = new BABYLON.Quaternion();
+        const MAX_DEG_PER_SEC = 10;                          //  ⟵ tweak
+        const maxRadPerMs     = (MAX_DEG_PER_SEC * Math.PI/180) / 1000;
 
-        // You can now wire up your telem hook here, or elsewhere:
-        const d2r = BABYLON.Angle.FromDegrees;
+        rocket.rotationQuaternion = new BABYLON.Quaternion(); // start clean
+        let targetQuat = rocket.rotationQuaternion.clone();   // current goal
+
+        //update target
         api.on("data", (msg) => {
             if (msg.stream !== "telem-avionics") return;
-            rocket.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
-                d2r(msg.orientation[0]).radians(),
-                d2r(msg.orientation[1]).radians(),
-                d2r(msg.orientation[2]).radians()
+
+            // Convert incoming Euler angles (deg) → quaternion
+            targetQuat = BABYLON.Quaternion.FromEulerAngles(
+                BABYLON.Angle.FromDegrees(msg.orientation[0]).radians(),
+                BABYLON.Angle.FromDegrees(msg.orientation[1]).radians(),
+                BABYLON.Angle.FromDegrees(msg.orientation[2]).radians()
             );
+        });
+
+        //blend
+        scene.onBeforeRenderObservable.add(() => {
+            const dt     = babylonEngine.getDeltaTime();          // ms since last frame
+            const step   = maxRadPerMs * dt;               // max radians this frame
+
+            const current = rocket.rotationQuaternion;
+            const dot     = BABYLON.Quaternion.Dot(current, targetQuat);
+
+            // theta = 2·acos(|dot|)  → full angle between quaternions
+            const angle = 2 * Math.acos(Math.min(1, Math.abs(dot)));
+
+            if (angle < 1e-6) return;                      // already there
+
+            const t = Math.min(1, step / angle);           // blend fraction
+            BABYLON.Quaternion.SlerpToRef(current, targetQuat, t, current);
         });
       }
     );
