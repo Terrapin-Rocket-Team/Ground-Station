@@ -497,7 +497,7 @@ window.onload = () => {
 
     BABYLON.SceneLoader.ImportMesh(
       null,                   // import all meshes
-      "../../models/",
+      "../models/",
       "rocket.obj",
       scene,
       function(meshes) {
