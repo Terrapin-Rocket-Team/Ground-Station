@@ -1,5 +1,5 @@
+// import * as BABYLON from "@babylonjs/core";
 // TODO: when the video window gets overhauled fix all the copy and pasted code from index.js
-
 window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
@@ -68,7 +68,8 @@ window.onload = () => {
     LV1 = setupVideoCanvas("live-video-1"),
     charts = document.getElementById("charts"),
     none0 = document.getElementById("none-0"),
-    none1 = document.getElementById("none-1");
+    none1 = document.getElementById("none-1"),
+    viz3d = document.getElementById("3d-visualization");
 
   let altG = createChart("alt-graph", "min", "ft", 1, 1, chartsConfig),
     spdG = createChart("spd-graph", "min", "ft/s", 1, 1, chartsConfig),
@@ -118,7 +119,7 @@ window.onload = () => {
   const sizeGauges = () => {
     let size =
       telemetry.offsetWidth *
-      0.75 *
+      0.85 *
       (!main.classList.contains("two-video") ? 0.5 : 1);
 
     alt.setAttribute("data-width", size);
@@ -147,6 +148,7 @@ window.onload = () => {
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
     }
     if (layout === "one-video") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
@@ -155,6 +157,7 @@ window.onload = () => {
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
     }
     if (layout === "telemetry-only") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
@@ -349,30 +352,46 @@ window.onload = () => {
 
       //update gauges
       if (msg.getAlt() || msg.getAlt() === 0) {
-        alt.setAttribute("data-value-text", msg.getAlt());
-        alt.setAttribute("data-value", msg.getAlt() / 1000);
-        document.getElementById("alt-text").textContent = msg.getAlt() + " ft";
+        const altValue = Math.max(msg.getAlt() || 0, 0);
+        alt.setAttribute("data-value-text", altValue);
+        alt.setAttribute("data-value", altValue / 1000);
+        
+        // Set the altitude text and track digit length for responsive font sizing
+        const altText = document.getElementById("alt-text");
+        altText.textContent = altValue + " ft";
+        
+        // Add a data attribute to track the number of digits for CSS responsive font sizing
+        const digitLength = altValue.toString().length;
+        altText.setAttribute("data-length", digitLength);
       } else {
         alt.setAttribute("data-value-text", "\u2014");
       }
+      
       if (msg.getSpeed() || msg.getSpeed() === 0) {
-        spd.setAttribute("data-value-text", msg.getSpeed());
-        spd.setAttribute("data-value", msg.getSpeed() / 100);
-        document.getElementById("spd-text").textContent =
-          msg.getSpeed() + " ft/s";
+        const spdValue = Math.max(msg.getSpeed() || 0, 0)
+        spd.setAttribute("data-value-text", spdValue);
+        spd.setAttribute("data-value", spdValue / 100);
+        
+        // Set the speed text and track digit length for responsive font sizing
+        const spdText = document.getElementById("spd-text");
+        spdText.textContent = spdValue + " ft/s";
+        
+        // Add a data attribute to track the number of digits for CSS responsive font sizing
+        const digitLength = spdValue.toString().length;
+        spdText.setAttribute("data-length", digitLength);
       } else {
         spd.setAttribute("data-value-text", "\u2014");
       }
 
       //update max altitude and speed
       if (msg.getAlt() > maxAlt) {
-        maxAlt = msg.getAlt();
+        maxAlt = Math.max(msg.getAlt() || 0, 0)
         maxAltEl.textContent = maxAlt + " ft";
         sessionStorage.setItem("max-alt", maxAlt);
       }
 
       if (msg.getSpeed() > maxSpd) {
-        maxSpd = msg.getSpeed();
+        maxSpd = Math.max(msg.getSpeed() || 0, 0);
         maxSpdEl.textContent = maxSpd + " ft/s";
         sessionStorage.setItem("max-spd", maxSpd);
       }
@@ -382,8 +401,9 @@ window.onload = () => {
       let ff = document.getElementById("fun-facts-container");
       let ffTitle = document.getElementById("fun-fact-title");
       let ffText = document.getElementById("fun-fact-text");
+      // Try to get stage number using the updated getStateflag method that handles both "Stage" and "State Flags"
       let sn = msg.getStateflag("Stage");
-      let percents = [5, 15, 25, 45, 80, 90];
+      let percents = [5.5, 17, 31, 49, 76, 100];    // think these percents work better for 1080p, but may need to be checked
       let stageNames = [
         "On the Pad",
         "Powered Flight",
@@ -395,20 +415,26 @@ window.onload = () => {
       let stageFunFacts = [
         "The rocket is on the pad with all systems ready for flight.",
         "Liftoff! The rocket's motor ignites accelerating it to nearly the speed of sound in just a few seconds.",
-        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 10,000ft.",
+        "After the motor burns out, the rocket's airbrake deploys to slow the rocket down and target a maximum altitude of 30,000ft.",
         "At the highest point during the rocket's flight, it separates and a drogue parachute deploys to slow the rocket's descent.",
         "The main parachute deploys near 1,000ft to slow the rocket down to a safe velocity for landing.",
         "The rocket lands back on the ground, completing its flight.",
       ];
-      if (sn >= 0 && sn !== null) {
+      // Check if we have a valid stage number and it's within our array bounds
+      if (sn !== null && sn >= 0 && sn < stageNames.length) {
+        // Update progress bar
         prog.textContent = percents[sn] + "%";
         prog.setAttribute("value", percents[sn]);
+        
+        // Mark current stage as active
         document.getElementById("s" + sn).className = "stage active";
-        if (sn > 0)
-          document.getElementById("s" + (sn - 1)).className = "stage active";
-        for (let i = lastStage; i < sn; i++) {
+        
+        // Make sure all previous stages are also marked as active
+        for (let i = 0; i <= sn; i++) {
           document.getElementById("s" + i).className = "stage active";
         }
+        
+        // Show fun facts if we've moved to a new stage
         if (sn > lastStage) {
           ff.className = "hide";
           ffTitle.textContent = stageNames[sn];
@@ -444,4 +470,90 @@ window.onload = () => {
     if (controls.layout === "two-video")
       video1.appendChild(document.getElementById(controls.video1));
   });
+
+
+  console.log("Babylon.js core modules and OBJ loader imported successfully.");
+  canvas = document.getElementById("3d-visualization");
+  babylonEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+  console.log("Babylon.js Engine created.");
+  console.log(BABYLON.Engine.isSupported());
+
+  const createScene = async () => {
+    const scene = new BABYLON.Scene(babylonEngine);
+    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent background
+
+    const camera = new BABYLON.ArcRotateCamera(
+      "cam",
+      BABYLON.Tools.ToRadians(0),    // α = 0° → side-on
+      BABYLON.Tools.ToRadians(100),   // β = 90° → horizontal
+      1000,          
+      new BABYLON.Vector3(0, 255, 0),
+      scene
+    );
+    // camera.attachControl(canvas, true);
+
+    new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
+
+
+    BABYLON.SceneLoader.ImportMesh(
+      null,                   // import all meshes
+      "../models/",
+      "rocket.obj",
+      scene,
+      function(meshes) {
+        console.log("Imported OBJ:", meshes);
+
+        // Grab your rocket (e.g. the first mesh)
+        const rocket = meshes[0];
+
+        // Now it's safe to set properties on it:
+        rocket.position = new BABYLON.Vector3(0, -40, 0); 
+        rocket.scaling.setAll(2);
+
+        const MAX_DEG_PER_SEC = 10;                          //  ⟵ tweak
+        const maxRadPerMs     = (MAX_DEG_PER_SEC * Math.PI/180) / 1000;
+
+        rocket.rotationQuaternion = new BABYLON.Quaternion(); // start clean
+        let targetQuat = rocket.rotationQuaternion.clone();   // current goal
+
+        //update target
+        api.on("data", (msg) => {
+            if (msg.stream !== "telem-avionics") return;
+
+            // Convert incoming Euler angles (deg) → quaternion
+            targetQuat = BABYLON.Quaternion.FromEulerAngles(
+                BABYLON.Angle.FromDegrees(msg.orientation[0]).radians(),
+                BABYLON.Angle.FromDegrees(msg.orientation[1]).radians(),
+                BABYLON.Angle.FromDegrees(msg.orientation[2]).radians()
+            );
+        });
+
+        //blend
+        scene.onBeforeRenderObservable.add(() => {
+            const dt     = babylonEngine.getDeltaTime();          // ms since last frame
+            const step   = maxRadPerMs * dt;               // max radians this frame
+
+            const current = rocket.rotationQuaternion;
+            const dot     = BABYLON.Quaternion.Dot(current, targetQuat);
+
+            // theta = 2·acos(|dot|)  → full angle between quaternions
+            const angle = 2 * Math.acos(Math.min(1, Math.abs(dot)));
+
+            if (angle < 1e-6) return;                      // already there
+
+            const t = Math.min(1, step / angle);           // blend fraction
+            BABYLON.Quaternion.SlerpToRef(current, targetQuat, t, current);
+        });
+      }
+    );
+    return scene;
+  };
+
+  createScene().then(scene => {
+      babylonEngine.runRenderLoop(() => scene.render());
+  });
+  window.addEventListener("resize", () => babylonEngine.resize());
+
+  console.log("Babylon.js initialization complete. Render loop started.");
+  
 };
