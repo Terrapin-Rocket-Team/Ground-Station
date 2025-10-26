@@ -61,7 +61,6 @@ class SerialVideoSource extends VideoSource {
     if (this.options.rotation === undefined) {
       // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
-        "-re",
         "-framerate",
         this.options.framerate + "/1",
         "-i",
@@ -85,7 +84,6 @@ class SerialVideoSource extends VideoSource {
 
       // set up ffmpeg instance
       this.ffmpeg = spawn(ffmpegPath, [
-        "-re",
         "-framerate",
         this.options.framerate + "/1",
         "-i",

@@ -20,6 +20,7 @@
 #include <cstdlib>
 
 #include "RadioMessage.h"
+#include "rs.h"
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
 
@@ -64,8 +65,20 @@ int main(int argc, char **argv)
     const uint8_t handshakeMaxAttempts = 5;
     // the current number of handshake attempts
     uint8_t handshakeNumAttempts = 0;
+    // handshake response string
+    char handshakeResp[6 + 1] = {0};
+    // handshake response string length
+    uint8_t handshakeRespLen = 0;
     // seed the random number generator
     srand(time(0));
+
+    // Reed solomon
+    // Reed solomon decoding object
+    RS rs;
+    // dummary array to pass for erasures since we don't know where they are
+    int erasureDummyArr[16] = {};
+    // TEMP: setting to enable/disable reed solomon on video streams
+    bool enableRS = false;
 
     // create the status and control pipes
 #ifdef WINDOWS
@@ -191,9 +204,9 @@ int main(int argc, char **argv)
 
                 // create a new serial connection
 #ifdef WINDOWS
-                device = new WinSerialPort(portBuf);
+                device = new WinSerialPort(portBuf, atoi(baudRate));
 #elif LINUX
-                device = new LinuxSerialPort(portBuf);
+                device = new LinuxSerialPort(portBuf, atoi(baudRate));
 #endif
             }
             // check for data pipes command
@@ -352,6 +365,10 @@ int main(int argc, char **argv)
                 handshakePending = true;
                 std::cout << "attempting handshake" << std::endl;
 
+                // reset handshake resp string
+                memset(handshakeResp, 0, sizeof(handshakeResp));
+                handshakeRespLen = 0;
+
                 // reset multiplexing message in case it caused the handshake attempt
                 mOut.clear();
                 // start timeout
@@ -378,58 +395,74 @@ int main(int argc, char **argv)
                 // if we received data
                 if (x > 0)
                 {
+                    bool hasNewline = false;
                     // make sure data is null terminated
-                    data[x] = 0;
-                    std::cout << "Sequence: " << handshakeSequence;
-                    std::cout << "Data: ";
                     for (int i = 0; i < x; i++)
                     {
-                        std::cout << data[i];
-                    }
-                    std::cout << std::endl;
-                    // check if the handshake sequence matches
-                    if (strcmp(handshakeSequence, (char *)data) == 0)
-                    {
-                        // if it matches then the handshake has succeeded
-                        std::cout << "handshake attempt succeeded" << std::endl;
-                        // tell the device the handshake has succeeded
-                        device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
-                        // set flags
-                        handshakeSuccess = true;
-                        handshakeAttempt = false;
-                        handshakePending = false;
-
-                        // report connection status if requested
-                        if (checkConnectionAfterHandshake)
+                        if (handshakeRespLen < sizeof(handshakeResp))
                         {
-                            if ((device != nullptr && device->isConnected() && handshakeSuccess))
-                            {
-                                pipeStatus->writeStr("connected");
-                            }
-                            else if (device == nullptr)
-                            {
-                                pipeStatus->writeStr("no active serial connection");
-                            }
-                            else if (device != nullptr && !device->isConnected())
-                            {
-                                std::cout << "here1" << std::endl;
-                                pipeStatus->writeStr("connection failed");
-                            }
-                            else if (!handshakeSuccess)
-                            {
-                                pipeStatus->writeStr("handshake failed");
-                            }
-                            checkConnectionAfterHandshake = false;
+                            handshakeResp[handshakeRespLen++] = data[i];
+                            std::cout << data[i] << std::endl;
+                        }
+                        if (data[i] == '\n')
+                        {
+                            hasNewline = true;
+                            break;
                         }
                     }
-                    else
+                    if (hasNewline)
                     {
-                        std::cout << "handshake failed" << std::endl;
+                        std::cout << "Sequence: " << handshakeSequence;
+                        std::cout << "Data: ";
+                        for (int i = 0; i < handshakeRespLen; i++)
+                        {
+                            std::cout << handshakeResp[i];
+                        }
+                        std::cout << std::endl;
+                        // check if the handshake sequence matches
+                        if (strcmp(handshakeSequence, handshakeResp) == 0)
+                        {
+                            // if it matches then the handshake has succeeded
+                            std::cout << "handshake attempt succeeded" << std::endl;
+                            // tell the device the handshake has succeeded
+                            device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
+                            // set flags
+                            handshakeSuccess = true;
+                            handshakeAttempt = false;
+                            handshakePending = false;
+
+                            // report connection status if requested
+                            if (checkConnectionAfterHandshake)
+                            {
+                                if ((device != nullptr && device->isConnected() && handshakeSuccess))
+                                {
+                                    pipeStatus->writeStr("connected");
+                                }
+                                else if (device == nullptr)
+                                {
+                                    pipeStatus->writeStr("no active serial connection");
+                                }
+                                else if (device != nullptr && !device->isConnected())
+                                {
+                                    std::cout << "here1" << std::endl;
+                                    pipeStatus->writeStr("connection failed");
+                                }
+                                else if (!handshakeSuccess)
+                                {
+                                    pipeStatus->writeStr("handshake failed");
+                                }
+                                checkConnectionAfterHandshake = false;
+                            }
+                        }
+                        else
+                        {
+                            std::cout << "handshake failed" << std::endl;
+                        }
                     }
                 }
 
                 // make sure we still have an active handshake attempt (in case there was a successful handshake we don't want to override that)
-                if (handshakeAttempt && clock() - handshakeStart > 10) // 10ms timeout
+                if (handshakeAttempt && clock() - handshakeStart > 50) // 50ms timeout
                 {
                     // the connection failed
                     std::cout << "handshake attempt timeout" << std::endl;
@@ -626,7 +659,36 @@ int main(int argc, char **argv)
                             {
                                 if (pipeDemuxIds[i] == rawData.id)
                                 {
-                                    pipes[i]->write(mOut.buf, mOut.size);
+                                    if (enableRS)
+                                    {
+                                        // assume 255 byte block size
+                                        const uint8_t blockSize = 255;
+                                        uint8_t correctedData[blockSize] = {};
+                                        // assume message made up of an integer number of blocks
+                                        for (int j = 0; j < mOut.size / blockSize; j++)
+                                        {
+                                            // loop through each block
+                                            std::cout << "on video block " << j << std::endl;
+                                            rs.decode_data(mOut.buf + (blockSize * j), blockSize);
+                                            // check for errors
+                                            int syn = rs.check_syndrome();
+                                            if (syn != 0)
+                                            {
+                                                // if errors try to correct them
+                                                std::cout << "Errors in video block, syndrome = " << syn << std::endl;
+                                                // TODO: can only correct errors for now, not erasures
+                                                int result = rs.correct_errors_erasures(mOut.buf + (blockSize * j), blockSize, 0, erasureDummyArr);
+                                                std::cout << "Attempted correction, result = " << result << std::endl;
+                                                // TODO: what to do if we can't correct errors
+                                            }
+                                            // write the data (minus parity bits)
+                                            pipes[i]->write(mOut.buf + (blockSize * j), blockSize - NPAR);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        pipes[i]->write(mOut.buf, mOut.size);
+                                    }
                                 }
                             }
                         }

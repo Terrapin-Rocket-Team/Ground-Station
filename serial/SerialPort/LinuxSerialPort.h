@@ -11,7 +11,7 @@ private:
   termios2 backup;
 
 public:
-  LinuxSerialPort(const char *portName);
+  LinuxSerialPort(const char *portName, int baud);
   ~LinuxSerialPort();
 
   int readSerialPort(void *buffer, unsigned int buf_size) override;

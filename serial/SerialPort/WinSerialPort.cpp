@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-WinSerialPort::WinSerialPort(const char *portName) : SerialPort(portName)
+WinSerialPort::WinSerialPort(const char *portName, int baud) : SerialPort(portName)
 {
   this->connected = false;
 
@@ -34,15 +34,15 @@ WinSerialPort::WinSerialPort(const char *portName) : SerialPort(portName)
     }
     else
     {
-      dcbSerialParameters.BaudRate = 600000; // Adjust to match desired bitrate
+      dcbSerialParameters.BaudRate = baud; // Adjust to match desired bitrate
       dcbSerialParameters.ByteSize = 8;
       dcbSerialParameters.StopBits = ONESTOPBIT;
       dcbSerialParameters.Parity = NOPARITY;
       dcbSerialParameters.fDtrControl = DTR_CONTROL_ENABLE;
       dcbSerialParameters.fRtsControl =
-          RTS_CONTROL_HANDSHAKE; // Enable RTS/CTS flow control
-      dcbSerialParameters.fOutxCtsFlow = TRUE;
-      dcbSerialParameters.fOutxDsrFlow = TRUE;
+          RTS_CONTROL_DISABLE; // Enable RTS/CTS flow control
+      dcbSerialParameters.fOutxCtsFlow = FALSE;
+      dcbSerialParameters.fOutxDsrFlow = FALSE;
 
       if (!SetCommState(handler, &dcbSerialParameters))
       {

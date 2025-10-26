@@ -11,7 +11,7 @@ private:
   DWORD errors;
 
 public:
-  WinSerialPort(const char *portName);
+  WinSerialPort(const char *portName, int baud);
   ~WinSerialPort();
 
   int readSerialPort(void *buffer, unsigned int buf_size) override;

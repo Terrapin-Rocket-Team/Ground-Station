@@ -430,6 +430,8 @@ ipcMain.on("reload", (event, win, keepSettings) => {
     } catch (err) {
       log.warn("Failed to load commands or stateflags file: " + err.message);
     }
+    // reload all sources and sinks
+    loadStreams();
     // close serial connection, but keep pipes and the driver running
     serial.reset();
     //if mainWin exists reload it
