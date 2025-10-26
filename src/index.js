@@ -221,7 +221,7 @@ window.onload = () => {
     });
   };
   const getVideo0Displays = (idPrefix) => {
-    const video0Options = ["Input 0", "Input 1", "Charts", "None"];
+    const video0Options = ["Input 0", "Input 1", "Charts", "3D Visualization", "None"];
 
     setupStaticOptions(idPrefix, video0Options, (option) => {
       // video0 and video1 can't be set to the same thing
@@ -229,6 +229,7 @@ window.onload = () => {
       if (option == "Input 0") newSetting = "live-video-0";
       if (option == "Input 1") newSetting = "live-video-1";
       if (option == "Charts") newSetting = "charts";
+      if (option == "3D Visualization") newSetting = "3d-visualization";
       if (option == "None") newSetting = "none-0";
       if (newSetting !== videoControls.video1) {
         // figure out what value the option text corresponds to
@@ -239,7 +240,7 @@ window.onload = () => {
     });
   };
   const getVideo1Displays = (idPrefix) => {
-    const video1Options = ["Input 1", "Input 0", "Charts", "None"];
+    const video1Options = ["Input 1", "Input 0", "Charts", "3D Visualization", "None"];
 
     setupStaticOptions(idPrefix, video1Options, (option) => {
       // video1 and video0 can't be set to the same thing
@@ -247,6 +248,7 @@ window.onload = () => {
       if (option == "Input 0") newSetting = "live-video-0";
       if (option == "Input 1") newSetting = "live-video-1";
       if (option == "Charts") newSetting = "charts";
+      if (option == "3D Visualization") newSetting = "3d-visualization";
       if (option == "None") newSetting = "none-0";
       if (newSetting !== videoControls.video0) {
         // figure out what value the option text corresponds to
@@ -280,14 +282,18 @@ window.onload = () => {
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
     document.getElementById("video-layout-selected").textContent = option;
+    
     if (videoControls.video0 === "live-video-0") option = "Input 0";
     if (videoControls.video0 === "live-video-1") option = "Input 1";
     if (videoControls.video0 === "charts") option = "Charts";
+    if (videoControls.video0 === "3d-visualization") option = "3D Visualization";
     if (videoControls.video0 === "none-0") option = "None";
     document.getElementById("video-0-selected").textContent = option;
+    
     if (videoControls.video1 === "live-video-1") option = "Input 1";
     if (videoControls.video1 === "live-video-0") option = "Input 0";
     if (videoControls.video1 === "charts") option = "Charts";
+    if (videoControls.video1 === "3d-visualization") option = "3D Visualization";
     if (videoControls.video1 === "none-0") option = "None";
     document.getElementById("video-1-selected").textContent = option;
   });
@@ -586,18 +592,33 @@ window.onload = () => {
 
     // update altitude and speed if given in the message
     if (msg.getAlt() || msg.getAlt() === 0) {
-      alt.setAttribute("data-value-text", msg.getAlt());
-      alt.setAttribute("data-value", msg.getAlt() / 1000);
-      document.getElementById(idPrefix + "-alt-text").textContent =
-        msg.getAlt() + " ft";
+      const altValue = msg.getAlt();
+      alt.setAttribute("data-value-text", altValue);
+      alt.setAttribute("data-value", altValue / 1000);
+      
+      // Set the altitude text and track digit length for responsive font sizing
+      const altText = document.getElementById(idPrefix + "-alt-text");
+      altText.textContent = altValue + " ft";
+      
+      // Add a data attribute to track the number of digits for CSS responsive font sizing
+      const digitLength = altValue.toString().length;
+      altText.setAttribute("data-length", digitLength);
     } else {
       alt.setAttribute("data-value-text", "\u2014");
     }
+    
     if (msg.getSpeed() || msg.getSpeed() === 0) {
-      spd.setAttribute("data-value-text", msg.getSpeed());
-      spd.setAttribute("data-value", msg.getSpeed());
-      document.getElementById(idPrefix + "-spd-text").textContent =
-        msg.getSpeed() + " ft/s";
+      const spdValue = msg.getSpeed();
+      spd.setAttribute("data-value-text", spdValue);
+      spd.setAttribute("data-value", spdValue);
+      
+      // Set the speed text and track digit length for responsive font sizing
+      const spdText = document.getElementById(idPrefix + "-spd-text");
+      spdText.textContent = spdValue + " ft/s";
+      
+      // Add a data attribute to track the number of digits for CSS responsive font sizing
+      const digitLength = spdValue.toString().length;
+      spdText.setAttribute("data-length", digitLength);
     } else {
       spd.setAttribute("data-value-text", "\u2014");
     }
@@ -605,7 +626,9 @@ window.onload = () => {
   const updateStage = (idPrefix, msg) => {
     // update the given stage element
     let stageEl = document.getElementById(idPrefix + "-stage");
+    // Try to get stage number, checking both "Stage" and "State Flags" fields
     let stageNum = msg.getStateflag("Stage");
+    
     // TODO: define state list per stream
     let stageNames = [
       "Preflight",
@@ -615,7 +638,8 @@ window.onload = () => {
       "Main Parachute",
       "Landed",
     ];
-    if (stageNum !== null) {
+    
+    if (stageNum !== null && stageNum < stageNames.length) {
       stageEl.textContent = stageNames[stageNum];
     }
   };
