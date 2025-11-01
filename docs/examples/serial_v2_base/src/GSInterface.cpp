@@ -1,6 +1,9 @@
 #include "GSInterface.h"
 
-GSInterface::GSInterface(uint32_t baud, uint32_t debugBaud) : baud(baud), debugBaud(debugBaud) {}
+GSInterface::GSInterface(uint32_t baud, uint32_t debugBaud) : baud(baud), debugBaud(debugBaud)
+{
+    this->metricsGSData = GSData(Metrics::type, this->streamIndex++, 0);
+}
 
 #ifdef ARDUINO
 bool GSInterface::begin(HardwareSerial *serial, HardwareSerial *serialDebug)
@@ -68,24 +71,19 @@ int GSInterface::run()
                 {
                     // the handshake was successful
                     this->handshake = true;
-                    this->handshakeSuccessCallback();
-
-                    // we will start sending data, so setup metrics
-                    telemMetrics.setInitialTime(millis());
+                    for (int i = 0; i < this->numMetrics; i++)
+                    {
+                        this->metricsArr[i].setInitialTime(this->time());
+                    }
                 }
                 else if (strcmp(this->serialBuf, "handshake failed") == 0)
                 {
                     // the handshake was not successful
                     this->handshake = false;
-                    this->handshakeFailedCallback();
                 }
                 else if (strcmp(this->serialBuf, "command") == 0)
                 {
                     this->state = COMMAND;
-                    this->commandStartCallback();
-
-                    // the next text will be a radio command
-                    commandMsg.clear();
                 }
                 // add additional commands as required
 
@@ -124,48 +122,40 @@ int GSInterface::run()
         // receive the radio command
         if (this->state == COMMAND)
         {
+            this->m.clear();
             // read into serial buffer
             for (int i = 0; i < bytesAvail; i++)
             {
-                commandMsg.append(this->readC());
-                if (commandMsg.size >= Message::maxSize)
+                this->m.append(this->readC());
+                if (this->m.size >= Message::maxSize)
                     break;
             }
             bytesAvail = this->available();
 
-            if (commandMsg.size >= GSData::headerLen)
+            if (this->m.size >= GSData::headerLen)
             {
                 // we can decode the header
                 uint8_t type, id, deviceId = 0;
-                GSData::decodeHeader(commandMsg.buf, type, id, deviceId, commandSize);
-                if (type != APRSCmd::type || id == 0 || commandSize == 0)
+                GSData::decodeHeader(this->m.buf, type, id, deviceId, inputSize);
+                if (type != APRSCmd::type || id == 0 || inputSize == 0)
                 {
                     // this is not an APRSCmd, ignore it
                     this->state = READY;
                 }
             }
 
-            if (commandMsg.size - GSData::headerLen > commandSize && commandSize != 0)
+            if (this->m.size - GSData::headerLen > inputSize && inputSize != 0)
             {
                 // remove the extra bytes and put them in the serial buffer in case they are part of a different message
-                uint16_t removed = (commandMsg.size - GSData::headerLen) - commandSize;
-                commandMsg.pop((uint8_t *)this->serialBuf, removed);
+                uint16_t removed = (this->m.size - GSData::headerLen) - inputSize;
+                this->m.pop((uint8_t *)this->serialBuf, removed);
                 this->serialBufLength += removed;
             }
-            if (commandMsg.size - GSData::headerLen == commandSize && commandSize != 0)
+            if (this->m.size - GSData::headerLen == inputSize && inputSize != 0)
             {
                 // we have the full command, so decode it
-                GSData multiplexedCommand;
-                commandMsg.decode(&multiplexedCommand);
-                // send the actual command data
-                commandMsg.clear();
-                commandMsg.fill(multiplexedCommand.buf, multiplexedCommand.size);
-                APRSCmd cmd;
-                commandMsg.decode(&cmd);
-                cmd.config = commandConfig;
-                commandMsg.encode(&cmd);
-                commandMsg.write(Serial); // TODO: send to radio
-                // we are now finished handling the radio command on the Serial side
+                this->m.decode(&input);
+                hasInput = true;
                 this->state = READY;
             }
         }
@@ -173,35 +163,86 @@ int GSInterface::run()
         // add additional command handling here
     }
 
-    if (this->handshake)
+    if (this->time() - this->metricsTimer > this->metricsInterval)
     {
-        // output goes here
-
-        // ==========================================================
-        // Send sample data
-        // ==========================================================
-        if (millis() - timer > 1000)
+        this->metricsTimer = this->time();
+        for (int i = 0; i < this->numMetrics; i++)
         {
-            timer = millis();
-            Serial.write(m.buf, m.size);
-            telemMetrics.update(m.size * 8, millis(), 0);
+            this->m.clear();
+            this->m.encode(&(this->metricsArr[i]));
+            this->metricsGSData.fill(this->m.buf, this->m.size);
+            this->m.encode(&(this->metricsGSData));
+            this->write((char *)this->m.buf, this->m.size);
         }
-        if (millis() - timer2 > 500)
-        {
-            timer2 = millis();
-            Serial.write(m2.buf, m2.size);
-            telemMetrics.update(m2.size * 8, millis(), 0);
-        }
-        if (millis() - timerMetrics > 1000)
-        {
-            timerMetrics = millis();
-            metricsMessage.encode(&telemMetrics);
-            metricsGSData.fill(metricsMessage.buf, metricsMessage.size);
-            metricsMessage.encode(&metricsGSData);
-            Serial.write(metricsMessage.buf, metricsMessage.size);
-        }
-        // ==========================================================
     }
+}
+
+bool GSInterface::isReady()
+{
+    return this->ready && this->handshake && this->state == READY;
+}
+
+int GSInterface::writeStream(GSStream *s, Data *data, short signalStrength)
+{
+    // encode data to internal message to get character buffer
+    this->m.encode(data);
+    return this->writeStream(s, (char *)this->m.buf, this->m.size, signalStrength);
+}
+
+int GSInterface::writeStream(GSStream *s, char *data, int dataLen, short signalStrength)
+{
+    if (dataLen <= 0)
+        return 0;
+
+    // reset internal message
+    this->m.clear();
+    // set up data to be encoded for multiplexing
+    s->streamData.fill((uint8_t *)data, dataLen);
+    // encode data for multiplexing
+    this->m.encode(&(s->streamData));
+    // update metrics for this stream
+    s->streamMetrics->update(m.size, this->time(), signalStrength);
+    // write the stream data
+    return this->write((char *)this->m.buf, this->m.size);
+}
+
+int GSInterface::readStream(char *data, int dataLen)
+{
+    if (this->hasInput)
+    {
+        if (dataLen < this->input.size)
+        {
+            return 0;
+        }
+
+        memcpy(data, this->input.buf, this->input.size);
+        this->hasInput = false;
+    }
+    return 0;
+}
+
+GSStream GSInterface::createStream(uint8_t type, uint8_t deviceId)
+{
+
+    // associate metrics
+    bool hasDeviceId = false;
+    int i;
+    for (i = 0; i < this->numMetrics; i++)
+    {
+        if (this->deviceIdArr[i] == deviceId)
+        {
+            hasDeviceId = true;
+            break;
+        }
+    }
+
+    if (!hasDeviceId)
+    {
+        this->metricsArr[numMetrics++] = Metrics(deviceId);
+        return GSStream(type, streamIndex++, &(this->metricsArr[numMetrics++]));
+    }
+
+    return GSStream(type, streamIndex++, &(this->metricsArr[i]));
 }
 
 // debug functions
@@ -234,17 +275,29 @@ int GSInterface::write(char *s, uint32_t length)
     return this->s->write(s, length);
 #endif
 }
+
 void GSInterface::writeC(char c)
 {
 #ifdef ARDUINO
     this->s->write(c);
 #endif
 }
+
 int GSInterface::read(char *s, uint32_t length) {}
+
 char GSInterface::readC()
 {
 #ifdef ARDUINO
     return this->s->read();
+#else
+    return 0;
+#endif
+}
+
+uint32_t GSInterface::time()
+{
+#ifdef ARDUINO
+    return millis();
 #else
     return 0;
 #endif

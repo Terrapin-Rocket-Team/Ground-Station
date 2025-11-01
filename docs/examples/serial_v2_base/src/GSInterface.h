@@ -13,18 +13,11 @@ enum InputState
     IDLE       // not ready to read or write
 };
 
-enum CallbackNames
+struct GSStream
 {
-    HANDSHAKE_SUCCESS,
-    HANDSHAKE_FAIL,
-    COMMAND_START,
-    NONE
-};
-
-struct Callback
-{
-    void (*func)();
-    CallbackNames type = NONE;
+    GSStream::GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex, 0), streamMetrics(m) {}
+    GSData streamData;
+    Metrics *streamMetrics;
 };
 
 class GSInterface
@@ -42,6 +35,15 @@ public:
 
     int run();
 
+    bool isReady();
+
+    int writeStream(GSStream *s, Data *data, short signalStrength = 0);
+    int writeStream(GSStream *s, char *data, int dataLen, short signalStrength = 0);
+
+    int readStream(char *data, int dataLen);
+
+    GSStream createStream(uint8_t type, uint8_t deviceId);
+
     // debug methods
     void log(const char *str1, const char *str2 = "", const char *str3 = "");
 
@@ -56,8 +58,21 @@ public:
     bool handshake = false;
     InputState state = IDLE;
 
-    // callback variables
-    Callback callbacks[10];
+    // streams
+    uint8_t streamIndex = 0;
+
+    // metrics handling
+    Metrics metricsArr[10];
+    uint8_t deviceIdArr[10];
+    int numMetrics = 0;
+    uint32_t metricsInterval = 1000; // ms
+    GSData metricsGSData;
+
+    // encoding variables
+    Message m;
+    uint16_t inputSize = 0;
+    GSData input;
+    bool hasInput = false;
 
 private:
     int available();
@@ -65,8 +80,9 @@ private:
     void writeC(char c);
     int read(char *s, uint32_t length);
     char readC();
+    uint32_t time();
 
-    // uint32_t bytesAvail = 0;
+    uint32_t metricsTimer = 0;
 };
 
 #endif
