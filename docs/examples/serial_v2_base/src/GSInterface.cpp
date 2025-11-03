@@ -1,8 +1,11 @@
 #include "GSInterface.h"
 
-GSInterface::GSInterface(uint32_t baud, uint32_t debugBaud) : baud(baud), debugBaud(debugBaud)
+GSInterface::GSInterface(uint32_t baud, uint32_t debugBaud) : baud(baud), debugBaud(debugBaud) {}
+
+GSInterface::~GSInterface()
 {
-    this->metricsGSData = GSData(Metrics::type, this->streamIndex++, 0);
+    for (int i = 0; i < this->numMetrics; i++)
+        delete this->metricsArr[i];
 }
 
 #ifdef ARDUINO
@@ -43,7 +46,7 @@ int GSInterface::run()
         // check if a command is being sent
         if (this->state == READY)
         {
-            for (int i = 0; i < bytesAvail; i++)
+            for (uint32_t i = 0; i < bytesAvail; i++)
             {
                 char c = this->readC();
                 if (c == '\n')
@@ -73,7 +76,7 @@ int GSInterface::run()
                     this->handshake = true;
                     for (int i = 0; i < this->numMetrics; i++)
                     {
-                        this->metricsArr[i].setInitialTime(this->time());
+                        this->metricsArr[i]->setInitialTime(this->time());
                     }
                 }
                 else if (strcmp(this->serialBuf, "handshake failed") == 0)
@@ -96,7 +99,7 @@ int GSInterface::run()
         // complete the handshake
         if (this->state == HANDSHAKE)
         {
-            for (int i = 0; i < bytesAvail; i++)
+            for (uint32_t i = 0; i < bytesAvail; i++)
             {
                 char c = this->readC();
                 // skip odd characters that accidently get added
@@ -124,7 +127,7 @@ int GSInterface::run()
         {
             this->m.clear();
             // read into serial buffer
-            for (int i = 0; i < bytesAvail; i++)
+            for (uint32_t i = 0; i < bytesAvail; i++)
             {
                 this->m.append(this->readC());
                 if (this->m.size >= Message::maxSize)
@@ -163,18 +166,19 @@ int GSInterface::run()
         // add additional command handling here
     }
 
-    if (this->time() - this->metricsTimer > this->metricsInterval)
+    if (this->time() - this->metricsTimer > this->metricsInterval && this->handshake)
     {
         this->metricsTimer = this->time();
         for (int i = 0; i < this->numMetrics; i++)
         {
             this->m.clear();
-            this->m.encode(&(this->metricsArr[i]));
+            this->m.encode(this->metricsArr[i]);
             this->metricsGSData.fill(this->m.buf, this->m.size);
             this->m.encode(&(this->metricsGSData));
             this->write((char *)this->m.buf, this->m.size);
         }
     }
+    return 0;
 }
 
 bool GSInterface::isReady()
@@ -194,10 +198,10 @@ int GSInterface::writeStream(GSStream *s, char *data, int dataLen, short signalS
     if (dataLen <= 0)
         return 0;
 
-    // reset internal message
-    this->m.clear();
     // set up data to be encoded for multiplexing
     s->streamData.fill((uint8_t *)data, dataLen);
+    // reset internal message
+    this->m.clear();
     // encode data for multiplexing
     this->m.encode(&(s->streamData));
     // update metrics for this stream
@@ -223,7 +227,6 @@ int GSInterface::readStream(char *data, int dataLen)
 
 GSStream GSInterface::createStream(uint8_t type, uint8_t deviceId)
 {
-
     // associate metrics
     bool hasDeviceId = false;
     int i;
@@ -236,24 +239,28 @@ GSStream GSInterface::createStream(uint8_t type, uint8_t deviceId)
         }
     }
 
-    if (!hasDeviceId)
+    if (!hasDeviceId && this->numMetrics < 10)
     {
-        this->metricsArr[numMetrics++] = Metrics(deviceId);
-        return GSStream(type, streamIndex++, &(this->metricsArr[numMetrics++]));
+        this->deviceIdArr[numMetrics] = deviceId;
+        this->metricsArr[numMetrics] = new Metrics(deviceId);
+        return GSStream(type, streamIndex++, this->metricsArr[numMetrics++]);
     }
 
-    return GSStream(type, streamIndex++, &(this->metricsArr[i]));
+    return GSStream(type, streamIndex++, this->metricsArr[i]);
 }
 
 // debug functions
 void GSInterface::log(const char *str1, const char *str2, const char *str3)
 {
+    if (this->sd != nullptr && this->debugBaud > 0)
+    {
 #ifdef ARDUINO
-    this->sd->print(str1);
-    this->sd->print(str2);
-    this->sd->print(str3);
-    this->sd->write("\n");
+        this->sd->print(str1);
+        this->sd->print(str2);
+        this->sd->print(str3);
+        this->sd->write("\n");
 #endif
+    }
 }
 
 // private methods
@@ -283,7 +290,19 @@ void GSInterface::writeC(char c)
 #endif
 }
 
-int GSInterface::read(char *s, uint32_t length) {}
+int GSInterface::read(char *s, uint32_t length)
+{
+#ifdef ARDUINO
+    uint32_t addedLength = 0;
+    while (this->s->available() > 0 && addedLength < length)
+    {
+        s[addedLength++] = this->s->read();
+    }
+    return addedLength;
+#else
+    return 0;
+#endif
+}
 
 char GSInterface::readC()
 {

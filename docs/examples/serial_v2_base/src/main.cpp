@@ -43,10 +43,13 @@ void setup()
   // ==========================================================
   // Set up Ground Station Interface
   // ==========================================================
-  if (!gsi.begin(&Serial))
+  if (!gsi.begin((HardwareSerial *)&Serial))
   {
     Serial.println("Error: GSI failed to begin");
   }
+
+  if (CrashReport)
+    Serial.println(CrashReport);
   // ==========================================================
 }
 
@@ -59,37 +62,20 @@ void loop()
   // ==========================================================
 
   // ==========================================================
-  // Read data from radio
+  // Read data from radio and send to ground station
   // Note: the timers take the place of actually getting data
   // ==========================================================
-  if (millis() - timer > 1000)
+  if (millis() - timer > 40)
   {
     timer = millis();
-    telem = &telem1;
-    hasAvionicsTelem = true;
+    if (gsi.isReady())
+      gsi.writeStream(&telemAvionics, &telem1, -50);
   }
-  if (millis() - timer2 > 500)
+  if (millis() - timer2 > 40)
   {
     timer2 = millis();
-    telem = &telem2;
-    hasPayloadTelem = true;
-  }
-  // ==========================================================
-
-  // ==========================================================
-  // Send data to Ground Station
-  // ==========================================================
-  if (gsi.isReady())
-  {
-
-    if (hasAvionicsTelem)
-    {
-      gsi.writeStream(&telemAvionics, telem, -50);
-    }
-    if (hasPayloadTelem)
-    {
-      gsi.writeStream(&telemPayload, telem, -50);
-    }
+    if (gsi.isReady())
+      gsi.writeStream(&telemPayload, &telem2, -50);
   }
   // ==========================================================
 
