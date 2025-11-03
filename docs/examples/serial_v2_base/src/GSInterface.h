@@ -15,7 +15,7 @@ enum InputState
 
 struct GSStream
 {
-    GSStream::GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex, 0), streamMetrics(m) {}
+    GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex, 0), streamMetrics(m) {}
     GSData streamData;
     Metrics *streamMetrics;
 };
@@ -24,6 +24,7 @@ class GSInterface
 {
 public:
     GSInterface(uint32_t baud, uint32_t debugBaud = 0);
+    ~GSInterface();
 
 #ifdef ARDUINO
     bool begin(HardwareSerial *s, HardwareSerial *sd = nullptr);
@@ -59,14 +60,14 @@ public:
     InputState state = IDLE;
 
     // streams
-    uint8_t streamIndex = 0;
+    uint8_t streamIndex = 1; // 0 used to indicate error, so start at 1
 
     // metrics handling
-    Metrics metricsArr[10];
+    Metrics *metricsArr[10];
     uint8_t deviceIdArr[10];
     int numMetrics = 0;
     uint32_t metricsInterval = 1000; // ms
-    GSData metricsGSData;
+    GSData metricsGSData = {Metrics::type, this->streamIndex++, 0};
 
     // encoding variables
     Message m;
