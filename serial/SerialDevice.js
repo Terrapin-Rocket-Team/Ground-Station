@@ -146,7 +146,7 @@ class SerialDevice extends EventEmitter {
                   // we know there the serial driver is trying to tell us something at i+1
                   // figure out what that is
                   if (strings[i + 1].includes("serial connection error")) {
-                    log.debug(
+                    log.warn(
                       "Error communicating with serial device: " +
                         strings[i + 1]
                     );
@@ -156,7 +156,7 @@ class SerialDevice extends EventEmitter {
                     this.port = "";
                   }
                   if (strings[i + 1].includes("serial driver error")) {
-                    log.debug("Error with serial driver: " + strings[i + 1]);
+                    log.err("Error with serial driver: " + strings[i + 1]);
                     this.close();
                   }
                 }

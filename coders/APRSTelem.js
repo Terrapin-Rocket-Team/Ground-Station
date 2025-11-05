@@ -258,11 +258,36 @@ class APRSTelem {
   }
 
   getStateflag(flagName) {
+    // Check for the exact flag name first
     let index = this.stateflagsFormat.findIndex((name) => {
       return name === flagName;
     });
+    
     if (index >= 0) return this.stateflags[index];
-    else return null;
+    
+    // If not found and we're looking for "Stage", check for "State Flags" instead
+    if (flagName === "Stage" && !this.stateflagsFormat.includes("Stage")) {
+      // If there are no state flags defined but we have a raw value, use it directly
+      if (this.stateflagsFormat.length === 0 && this.rawStateflags !== undefined) {
+        return this.rawStateflags;
+      }
+      
+      // Check for alternate name "State Flags"
+      let altIndex = this.stateflagsFormat.findIndex((name) => {
+        return name === "State Flags";
+      });
+      if (altIndex >= 0) return this.stateflags[altIndex];
+    }
+    
+    // If not found and we're looking for "State Flags", check for "Stage" instead
+    if (flagName === "State Flags" && !this.stateflagsFormat.includes("State Flags")) {
+      let altIndex = this.stateflagsFormat.findIndex((name) => {
+        return name === "Stage";
+      });
+      if (altIndex >= 0) return this.stateflags[altIndex];
+    }
+    
+    return null;
   }
 
   /**
