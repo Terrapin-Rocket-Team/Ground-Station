@@ -12,12 +12,13 @@ message("Building for target: " ${BUILD_ENV})
 include(${CMAKE_CURRENT_SOURCE_DIR}/RadioMessage/CMakeLists.txt)
 include(${CMAKE_CURRENT_SOURCE_DIR}/NamedPipe/CMakeLists.txt)
 include(${CMAKE_CURRENT_SOURCE_DIR}/SerialPort/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/rscode-cpp/CMakeLists.txt)
 
 add_executable(SerialDriver serialDriver.cpp)
 add_executable(DriverShell driverShell.cpp)
 
-target_link_libraries(SerialDriver Message NamedPipe SerialPort)
-target_link_libraries(DriverShell Message NamedPipe SerialPort)
+target_link_libraries(SerialDriver Message NamedPipe SerialPort rscode-cpp)
+target_link_libraries(DriverShell Message NamedPipe SerialPort rscode-cpp)
 
 target_include_directories(SerialDriver PUBLIC "${PROJECT_INCLUDE}")
 target_include_directories(DriverShell PUBLIC "${PROJECT_INCLUDE}")
