@@ -22,9 +22,9 @@ int main(int argc, char const *argv[])
     VideoData video2Data;
     Message video1;
     Message video2;
-    GSData muxTelemOut(APRSTelem::type, 1, 1);
-    GSData muxVideo1Out(VideoData::type, 2, 2);
-    GSData muxVideo2Out(VideoData::type, 3, 3);
+    GSData muxTelemOut(APRSTelem::type, 1);
+    GSData muxVideo1Out(VideoData::type, 2);
+    GSData muxVideo2Out(VideoData::type, 3);
     Metrics device1Metrics(1);
     Metrics device2Metrics(2);
     Metrics device3Metrics(3);
