@@ -85,8 +85,6 @@ int main(int argc, char **argv)
     uint8_t msgType = 0;
     // the index/id of the message from the header
     uint8_t msgIndex = 0;
-    // the deviceId of the message
-    uint8_t deviceId = 0;
     // the size of the message from the header
     uint16_t msgSize = 0;
 
@@ -366,7 +364,7 @@ int main(int argc, char **argv)
                     if (headerSize == GSData::headerLen)
                     {
                         // decode the header and check we got a valid header
-                        GSData::decodeHeader(header, msgType, msgIndex, deviceId, msgSize);
+                        GSData::decodeHeader(header, msgType, msgIndex, msgSize);
                         std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
                         if (msgType > 0 && msgIndex > 0 && msgSize > 0)
                         {
@@ -568,7 +566,7 @@ int main(int argc, char **argv)
                     mIn.clear();
                     mIn.encode(&inData);
                     // take the APRSCmd and place it in a GSData object for multiplexing
-                    GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], (uint8_t)id, mIn.buf, mIn.size);
+                    GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], mIn.buf, mIn.size);
                     mIn.clear();
                     mIn.encode(&inDataGS);
                     mIn.write();
