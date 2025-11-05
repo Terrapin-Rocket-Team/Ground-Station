@@ -16,7 +16,7 @@ enum InputState
 // struct to consolidate information about a single stream
 struct GSStream
 {
-    GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex, 0), streamMetrics(m) {}
+    GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex), streamMetrics(m) {}
     // the GSData object for the stream
     GSData streamData;
     // pointer to the Metrics for the stream
@@ -58,7 +58,7 @@ public:
     // the interval at which to log metrics in ms
     uint32_t metricsInterval = 1000;
     // the GSData object for metrics (always stream index 1)
-    GSData metricsGSData = {Metrics::type, this->streamIndex++, 0};
+    GSData metricsGSData = {Metrics::type, this->streamIndex++};
 
     // message to use for encoding data
     Message m;
