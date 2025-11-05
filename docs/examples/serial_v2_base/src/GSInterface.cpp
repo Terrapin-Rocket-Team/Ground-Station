@@ -168,8 +168,8 @@ int GSInterface::run()
             if (this->m.size >= GSData::headerLen)
             {
                 // decode the header
-                uint8_t type, id, deviceId = 0;
-                GSData::decodeHeader(this->m.buf, type, id, deviceId, inputSize);
+                uint8_t type, id = 0;
+                GSData::decodeHeader(this->m.buf, type, id, inputSize);
                 if (type != APRSCmd::type || id == 0 || inputSize == 0)
                 {
                     // this is not an APRSCmd, ignore it
