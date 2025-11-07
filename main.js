@@ -15,7 +15,6 @@ const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
 
-
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
 const logPath = "./log";
@@ -95,6 +94,28 @@ try {
 
 // need to setup after loading config
 serial.setupDriver();
+
+if (!config.tileCache.value) {
+  // if the cache is disabled, remove cached tiles on startup
+  try {
+    // check if the metadata file exists
+    if (fs.existsSync(path.join(__dirname, "src", "cachedtiles"))) {
+      // reset the metadata and remove the metadata file
+      cacheMeta = {
+        tiles: {},
+        fileList: [],
+        runningSize: 0,
+      };
+      fs.rmSync(path.join(__dirname, "src", "cachedtiles"), {
+        recursive: true,
+        force: true,
+      });
+      log.debug("Tile cache successfully cleared");
+    }
+  } catch (err) {
+    log.err('Error clearing tile cache: "' + err.message + '"');
+  }
+}
 
 try {
   // load command list
@@ -253,8 +274,8 @@ const createMain = () => {
     process.platform === "win32"
       ? ".ico"
       : process.platform === "darwin"
-      ? ".icns"
-      : ".png";
+        ? ".icns"
+        : ".png";
 
   windows.main = new BrowserWindow({
     width: width * config.scale.value,
@@ -326,8 +347,8 @@ const createVideo = () => {
     process.platform === "win32"
       ? ".ico"
       : process.platform === "darwin"
-      ? ".icns"
-      : ".png";
+        ? ".icns"
+        : ".png";
 
   windows.video = new BrowserWindow({
     width: width * config.scale.value,
@@ -883,15 +904,15 @@ if (config.dataDebug.value) {
             // make sure we got a valid line
             if (!closed && windows.main) {
               let aprsMsg = APRSTelem.fromCSV(data);
-              
+
               // The rawStateflags should be correctly populated from CSV data
               // but the Stage is not being properly recognized because stateflagsFormat is empty
               // Either use the existing raw state flags directly (already in our patched getStateflag method)
               // or explicitly set the stateflags format
-              
+
               // We're using an empty stateflags array but our improved getStateflag will handle this
               aprsMsg.stateflagsFormat = []; // Clear existing format if any
-              
+
               windows.main.webContents.send("data", aprsMsg);
               if (windows.video)
                 windows.video.webContents.send("data", aprsMsg);

@@ -32,7 +32,7 @@
 		"type": "toggle"
 	},
 	"tileCache": {
-		"name": "Toggle Tile Caching (Not Implemented)",
+		"name": "Toggle Tile Caching",
 		"description": "Turn off caching of map tiles to the disk. If disabled, the map may not work when offline.",
 		"value": true,
 		"type": "toggle"

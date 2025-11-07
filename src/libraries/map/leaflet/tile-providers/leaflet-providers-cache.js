@@ -12,8 +12,14 @@
 })(this, function (L) {
   "use strict";
 
+  let enableCache = false;
   L.TileLayer.Provider = L.TileLayer.extend({
     initialize: function (arg, options) {
+      // set enableCache variable so it is preserved outside this function's scope
+      enableCache = options.enableCache;
+      // remove custom enableCache option so it doesn't cause issues later on
+      delete options.enableCache;
+
       var providers = L.TileLayer.Provider.providers;
 
       var parts = arg.split(".");
@@ -91,51 +97,68 @@
 
       // get url before async part starts to avoid weird things happening
       let tileUrl = this.getTileUrl(coords);
-      api.getCachedTiles().then((cachedTiles) => {
-        // check if a tile is in the cache
-        if (
-          cachedTiles &&
-          cachedTiles[coordsStr.z] &&
-          cachedTiles[coordsStr.z][coordsStr.x] &&
-          cachedTiles[coordsStr.z][coordsStr.x].includes(coordsStr.y)
-        ) {
-          // since the tiles are stored in src they can be loaded directly
-          try {
-            // attempt to load from cache
-            tile.src =
-              "cachedtiles/" +
-              [coordsStr.z, coordsStr.x, coordsStr.y].join("/") +
-              ".png";
-          } catch (err) {
-            // if that fails and causes an error (it might not), try loading it from the source
-            console.warn(
-              'Error loading tile from cache: "' + err.message + '"'
+      // check if the tile should be manually cached
+      if (enableCache) {
+        api.getCachedTiles().then((cachedTiles) => {
+          // check if a tile is in the cache
+          if (
+            cachedTiles &&
+            cachedTiles[coordsStr.z] &&
+            cachedTiles[coordsStr.z][coordsStr.x] &&
+            cachedTiles[coordsStr.z][coordsStr.x].includes(coordsStr.y)
+          ) {
+            // since the tiles are stored in src they can be loaded directly
+            try {
+              // attempt to load from cache
+              tile.src =
+                "cachedtiles/" +
+                [coordsStr.z, coordsStr.x, coordsStr.y].join("/") +
+                ".png";
+            } catch (err) {
+              // if that fails and causes an error (it might not), try loading it from the source
+              console.warn(
+                'Error loading tile from cache: "' + err.message + '"'
+              );
+              fetchTileOnline(
+                tileUrl,
+                tile,
+                coords,
+                [coordsStr.z, coordsStr.x, coordsStr.y],
+                enableCache
+              );
+            }
+          } else {
+            // if the tile is not in the cache load it from the source
+            fetchTileOnline(
+              tileUrl,
+              tile,
+              coords,
+              [coordsStr.z, coordsStr.x, coordsStr.y],
+              enableCache
             );
-            fetchTileOnline(tileUrl, tile, coords, [
-              coordsStr.z,
-              coordsStr.x,
-              coordsStr.y,
-            ]);
           }
-        } else {
-          // if the tile is not in the cache load it from the source
-          fetchTileOnline(tileUrl, tile, coords, [
-            coordsStr.z,
-            coordsStr.x,
-            coordsStr.y,
-          ]);
-        }
-      });
+        });
+      } else {
+        // if tiles are not being manually cached, they must be loaded from online
+        fetchTileOnline(
+          tileUrl,
+          tile,
+          coords,
+          [coordsStr.z, coordsStr.x, coordsStr.y],
+          enableCache
+        );
+      }
       return tile;
     },
     _onTileRemove: (e) => {
       e.tile.onload = null;
     },
   });
-  const fetchTileOnline = (src, tile, coords, coordsS) => {
-    //cache: no-store prevents the use of the browser cache
-    if (navigator.onLine) {
-      fetch(src, { cache: "no-store" })
+  const fetchTileOnline = (src, tile, coords, coordsS, enableCache) => {
+    // cache: no-store prevents the use of the browser cache
+    // if the manual cache is not enabled then the browser cache will be used
+    if (navigator.onLine || !enableCache) {
+      fetch(src, enableCache ? { cache: "no-store" } : {})
         .then(
           (img) => {
             // check if a response was received and has an ok status (we don't want to store http responses as images)
@@ -151,12 +174,15 @@
           if (res) {
             // create an image blob and use that as the source
             tile.src = URL.createObjectURL(res);
-            // send the blob to main to be stored in the src/cachedtiles/coordsS[0]/coordsS[1]/coordsS[2].png folder
-            api.cacheTile(await res.arrayBuffer(), [
-              coordsS[0],
-              coordsS[1],
-              coordsS[2],
-            ]);
+            // check whether the tile should be stored in the manual cache
+            if (enableCache) {
+              // send the blob to main to be stored in the src/cachedtiles/coordsS[0]/coordsS[1]/coordsS[2].png folder
+              api.cacheTile(await res.arrayBuffer(), [
+                coordsS[0],
+                coordsS[1],
+                coordsS[2],
+              ]);
+            }
           }
         })
         .catch((err) => {
