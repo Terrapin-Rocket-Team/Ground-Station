@@ -13,7 +13,11 @@ const buildMap = (id) => {
     zoom: 5,
   });
 
-  L.tileLayer.provider("OpenTopoMap").addTo(map);
+  api.getSettings().then((config) => {
+    L.tileLayer
+      .provider("OpenTopoMap", { enableCache: config.tileCache.value })
+      .addTo(map);
+  });
 
   markers.addTo(map);
 
