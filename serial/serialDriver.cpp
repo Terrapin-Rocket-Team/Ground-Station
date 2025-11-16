@@ -206,6 +206,9 @@ int main(int argc, char **argv)
 #elif LINUX
                 device = new LinuxSerialPort(portBuf, atoi(baudRate));
 #endif
+                // reset state control vars
+                headerFound = false;
+                mOut.clear();
             }
             // check for data pipes command
             if (strcmp(controlStr, "data pipes") == 0)
