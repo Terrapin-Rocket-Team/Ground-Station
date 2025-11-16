@@ -73,6 +73,11 @@ class SerialDevice extends EventEmitter {
   }
 
   clearStreams() {
+    // remove all listeners on output stream data events to prevent duplicate events on stream reload
+    // this is different from a driver reload which reconnects to a different serial port, but keeps the same streams
+    this.outputStreamNames.forEach((name) => {
+      this.removeAllListeners(name + "-data");
+    });
     this.inputStreamNames = [];
     this.outputStreamNames = [];
   }
