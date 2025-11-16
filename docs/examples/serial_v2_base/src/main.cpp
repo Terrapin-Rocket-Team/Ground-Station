@@ -10,11 +10,6 @@ Message commandMsg;
 APRSConfig commandConfig = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
 uint16_t commandSize = 0;
 
-// Data output storage and control variables
-bool hasAvionicsTelem = false;
-bool hasPayloadTelem = false;
-APRSTelem *telem;
-
 // create Ground Station Interface
 GSInterface gsi(115200);
 
