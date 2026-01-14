@@ -36,6 +36,8 @@ APRSTelem telem1(config, 39.336896667, -77.337067833, 480.0, 0.0, 31.0, orientTe
 APRSConfig config2 = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
 double orientTest2[3] = {1.0, 110.0, 65.0};
 APRSTelem telem2(config2, 39.336896667, -77.337067833, 400.0, 0.0, 3.0, orientTest2, (uint32_t)0x15abcdef);
+
+APRSCmd cmd;
 // ==========================================================
 
 void setup()
@@ -82,13 +84,11 @@ void loop()
   // ==========================================================
   // Check for commands from Ground Station
   // ==========================================================
-  if ((commandSize = gsi.readStream((char *)commandMsg.buf, Message::maxSize)) > 0)
+  if (gsi.readStream(&cmd) > 0)
   {
-    commandMsg.size = commandSize;
-    APRSCmd cmd;
-    commandMsg.decode(&cmd);
     cmd.config = commandConfig;
     commandMsg.encode(&cmd);
+    Serial.write(commandMsg.buf, commandMsg.size);
     // send commandMsg to radio here
   }
   // ==========================================================

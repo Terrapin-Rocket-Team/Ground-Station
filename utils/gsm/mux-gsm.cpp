@@ -17,25 +17,26 @@ int main(int argc, char const *argv[])
     APRSConfig c = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
     double orientTest[3] = {1.0, 110.0, 65.0};
     APRSTelem telemData(c, 39.336896667, -77.337067833, 480.0, 0.0, 31.0, orientTest, (uint32_t)0x15abcdef);
-    Message telem;
+    // Message telem;
     VideoData video1Data;
     VideoData video2Data;
-    Message video1;
-    Message video2;
-    GSData muxTelemOut(APRSTelem::type, 1);
-    GSData muxVideo1Out(VideoData::type, 2);
-    GSData muxVideo2Out(VideoData::type, 3);
+    // Message video1;
+    // Message video2;
+    GSMessage telem(APRSTelem::type, 1);
+    GSMessage video1(VideoData::type, 2);
+    GSMessage video2(VideoData::type, 3);
     Metrics device1Metrics(1);
     Metrics device2Metrics(2);
     Metrics device3Metrics(3);
 
     int telemFrequency = 1; // transmissions / second
 
-    telem.encode(&telemData);
+    if (telem.encode(&telemData)->hasError())
+        printf(telem.errors());
 
-    int video1Bitrate = 250e3;                                         // bits / second
-    int video2Bitrate = 250e3;                                         // bits / second
-    int telemBitrate = strlen((char *)telem.buf) * 8 * telemFrequency; // bits / second
+    int video1Bitrate = 250e3;                                                                  // bits / second
+    int video2Bitrate = 250e3;                                                                  // bits / second
+    int telemBitrate = strlen((char *)(telem.buf + GSMessage::headerLen)) * 8 * telemFrequency; // bits / second
     int totalBitrate = video1Bitrate + video2Bitrate + telemBitrate;
     double video1Fraction = (double)video1Bitrate / totalBitrate;
     double video2Fraction = (double)video2Bitrate / totalBitrate;
@@ -102,12 +103,9 @@ int main(int argc, char const *argv[])
     }
 
     // write GSM header
-    char gsmHeader[GSData::gsmHeaderSize] = {0};
-    GSData::encodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, totalBitrate);
-    fwrite(gsmHeader, sizeof(char), GSData::gsmHeaderSize, out);
-
-    muxTelemOut.fill(telem.buf, telem.size);
-    telem.encode(&muxTelemOut);
+    char gsmHeader[GSMessage::gsmHeaderSize] = {0};
+    GSMessage::encodeGSMHeader(gsmHeader, GSMessage::gsmHeaderSize, totalBitrate);
+    fwrite(gsmHeader, sizeof(char), GSMessage::gsmHeaderSize, out);
 
     char buf[100];
 
@@ -122,8 +120,8 @@ int main(int argc, char const *argv[])
         {
             // write video1
             int readBytes = fread(buf, sizeof(char), PACKET_SIZE, file1);
-            muxVideo1Out.fill((uint8_t *)buf, readBytes);
-            video1.encode(&muxVideo1Out);
+            video1Data.fill((uint8_t *)buf, readBytes);
+            video1.encode(&video1Data);
             fwrite(video1.buf, sizeof(char), video1.size, out);
             device1Metrics.updateBitrate(video1.size * 8, clock());
         }
@@ -131,8 +129,8 @@ int main(int argc, char const *argv[])
         {
             // write video2
             int readBytes = fread(buf, sizeof(char), PACKET_SIZE, file2);
-            muxVideo2Out.fill((uint8_t *)buf, readBytes);
-            video2.encode(&muxVideo2Out);
+            video2Data.fill((uint8_t *)buf, readBytes);
+            video2.encode(&video2Data);
             fwrite(video2.buf, sizeof(char), video2.size, out);
             device2Metrics.updateBitrate(video2.size * 8, clock());
         }

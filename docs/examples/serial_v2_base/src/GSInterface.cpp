@@ -153,23 +153,23 @@ int GSInterface::run()
         if (this->state == COMMAND)
         {
             // clear internal message
-            this->m.clear();
+            this->input.clear();
             // read into message
             for (uint32_t i = 0; i < bytesAvail; i++)
             {
-                this->m.append(this->readC());
-                if (this->m.size >= Message::maxSize)
+                this->input.append(this->readC());
+                if (this->input.size >= GSMessage::maxSize)
                     break;
             }
             // update the available number of bytes
             bytesAvail = this->available();
 
             // check if we can decode the header
-            if (this->m.size >= GSData::headerLen)
+            if (this->input.size >= GSMessage::headerLen)
             {
                 // decode the header
                 uint8_t type, id = 0;
-                GSData::decodeHeader(this->m.buf, type, id, inputSize);
+                GSMessage::decodeHeader(this->input.buf, type, id, inputSize);
                 if (type != APRSCmd::type || id == 0 || inputSize == 0)
                 {
                     // this is not an APRSCmd, ignore it
@@ -178,18 +178,18 @@ int GSInterface::run()
             }
 
             // if there are more bytes in message than necessary
-            if (this->m.size - GSData::headerLen > inputSize && inputSize != 0)
+            if (this->input.size - GSMessage::headerLen > inputSize && inputSize != 0)
             {
                 // remove the extra bytes and put them in the serial buffer in case they are part of a different message
-                uint16_t removed = (this->m.size - GSData::headerLen) - inputSize;
-                this->m.pop((uint8_t *)this->serialBuf, removed);
+                uint16_t removed = (this->input.size - GSMessage::headerLen) - inputSize;
+                this->input.pop((uint8_t *)this->serialBuf, removed);
                 this->serialBufLength += removed;
             }
             // if there are exactly enough bytes
-            if (this->m.size - GSData::headerLen == inputSize && inputSize != 0)
+            if (this->input.size - GSMessage::headerLen == inputSize && inputSize != 0)
             {
                 // we have the full command, so decode it
-                this->m.decode(&input);
+                // this->m.decode(&input);
                 hasInput = true;
                 this->state = READY;
             }
@@ -207,15 +207,11 @@ int GSInterface::run()
         for (int i = 0; i < this->numMetrics; i++)
         {
             // clear message
-            this->m.clear();
+            this->metricsGSData.clear();
             // encode metrics
-            this->m.encode(this->metricsArr[i]);
-            // fill GSData with metrics for multiplexing
-            this->metricsGSData.fill(this->m.buf, this->m.size);
-            // encode data for multiplexing
-            this->m.encode(&(this->metricsGSData));
+            this->metricsGSData.encode(this->metricsArr[i]);
             // write multiplexed data
-            this->write((char *)this->m.buf, this->m.size);
+            this->write((char *)this->metricsGSData.buf, this->metricsGSData.size);
         }
     }
     return 0;
@@ -264,9 +260,14 @@ GSStream GSInterface::createStream(uint8_t type, uint8_t deviceId)
 
 int GSInterface::writeStream(GSStream *s, Data *data, short signalStrength)
 {
-    // encode data to internal message to get character buffer
-    this->m.encode(data);
-    return this->writeStream(s, (char *)this->m.buf, this->m.size, signalStrength);
+    s->streamData.clear();
+
+    // encode data to message
+    s->streamData.encode(data);
+
+    s->streamMetrics->update(s->streamData.size, this->time(), signalStrength);
+    // write the stream data
+    return this->write((char *)s->streamData.buf, s->streamData.size);
 }
 
 int GSInterface::writeStream(GSStream *s, char *data, int dataLen, short signalStrength)
@@ -275,29 +276,23 @@ int GSInterface::writeStream(GSStream *s, char *data, int dataLen, short signalS
     if (dataLen <= 0)
         return 0;
 
+    // reset message
+    s->streamData.clear();
     // set up data to be encoded for multiplexing
-    s->streamData.fill((uint8_t *)data, dataLen);
-    // reset internal message
-    this->m.clear();
-    // encode data for multiplexing
-    this->m.encode(&(s->streamData));
+    s->streamData.encode((uint8_t *)data, dataLen);
     // update metrics for this stream
-    s->streamMetrics->update(m.size, this->time(), signalStrength);
+    s->streamMetrics->update(s->streamData.size, this->time(), signalStrength);
     // write the stream data
-    return this->write((char *)this->m.buf, this->m.size);
+    return this->write((char *)s->streamData.buf, s->streamData.size);
 }
 
-int GSInterface::readStream(char *data, int dataLen)
+int GSInterface::readStream(Data *data)
 {
     // check if there is input available
     if (this->hasInput)
     {
-        // make sure the data array can fit the input
-        if (dataLen < this->input.size)
-            return 0;
+        this->input.decode(data);
 
-        // copy the data contained in the GSData to the data array
-        memcpy(data, this->input.buf, this->input.size);
         this->hasInput = false;
         return this->input.size;
     }
