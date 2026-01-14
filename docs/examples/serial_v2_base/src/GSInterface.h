@@ -18,7 +18,7 @@ struct GSStream
 {
     GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex), streamMetrics(m) {}
     // the GSData object for the stream
-    GSData streamData;
+    GSMessage streamData;
     // pointer to the Metrics for the stream
     // each metrics could be connected to multiple streams, so it is a pointer
     // references to all pointers are stored in the GSInterface object
@@ -57,15 +57,15 @@ public:
     uint16_t numMetrics = 0;
     // the interval at which to log metrics in ms
     uint32_t metricsInterval = 1000;
-    // the GSData object for metrics (always stream index 1)
-    GSData metricsGSData = {Metrics::type, this->streamIndex++};
+    // the GSMessage object for metrics (always stream index 1)
+    GSMessage metricsGSData = {Metrics::type, this->streamIndex++};
 
     // message to use for encoding data
-    Message m;
+    // Message m;
     // used to store the size of input from the ground station
     uint16_t inputSize = 0;
     // used to decode input from the ground station
-    GSData input;
+    GSMessage input;
     // whether there is input from the ground station
     bool hasInput = false;
 
@@ -115,7 +115,7 @@ public:
 
     // read up to ```dataLen``` bytes from the serial port into ```data```
     // returns the number of bytes read
-    int readStream(char *data, int dataLen);
+    int readStream(Data *data);
 
     // log to debug serial port, writes ```str1```, ```str2```, then ```str3```, followed by a newline
     void log(const char *str1, const char *str2 = "", const char *str3 = "");

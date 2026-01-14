@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     // dummary array to pass for erasures since we don't know where they are
     int erasureDummyArr[16] = {};
     // TEMP: setting to enable/disable reed solomon on video streams
-    bool enableRS = true;
+    bool enableRS = false;
 
     // create the status and control pipes
 #ifdef WINDOWS
@@ -105,11 +105,11 @@ int main(int argc, char **argv)
     char inStr[maxChunkSize] = {0};
 
     // a message to hold only the data for a single multiplexed message
-    Message mOut;
+    GSMessage mOut;
     // a message to hold data from driver input pipes
-    Message mIn;
+    GSMessage mIn;
     // a GSData object to decode multplexed data
-    GSData rawData;
+    // GSData rawData;
 
     // file to read data from
     FILE *input = fopen(inputFileName, "rb");
@@ -187,13 +187,17 @@ int main(int argc, char **argv)
                 }
                 else
                 {
-                    char gsmHeader[GSData::gsmHeaderSize] = {0};
+                    char gsmHeader[GSMessage::gsmHeaderSize] = {0};
                     // always seek to the beginning of the file
                     fseek(input, 0, SEEK_SET);
-                    int read = fread(gsmHeader, sizeof(char), GSData::gsmHeaderSize, input);
-                    if (read == GSData::gsmHeaderSize)
+                    int read = fread(gsmHeader, sizeof(char), GSMessage::gsmHeaderSize, input);
+                    if (read == GSMessage::gsmHeaderSize)
                     {
-                        bool success = GSData::decodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, bytesPerSecond);
+                        printf("Header: ");
+                        for (int i = 0; i < read; i++)
+                            printf("%x ", gsmHeader[i]);
+                        printf("\n");
+                        bool success = GSMessage::decodeGSMHeader(gsmHeader, GSMessage::gsmHeaderSize, bytesPerSecond);
                         if (success)
                         {
                             std::cout << "successfully decoded gsm header" << std::endl;
@@ -360,104 +364,104 @@ int main(int argc, char **argv)
                 // check if we need to find the header
                 if (!headerFound)
                 {
+                    // TODO: make sure mOut is cleared
                     // copy up to headerLen bytes into header
                     for (int i = dataHandled; i < x; i++)
                     {
-                        header[headerSize] = data[i];
-                        headerSize++;
-                        if (headerSize == GSData::headerLen)
+                        mOut.append(data[i]);
+                        dataHandled++;
+                        if (mOut.size == GSMessage::headerLen)
                             break;
                     }
 
                     // if we have GSData::headerLen bytes in the header we've found the header
-                    if (headerSize == GSData::headerLen)
+                    if (mOut.size == GSMessage::headerLen)
                     {
                         // decode the header and check we got a valid header
-                        GSData::decodeHeader(header, msgType, msgIndex, msgSize);
-                        std::cout << "Type: " << (int)msgType << " Index: " << (int)msgIndex << " Size: " << (int)msgSize << std::endl;
-                        if (msgType > 0 && msgIndex > 0 && msgSize > 0)
+                        if (mOut.decodeHeader())
                         {
-                            if (msgSize <= Message::maxSize)
+                            // GSMessage::decodeHeader(header, msgType, msgIndex, msgSize);
+                            std::cout << "Type: " << (int)mOut.dataType << " Index: " << (int)mOut.id << " Size: " << (int)mOut.msgSize << std::endl;
+                            if (mOut.dataType > 0 && mOut.id > 0 && mOut.msgSize > 0)
                             {
-                                headerFound = true;
+                                if (mOut.msgSize <= GSMessage::maxSize)
+                                {
+                                    headerFound = true;
+                                }
+                                else
+                                {
+                                    std::cout << "Requested size of " << mOut.msgSize << " is too large, ignoring" << std::endl;
+                                    // normally rehandshake here
+                                    dataHandled = x; // we handled all data since there was an error
+                                    mOut.clear();    // clear erroneous data in the message
+                                }
                             }
                             else
                             {
-                                std::cout << "Requested size of " << msgSize << " is too large, ignoring" << std::endl;
-                                // normally rehandshake here
+                                std::cout << "Error parsing header, at least one field was not set correctly" << std::endl;
+                                // dataHandled += GSMessage::headerLen; // want to get rid of these bytes
+                                mOut.clear(); // clear erroneous data in the message
                             }
                         }
                         else
                         {
-                            std::cout << "Error parsing header, at least one field was not set correctly" << std::endl;
-                            dataHandled += GSData::headerLen; // want to get rid of these bytes
+                            std::cout << "Error parsing header, parsing failed in GSMessage" << std::endl;
+                            // dataHandled += GSMessage::headerLen; // want to get rid of these bytes
+                            mOut.clear(); // clear erroneous data in the message
                         }
                         // reset the header variables
-                        memset(header, 0, sizeof(header));
-                        headerSize = 0;
+                        // memset(header, 0, sizeof(header));
+                        // headerSize = 0;
                     }
 
                     // append the read data to the message
-                    // NOTE: this may have issues
-                    if (x - dataHandled > 0 && mOut.size + x - dataHandled <= msgSize + GSData::headerLen)
-                    {
-                        mOut.append(data + dataHandled, x - dataHandled);
-                        dataHandled += x - dataHandled;
-                    }
-                    else if (x - dataHandled > 0 && mOut.size < msgSize + GSData::headerLen && mOut.size + x - dataHandled > msgSize + GSData::headerLen)
-                    {
-                        int toCopy = msgSize + GSData::headerLen - mOut.size;
-                        mOut.append(data + dataHandled, toCopy);
-                        dataHandled += toCopy;
-                    }
+                    // if (x - dataHandled > 0 && mOut.size + x - dataHandled <= mOut.msgSize + GSMessage::headerLen)
+                    // {
+                    //     mOut.append(data + dataHandled, x - dataHandled);
+                    //     dataHandled += x - dataHandled;
+                    // }
+                    // else if (x - dataHandled > 0 && mOut.size < mOut.msgSize + GSMessage::headerLen && mOut.size + x - dataHandled > mOut.msgSize + GSMessage::headerLen)
+                    // {
+                    //     int toCopy = msgSize + GSMessage::headerLen - mOut.size;
+                    //     mOut.append(data + dataHandled, toCopy);
+                    //     dataHandled += toCopy;
+                    // }
                 }
                 // we found the header
                 if (headerFound)
                 {
                     // append the read data to the message
-                    if (x - dataHandled > 0 && mOut.size + x - dataHandled <= msgSize + GSData::headerLen)
+                    if (x - dataHandled > 0 && mOut.size + x - dataHandled <= mOut.msgSize + GSMessage::headerLen)
                     {
                         mOut.append(data + dataHandled, x - dataHandled);
                         dataHandled += x - dataHandled;
                     }
-                    else if (x - dataHandled > 0 && mOut.size + x - dataHandled > msgSize + GSData::headerLen)
+                    else if (x - dataHandled > 0 && mOut.size + x - dataHandled > mOut.msgSize + GSMessage::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << " and got size: " << mOut.size << std::endl;
-                        int toCopy = msgSize + GSData::headerLen - mOut.size;
+                        std::cout << "Expected size: " << mOut.msgSize + GSMessage::headerLen << " and got size: " << mOut.size << std::endl;
+                        int toCopy = mOut.msgSize + GSMessage::headerLen - mOut.size;
                         mOut.append(data + dataHandled, toCopy);
                         dataHandled += toCopy;
                     }
 
                     // debug statements if something goes wrong
-                    if (mOut.size > msgSize + GSData::headerLen)
+                    if (mOut.size > mOut.msgSize + GSMessage::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << mOut.size << std::endl;
+                        std::cout << "Expected size: " << mOut.msgSize + GSMessage::headerLen << ", but got size: " << mOut.size << std::endl;
                     }
 
-                    if (x - dataHandled == 0 && mOut.size < msgSize + GSData::headerLen)
+                    if (x - dataHandled == 0 && mOut.size < mOut.msgSize + GSMessage::headerLen)
                     {
-                        std::cout << "Expected size: " << msgSize + GSData::headerLen << ", but got size: " << mOut.size << std::endl;
+                        std::cout << "Expected size: " << mOut.msgSize + GSMessage::headerLen << ", but got size: " << mOut.size << std::endl;
                     }
 
                     // if the message size (which includes the GSData)
                     // is the same as the payload size + the header then we read the whole message
-                    if (mOut.size == msgSize + GSData::headerLen)
+                    if (mOut.size == mOut.msgSize + GSMessage::headerLen)
                     {
-
                         // we have a complete message
-                        mOut.decode(&rawData);
-
-                        // reset the output message
-                        mOut.clear();
-                        // add the GSData payload to the output message
-                        mOut.fill(rawData.buf, rawData.size);
-
-                        // std::cout << "After decoding:" << std::endl;
-                        // mOut.write();
-                        // std::cout << std::endl;
-
                         // determine the type of data
-                        if (rawData.dataType == APRSTelem::type)
+                        if (mOut.dataType == APRSTelem::type)
                         {
                             // this is an APRSTelem message
                             APRSTelem outData;
@@ -466,7 +470,7 @@ int main(int argc, char **argv)
                             // need to skip over all the input pipe ids
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.id)
+                                if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
@@ -475,7 +479,7 @@ int main(int argc, char **argv)
                                 }
                             }
                         }
-                        if (rawData.dataType == VideoData::type)
+                        if (mOut.dataType == VideoData::type)
                         {
                             // this is video data
                             VideoData outData;
@@ -483,7 +487,7 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.id)
+                                if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     if (enableRS)
                                     {
@@ -491,11 +495,11 @@ int main(int argc, char **argv)
                                         const uint8_t blockSize = 255;
                                         uint8_t correctedData[blockSize] = {};
                                         // assume message made up of an integer number of blocks
-                                        for (int j = 0; j < mOut.size / blockSize; j++)
+                                        for (int j = 0; j < outData.size / blockSize; j++)
                                         {
                                             // loop through each block
                                             std::cout << "on video block " << j << std::endl;
-                                            rs.decode_data(mOut.buf + (blockSize * j), blockSize);
+                                            rs.decode_data(outData.data + (blockSize * j), blockSize);
                                             // check for errors
                                             int syn = rs.check_syndrome();
                                             if (syn != 0)
@@ -503,22 +507,65 @@ int main(int argc, char **argv)
                                                 // if errors try to correct them
                                                 std::cout << "Errors in video block, syndrome = " << syn << std::endl;
                                                 // TODO: can only correct errors for now, not erasures
-                                                int result = rs.correct_errors_erasures(mOut.buf + (blockSize * j), blockSize, 0, erasureDummyArr);
+                                                int result = rs.correct_errors_erasures(outData.data + (blockSize * j), blockSize, 0, erasureDummyArr);
                                                 std::cout << "Attempted correction, result = " << result << std::endl;
                                                 // TODO: what to do if we can't correct errors
                                             }
                                             // write the data (minus parity bits)
-                                            pipes[i]->write(mOut.buf + (blockSize * j), blockSize - NPAR);
+                                            pipes[i]->write(outData.data + (blockSize * j), blockSize - NPAR);
                                         }
                                     }
                                     else
                                     {
-                                        pipes[i]->write(mOut.buf, mOut.size);
+                                        pipes[i]->write(outData.data, outData.size);
                                     }
                                 }
                             }
                         }
-                        if (rawData.dataType == APRSCmd::type)
+                        if (mOut.dataType == GenericData::type)
+                        {
+                            // this is video data
+                            GenericData outData;
+                            mOut.decode(&outData);
+                            // locate the proper pipe and send data
+                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            {
+                                if (pipeDemuxIds[i] == mOut.id)
+                                {
+                                    if (enableRS)
+                                    {
+                                        // assume 255 byte block size
+                                        const uint8_t blockSize = 255;
+                                        uint8_t correctedData[blockSize] = {};
+                                        // assume message made up of an integer number of blocks
+                                        for (int j = 0; j < outData.size / blockSize; j++)
+                                        {
+                                            // loop through each block
+                                            std::cout << "on video block " << j << std::endl;
+                                            rs.decode_data(outData.data + (blockSize * j), blockSize);
+                                            // check for errors
+                                            int syn = rs.check_syndrome();
+                                            if (syn != 0)
+                                            {
+                                                // if errors try to correct them
+                                                std::cout << "Errors in video block, syndrome = " << syn << std::endl;
+                                                // TODO: can only correct errors for now, not erasures
+                                                int result = rs.correct_errors_erasures(outData.data + (blockSize * j), blockSize, 0, erasureDummyArr);
+                                                std::cout << "Attempted correction, result = " << result << std::endl;
+                                                // TODO: what to do if we can't correct errors
+                                            }
+                                            // write the data (minus parity bits)
+                                            pipes[i]->write(outData.data + (blockSize * j), blockSize - NPAR);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        pipes[i]->write(outData.data, outData.size);
+                                    }
+                                }
+                            }
+                        }
+                        if (mOut.dataType == APRSCmd::type)
                         {
                             // this is an APRSCmd message
                             APRSCmd outData;
@@ -526,7 +573,7 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.id)
+                                if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[numInputPipes + i]);
@@ -535,7 +582,7 @@ int main(int argc, char **argv)
                                 }
                             }
                         }
-                        if (rawData.dataType == APRSText::type)
+                        if (mOut.dataType == APRSText::type)
                         {
                             // this is an APRSText message
                             APRSText outData;
@@ -543,7 +590,7 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.id)
+                                if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
@@ -552,7 +599,7 @@ int main(int argc, char **argv)
                                 }
                             }
                         }
-                        if (rawData.dataType == Metrics::type)
+                        if (mOut.dataType == Metrics::type)
                         {
                             // this is a Metrics message
                             Metrics outData;
@@ -560,7 +607,7 @@ int main(int argc, char **argv)
                             // locate the proper pipe and send data
                             for (int i = numInputPipes; i < numTotalPipes; i++)
                             {
-                                if (pipeDemuxIds[i] == rawData.id)
+                                if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
                                     outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
@@ -573,9 +620,9 @@ int main(int argc, char **argv)
                         // reset
                         mOut.clear();
                         headerFound = false;
-                        msgType = 0;
-                        msgIndex = 0;
-                        msgSize = 0;
+                        // msgType = 0;
+                        // msgIndex = 0;
+                        // msgSize = 0;
                     }
                 }
 
@@ -601,14 +648,9 @@ int main(int argc, char **argv)
                     strlen(inStr);
                     std::cout << inStr << std::endl;
                     inData.fromJSON(inStr, strlen(inStr), id);
-                    mIn.clear();
+                    mIn.setMetadata(APRSCmd::type, pipeDemuxIds[i]);
                     mIn.encode(&inData);
-                    // take the APRSCmd and place it in a GSData object for multiplexing
-                    GSData inDataGS(APRSCmd::type, pipeDemuxIds[i], mIn.buf, mIn.size);
-                    mIn.clear();
-                    mIn.encode(&inDataGS);
-                    mIn.write();
-                    std::cout << std::endl;
+                    std::cout << "Sending command: " << mIn.buf << std::endl;
                     // TODO: implement commands
                     // tell the device we are sending a command
                     // device->writeSerialPort((void *)"command\n", strlen("command\n"));
