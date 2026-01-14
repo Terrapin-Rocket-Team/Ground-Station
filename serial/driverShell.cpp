@@ -58,8 +58,6 @@ int main(int argc, char **argv)
     clock_t timer = clock();
     // the target byte rate, taken from gsm
     uint32_t bytesPerSecond = 0;
-    // used to keep track of number of bytes read for throttling purposes
-    int bytesReadThisSecond = 0;
     // how long to wait in between reads
     int timeToWait = 0;
     // seed the random number generator
@@ -193,6 +191,10 @@ int main(int argc, char **argv)
                     int read = fread(gsmHeader, sizeof(char), GSData::gsmHeaderSize, input);
                     if (read == GSData::gsmHeaderSize)
                     {
+                        printf("Header: ");
+                        for (int i = 0; i < read; i++)
+                            printf("%x ", gsmHeader[i]);
+                        printf("\n");
                         bool success = GSData::decodeGSMHeader(gsmHeader, GSData::gsmHeaderSize, bytesPerSecond);
                         if (success)
                         {
@@ -206,6 +208,11 @@ int main(int argc, char **argv)
                             std::cout << "failed to decode gsm header" << std::endl;
                             validHeader = false;
                         }
+                        // reset total bytes read
+                        totalBytesRead = 0;
+                        // reset other state control vars
+                        headerFound = false;
+                        mOut.clear();
                     }
                     else
                     {
