@@ -24,6 +24,7 @@
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
 
+const char deviceLogFile[] = "log/serial_device.log";
 // TODO: don't hardcode this
 const char *inputFileName = "out.gsm";
 
@@ -83,10 +84,6 @@ int main(int argc, char **argv)
     pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true);
 #endif
 
-    // holds the header data
-    uint8_t header[5] = {0};
-    // holds the current size of the received header
-    uint8_t headerSize = 0;
     // whether the header has been found
     bool headerFound = false;
 
@@ -113,6 +110,8 @@ int main(int argc, char **argv)
 
     // file to read data from
     FILE *input = fopen(inputFileName, "rb");
+    // file to write serial device data to
+    FILE *log = fopen(deviceLogFile, "wb");
 
     int totalBytesRead = 0;
 
@@ -406,26 +405,9 @@ int main(int argc, char **argv)
                         else
                         {
                             std::cout << "Error parsing header, parsing failed in GSMessage" << std::endl;
-                            // dataHandled += GSMessage::headerLen; // want to get rid of these bytes
                             mOut.clear(); // clear erroneous data in the message
                         }
-                        // reset the header variables
-                        // memset(header, 0, sizeof(header));
-                        // headerSize = 0;
                     }
-
-                    // append the read data to the message
-                    // if (x - dataHandled > 0 && mOut.size + x - dataHandled <= mOut.msgSize + GSMessage::headerLen)
-                    // {
-                    //     mOut.append(data + dataHandled, x - dataHandled);
-                    //     dataHandled += x - dataHandled;
-                    // }
-                    // else if (x - dataHandled > 0 && mOut.size < mOut.msgSize + GSMessage::headerLen && mOut.size + x - dataHandled > mOut.msgSize + GSMessage::headerLen)
-                    // {
-                    //     int toCopy = msgSize + GSMessage::headerLen - mOut.size;
-                    //     mOut.append(data + dataHandled, toCopy);
-                    //     dataHandled += toCopy;
-                    // }
                 }
                 // we found the header
                 if (headerFound)
@@ -459,6 +441,18 @@ int main(int argc, char **argv)
                     // is the same as the payload size + the header then we read the whole message
                     if (mOut.size == mOut.msgSize + GSMessage::headerLen)
                     {
+                        if (mOut.dataType == GSControl::type)
+                        {
+                            // this is a GSControl message
+                            GSControl outData;
+                            mOut.decode(&outData);
+                            // handle fatal errors
+                            // ... no implementation in shell
+                            // this doesn't go to a pipe, write to a log file instead
+                            fwrite(outData.argBuf, sizeof(char), strlen(outData.argBuf), log);
+                            fwrite("\n", sizeof(char), 1, log);
+                            fflush(log);
+                        }
                         // we have a complete message
                         // determine the type of data
                         if (mOut.dataType == APRSTelem::type)

@@ -18,11 +18,16 @@
 #include <ostream>
 #include <cstdint>
 #include <cstdlib>
+#include <chrono>
 
 #include "RadioMessage.h"
 #include "rs.h"
 
+const char deviceLogFile[] = "log/serial_device.log";
+
 void createPipe(NamedPipe **arr, int &index, const char *name);
+
+std::chrono::milliseconds::rep elapsed(std::chrono::time_point<std::chrono::steady_clock> start);
 
 int main(int argc, char **argv)
 {
@@ -54,7 +59,7 @@ int main(int argc, char **argv)
     // whether there is a handshake being attempted (with a specific sequence)
     bool handshakeAttempt = false;
     // timeout to allow multiple attempts for 1 handshake sequence
-    clock_t handshakeStart = clock();
+    auto handshakeStart = std::chrono::steady_clock::now();
     // whether a handshake is in progress (up to 5 attempts)
     bool handshakePending = false;
     // whether connection status was requested during the handshake process
@@ -90,10 +95,6 @@ int main(int argc, char **argv)
     pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true);
 #endif
 
-    // holds the header data
-    uint8_t header[5] = {0};
-    // holds the current size of the received header
-    uint8_t headerSize = 0;
     // whether the header has been found
     bool headerFound = false;
 
@@ -115,8 +116,11 @@ int main(int argc, char **argv)
     GSMessage mOut;
     // a message to hold data from driver input pipes
     GSMessage mIn;
-    // a GSData object to decode multplexed data
-    // GSData rawData;
+
+    // file to write serial device data to
+    FILE *log = fopen(deviceLogFile, "wb");
+
+    const uint8_t statusIndex = 1;
 
     // an object to handle the serial device connection
     SerialPort *device = nullptr;
@@ -370,17 +374,23 @@ int main(int argc, char **argv)
                 // reset multiplexing message in case it caused the handshake attempt
                 mOut.clear();
                 // start timeout
-                handshakeStart = clock();
+                handshakeStart = std::chrono::steady_clock::now();
 
                 // set the handshake sequence to 0
                 memset(handshakeSequence, 0, sizeof(handshakeSequence));
                 // generate a new handshake sequence
-                snprintf(handshakeSequence, 7, "%d\n", rand() % 32767);
+                snprintf(handshakeSequence, sizeof(handshakeSequence), "%d", rand() % 32767);
                 std::cout << "handshake sequence: " << handshakeSequence << std::endl;
 
+                GSControl hs("HANDSHAKE", handshakeSequence);
+                mIn.setMetadata(GSControl::type, statusIndex);
+                mIn.encode(&hs);
+
                 // tell connected serial device to start handshake sequence and write handshake sequence
-                device->writeSerialPort((void *)"handshake\n", strlen("handshake\n"));
-                device->writeSerialPort(handshakeSequence, 6);
+                device->writeSerialPort(mIn.buf, mIn.size);
+                std::cout << "handshake message: ";
+                mIn.write();
+                std::cout << std::endl;
                 handshakeAttempt = true;
             }
 
@@ -394,35 +404,49 @@ int main(int argc, char **argv)
                 if (x > 0)
                 {
                     bool hasNewline = false;
-                    // make sure data is null terminated
                     for (int i = 0; i < x; i++)
                     {
                         if (handshakeRespLen < sizeof(handshakeResp))
                         {
                             handshakeResp[handshakeRespLen++] = data[i];
                         }
+                        else
+                        {
+                            // too much data, restart handshake
+                        }
                         if (data[i] == '\n')
                         {
+                            std::cout << "Received response after: " << elapsed(handshakeStart) << "ms" << std::endl;
+                            handshakeResp[i] = 0; // set to newline to null terminator
                             hasNewline = true;
                             break;
                         }
                     }
                     if (hasNewline)
                     {
-                        std::cout << "Sequence: " << handshakeSequence;
+                        std::cout << "Sequence: " << handshakeSequence << std::endl;
                         std::cout << "Data: ";
-                        for (int i = 0; i < handshakeRespLen; i++)
+                        for (int i = 0; i < handshakeRespLen - 1; i++)
                         {
                             std::cout << handshakeResp[i];
                         }
                         std::cout << std::endl;
+
                         // check if the handshake sequence matches
-                        if (strcmp(handshakeSequence, handshakeResp) == 0)
+                        bool success = strcmp(handshakeSequence, handshakeResp) == 0;
+
+                        GSControl hs("HS_DONE", success ? "SUCCESS" : "FAIL");
+                        mIn.setMetadata(GSControl::type, statusIndex);
+                        mIn.encode(&hs);
+
+                        // tell connected serial device that handshake result
+                        device->writeSerialPort(mIn.buf, mIn.size);
+
+                        // handle other actions
+                        if (success)
                         {
-                            // if it matches then the handshake has succeeded
                             std::cout << "handshake attempt succeeded" << std::endl;
-                            // tell the device the handshake has succeeded
-                            device->writeSerialPort((void *)"handshake succeeded\n", strlen("handshake succeeded\n"));
+
                             // set flags
                             handshakeSuccess = true;
                             handshakeAttempt = false;
@@ -459,10 +483,10 @@ int main(int argc, char **argv)
                 }
 
                 // make sure we still have an active handshake attempt (in case there was a successful handshake we don't want to override that)
-                if (handshakeAttempt && clock() - handshakeStart > 50) // 50ms timeout
+                if (handshakeAttempt && elapsed(handshakeStart) > 50) // 100ms timeout
                 {
                     // the connection failed
-                    std::cout << "handshake attempt timeout" << std::endl;
+                    std::cout << "handshake attempt timeout after 50ms" << std::endl;
                     // so set flags
                     handshakeSuccess = false;
                     handshakeAttempt = false;
@@ -479,7 +503,6 @@ int main(int argc, char **argv)
                 // TODO: maybe not needed
                 pipeStatus->writeStr("Interrupt\n");
                 pipeStatus->writeStr("serial connection error: handshake failed\n");
-                device->writeSerialPort((void *)"handshake failed\n", strlen("handshake failed\n"));
                 handshakePending = false;
 
                 // report connection status if requested
@@ -546,7 +569,6 @@ int main(int argc, char **argv)
                         // decode the header and check we got a valid header
                         if (mOut.decodeHeader())
                         {
-                            // GSMessage::decodeHeader(header, msgType, msgIndex, msgSize);
                             std::cout << "Type: " << (int)mOut.dataType << " Index: " << (int)mOut.id << " Size: " << (int)mOut.msgSize << std::endl;
                             if (mOut.dataType > 0 && mOut.id > 0 && mOut.msgSize > 0)
                             {
@@ -556,7 +578,7 @@ int main(int argc, char **argv)
                                 }
                                 else
                                 {
-                                    std::cout << "Requested size of " << mOut.msgSize << " is too large, ignoring" << std::endl;
+                                    std::cout << "Requested size of " << mOut.msgSize << " is too large, redoing handshake" << std::endl;
                                     handshakeSuccess = false; // something is out of sync, so redo handshake
                                     dataHandled = x;          // we handled all data since there was an error
                                     mOut.clear();             // clear erroneous data in the message
@@ -572,26 +594,9 @@ int main(int argc, char **argv)
                         else
                         {
                             std::cout << "Error parsing header, parsing failed in GSMessage" << std::endl;
-                            // dataHandled += GSMessage::headerLen; // want to get rid of these bytes
                             mOut.clear(); // clear erroneous data in the message
                         }
-                        // reset the header variables
-                        // memset(header, 0, sizeof(header));
-                        // headerSize = 0;
                     }
-
-                    // append the read data to the message
-                    // if (x - dataHandled > 0 && mOut.size + x - dataHandled <= mOut.msgSize + GSMessage::headerLen)
-                    // {
-                    //     mOut.append(data + dataHandled, x - dataHandled);
-                    //     dataHandled += x - dataHandled;
-                    // }
-                    // else if (x - dataHandled > 0 && mOut.size < mOut.msgSize + GSMessage::headerLen && mOut.size + x - dataHandled > mOut.msgSize + GSMessage::headerLen)
-                    // {
-                    //     int toCopy = msgSize + GSMessage::headerLen - mOut.size;
-                    //     mOut.append(data + dataHandled, toCopy);
-                    //     dataHandled += toCopy;
-                    // }
                 }
                 // we found the header
                 if (headerFound)
@@ -625,6 +630,32 @@ int main(int argc, char **argv)
                     // is the same as the payload size + the header then we read the whole message
                     if (mOut.size == mOut.msgSize + GSMessage::headerLen)
                     {
+                        if (mOut.dataType == GSControl::type)
+                        {
+                            // this is a GSControl message
+                            GSControl outData;
+                            mOut.decode(&outData);
+                            // handle fatal errors
+                            if (strcmp(outData.cmdBuf, "FATAL") == 0)
+                            {
+                                // hard reset device if it hasn't already
+                                GSControl cont("RESET", "");
+                                mIn.setMetadata(GSControl::type, statusIndex);
+                                mIn.encode(&cont);
+                                mIn.write();
+                                std::cout << std::endl;
+                                device->writeSerialPort(mIn.buf, mIn.size);
+
+                                // reset so handshake is invalid
+                                handshakeSuccess = false;
+                                // and close serial connection because the device is hard resetting
+                                device->closeSerial();
+                            }
+                            // this doesn't go to a pipe, write to a log file instead
+                            fwrite(outData.argBuf, sizeof(char), strlen(outData.argBuf), log);
+                            fwrite("\n", sizeof(char), 1, log);
+                            fflush(log);
+                        }
                         // we have a complete message
                         // determine the type of data
                         if (mOut.dataType == APRSTelem::type)
@@ -814,7 +845,7 @@ int main(int argc, char **argv)
                     mIn.encode(&inData);
                     std::cout << "Sending command: " << mIn.buf << std::endl;
                     // tell the device we are sending a command
-                    device->writeSerialPort((void *)"command\n", strlen("command\n"));
+                    // device->writeSerialPort((void *)"command\n", strlen("command\n"));
                     // write the new message formatted for multiplexing
                     device->writeSerialPort(mIn.buf, mIn.size);
                 }
@@ -867,4 +898,9 @@ void createPipe(NamedPipe **arr, int &index, const char *name)
     strcat(pipePath, name);
     arr[index++] = new LinuxNamedPipe(pipePath, true);
 #endif
+}
+
+std::chrono::milliseconds::rep elapsed(std::chrono::time_point<std::chrono::steady_clock> start)
+{
+    return (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)).count();
 }

@@ -8,12 +8,6 @@
 // Command handling
 Message commandMsg;
 APRSConfig commandConfig = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
-uint16_t commandSize = 0;
-
-// Data output storage and control variables
-bool hasAvionicsTelem = false;
-bool hasPayloadTelem = false;
-APRSTelem *telem;
 
 // create Ground Station Interface
 GSInterface gsi(115200);
@@ -29,13 +23,11 @@ GSStream telemPayload = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 uint32_t timer = millis();
 uint32_t timer2 = millis();
 
-APRSConfig config = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
-double orientTest[3] = {1.0, 110.0, 65.0};
-APRSTelem telem1(config, 39.336896667, -77.337067833, 480.0, 0.0, 31.0, orientTest, (uint32_t)0x15abcdef);
+APRSTelem telem1((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
+                 39.336896667, -77.337067833, 480.0, 0.0, 31.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
 
-APRSConfig config2 = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
-double orientTest2[3] = {1.0, 110.0, 65.0};
-APRSTelem telem2(config2, 39.336896667, -77.337067833, 400.0, 0.0, 3.0, orientTest2, (uint32_t)0x15abcdef);
+APRSTelem telem2((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
+                 39.336896667, -77.337067833, 400.0, 0.0, 3.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
 
 APRSCmd cmd;
 // ==========================================================
@@ -59,8 +51,25 @@ void loop()
 {
   // ==========================================================
   // Update GSI, needs to run as fast as possible
+  // Note: data that needs manual handling may be deleted if
+  //       not handled this loop
   // ==========================================================
-  gsi.run();
+  if (gsi.run())
+  {
+    // there is data that needs manual handling
+
+    // check if that data is an APRSCmd
+    if (gsi.input.dataType == APRSCmd::type)
+    {
+      gsi.readInput(&cmd);
+      cmd.config = commandConfig;
+      commandMsg.encode(&cmd);
+      gsi.logM(LL_DEBUG, (char *)commandMsg.buf);
+      // send commandMsg to radio here
+    }
+
+    // add more handlers here
+  }
   // ==========================================================
 
   // ==========================================================
@@ -78,18 +87,6 @@ void loop()
     timer2 = millis();
     if (gsi.isReady())
       gsi.writeStream(&telemPayload, &telem2, -50);
-  }
-  // ==========================================================
-
-  // ==========================================================
-  // Check for commands from Ground Station
-  // ==========================================================
-  if (gsi.readStream(&cmd) > 0)
-  {
-    cmd.config = commandConfig;
-    commandMsg.encode(&cmd);
-    Serial.write(commandMsg.buf, commandMsg.size);
-    // send commandMsg to radio here
   }
   // ==========================================================
 }
