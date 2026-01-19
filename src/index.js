@@ -6,7 +6,7 @@ window.onload = () => {
 
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
-      "--t1-color"
+      "--t1-color",
     ),
     t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
     t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
@@ -221,7 +221,13 @@ window.onload = () => {
     });
   };
   const getVideo0Displays = (idPrefix) => {
-    const video0Options = ["Input 0", "Input 1", "Charts", "3D Visualization", "None"];
+    const video0Options = [
+      "Input 0",
+      "Input 1",
+      "Charts",
+      "3D Visualization",
+      "None",
+    ];
 
     setupStaticOptions(idPrefix, video0Options, (option) => {
       // video0 and video1 can't be set to the same thing
@@ -240,7 +246,13 @@ window.onload = () => {
     });
   };
   const getVideo1Displays = (idPrefix) => {
-    const video1Options = ["Input 1", "Input 0", "Charts", "3D Visualization", "None"];
+    const video1Options = [
+      "Input 1",
+      "Input 0",
+      "Charts",
+      "3D Visualization",
+      "None",
+    ];
 
     setupStaticOptions(idPrefix, video1Options, (option) => {
       // video1 and video0 can't be set to the same thing
@@ -282,18 +294,20 @@ window.onload = () => {
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
     document.getElementById("video-layout-selected").textContent = option;
-    
+
     if (videoControls.video0 === "live-video-0") option = "Input 0";
     if (videoControls.video0 === "live-video-1") option = "Input 1";
     if (videoControls.video0 === "charts") option = "Charts";
-    if (videoControls.video0 === "3d-visualization") option = "3D Visualization";
+    if (videoControls.video0 === "3d-visualization")
+      option = "3D Visualization";
     if (videoControls.video0 === "none-0") option = "None";
     document.getElementById("video-0-selected").textContent = option;
-    
+
     if (videoControls.video1 === "live-video-1") option = "Input 1";
     if (videoControls.video1 === "live-video-0") option = "Input 0";
     if (videoControls.video1 === "charts") option = "Charts";
-    if (videoControls.video1 === "3d-visualization") option = "3D Visualization";
+    if (videoControls.video1 === "3d-visualization")
+      option = "3D Visualization";
     if (videoControls.video1 === "none-0") option = "None";
     document.getElementById("video-1-selected").textContent = option;
   });
@@ -322,47 +336,86 @@ window.onload = () => {
   const previousCommands = document.getElementById("previous-commands");
 
   let commandValid = false;
+  let isCommand = true;
+  let commandList = [];
+  let controlsList = [];
+  // adds commands to custom dropdown
+  const getCommands = (idPrefix) => {
+    const commandCallback = (option) => {
+      // figure out what index in the list was selected
+      let index = commandList.findIndex((command) => {
+        return command.name === option;
+      });
+      document.getElementById("command-syntax").textContent =
+        commandList[index].abbrv + ": " + commandList[index].syntax.join(" ");
+      document.getElementById("command-args").value =
+        commandList[index].abbrv + ": ";
+
+      // check if syntax is valid (in case there are no args)
+      commandValid = commandList[index].validator(
+        commandList[index].abbrv + ": ",
+      );
+      // if valid change color
+      if (commandValid) commandArgs.className = "valid";
+      // if invalid but valid command, show partially valid
+      else commandArgs.className = "part-valid";
+      return true;
+    };
+
+    if (commandList.length > 0) {
+      setupStaticOptions(
+        idPrefix,
+        commandList.map((command) => {
+          return command.name;
+        }),
+        commandCallback,
+      );
+    } else {
+      setupStaticOptions(idPrefix, ["No commands available"], () => {
+        return false;
+      });
+    }
+  };
+  // adds device controls to custom dropdown
+  const getControls = (idPrefix) => {
+    const controlCallback = (option) => {
+      // figure out what index in the list was selected
+      let index = controlsList.findIndex((command) => {
+        return command.name === option;
+      });
+      document.getElementById("command-syntax").textContent =
+        controlsList[index].abbrv + ": " + controlsList[index].syntax.join(" ");
+      document.getElementById("command-args").value =
+        controlsList[index].abbrv + ": ";
+
+      // check if syntax is valid (in case there are no args)
+      commandValid = controlsList[index].validator(
+        controlsList[index].abbrv + ": ",
+      );
+      // if valid change color
+      if (commandValid) commandArgs.className = "valid";
+      // if invalid but valid command, show partially valid
+      else commandArgs.className = "part-valid";
+      return true;
+    };
+
+    if (controlsList.length > 0) {
+      setupStaticOptions(
+        idPrefix,
+        controlsList.map((command) => {
+          return command.name;
+        }),
+        controlCallback,
+      );
+    } else {
+      setupStaticOptions(idPrefix, ["No controls available"], () => {
+        return false;
+      });
+    }
+  };
   // need to get the command list from the backend since it's being loaded from a file
   api.getCommandList().then((list) => {
-    const commandList = APRSCmd.createCommandList(list);
-
-    //adds commands to custom dropdown
-    const getCommands = (idPrefix) => {
-      const commandCallback = (option) => {
-        // figure out what index in the list was selected
-        let index = commandList.findIndex((command) => {
-          return command.name === option;
-        });
-        document.getElementById("command-syntax").textContent =
-          commandList[index].abbrv + ": " + commandList[index].syntax.join(" ");
-        document.getElementById("command-args").value =
-          commandList[index].abbrv + ": ";
-
-        // check if syntax is valid (in case there are no args)
-        commandValid = commandList[index].validator(
-          commandList[index].abbrv + ": "
-        );
-        // if valid change color
-        if (commandValid) commandArgs.className = "valid";
-        // if invalid but valid command, show partially valid
-        else commandArgs.className = "part-valid";
-        return true;
-      };
-
-      if (commandList.length > 0) {
-        setupStaticOptions(
-          idPrefix,
-          commandList.map((command) => {
-            return command.name;
-          }),
-          commandCallback
-        );
-      } else {
-        setupStaticOptions(idPrefix, ["No commands available"], () => {
-          return false;
-        });
-      }
-    };
+    // commandList = APRSCmd.createCommandList(list);
 
     // setup the commands dropdown
     setupDropdown("command", getCommands, false);
@@ -373,16 +426,17 @@ window.onload = () => {
 
       if (commandText.length > 0) {
         // see if text matches the command format
-        let cmdMatch = commandText.match(/[A-Z][A-Z][A-Z]?:( [A-z0-9])*/g);
+        let cmdMatch = commandText.match(/[A-Z]+(:( [A-z0-9])*)?/g);
 
         if (cmdMatch) {
-          // if we fouond a match, figure out where the command abbreviation is
+          // if we found a match, figure out where the command abbreviation is
           let command = cmdMatch[0];
           let index = -1;
           if ((index = commandText.search(":")) > 0) {
             command = commandText.slice(0, index);
           }
 
+          let foundCommand = false;
           for (let i = 0; i < commandList.length; i++) {
             let cmdName = commandList[i].abbrv;
             // check if current abbreviation matches the input
@@ -398,15 +452,33 @@ window.onload = () => {
               if (commandValid) commandArgs.className = "valid";
               // if invalid but valid command show partially valid
               else commandArgs.className = "part-valid";
+              foundCommand = true;
               break;
             }
           }
+          if (!foundCommand) {
+            document.getElementById("command-selected").textContent =
+              "Select Command";
+            document.getElementById("command-syntax").textContent =
+              "No command selected";
+            // if no match the command is invalid
+            commandValid = false;
+            commandArgs.className = "invalid";
+          }
         } else {
+          document.getElementById("command-selected").textContent =
+            "Select Command";
+          document.getElementById("command-syntax").textContent =
+            "No command selected";
           // if no match the command is invalid
           commandValid = false;
           commandArgs.className = "invalid";
         }
       } else {
+        document.getElementById("command-selected").textContent =
+          "Select Command";
+        document.getElementById("command-syntax").textContent =
+          "No command selected";
         // otherwise text box is empty
         commandValid = false;
         commandArgs.className = "empty";
@@ -414,8 +486,22 @@ window.onload = () => {
     });
   });
 
+  // api.getControlsList().then((list) => {
+  //   controlsList = ...
+  // });
+
   // reset the dropdown, syntax display, and text box
-  document.getElementById("reset-command").addEventListener("click", () => {
+  document.getElementById("command-type").addEventListener("click", () => {
+    isCommand = !isCommand;
+
+    if (isCommand) {
+      setupDropdown("command", getCommands, false);
+      document.getElementById("command-type").textContent = "Command";
+    } else {
+      setupDropdown("command", getControls, false);
+      document.getElementById("command-type").textContent = "Control";
+    }
+
     document.getElementById("command-syntax").textContent =
       "No command selected";
     commandArgs.value = "";
@@ -456,7 +542,12 @@ window.onload = () => {
     previousCommands.appendChild(span);
 
     // send command to backend
-    api.sendCommand(command, 0); // first command sink (0) temporarily hardcoded until support for more is needed
+    // first command sink (0) temporarily hardcoded until support for more is needed
+    if (isCommand) {
+      api.sendCommand(command, 0);
+    } else {
+      api.sendCommand(command, 1);
+    }
   });
 
   /// middle/data display
@@ -505,12 +596,12 @@ window.onload = () => {
       let index = parseInt(idPrefix.split("t")[1]) - 1;
 
       altG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-altData"
+        idPrefix + "-altData",
       )
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
         : [];
       spdG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-spdData"
+        idPrefix + "-spdData",
       )
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
         : [];
@@ -536,7 +627,7 @@ window.onload = () => {
 
       setInterval(() => {
         document.getElementById("t-plus-value").textContent = mstohhmmss(
-          Date.now() - t0
+          Date.now() - t0,
         );
       }, 10);
     }
@@ -595,27 +686,27 @@ window.onload = () => {
       const altValue = msg.getAlt();
       alt.setAttribute("data-value-text", altValue);
       alt.setAttribute("data-value", altValue / 1000);
-      
+
       // Set the altitude text and track digit length for responsive font sizing
       const altText = document.getElementById(idPrefix + "-alt-text");
       altText.textContent = altValue + " ft";
-      
+
       // Add a data attribute to track the number of digits for CSS responsive font sizing
       const digitLength = altValue.toString().length;
       altText.setAttribute("data-length", digitLength);
     } else {
       alt.setAttribute("data-value-text", "\u2014");
     }
-    
+
     if (msg.getSpeed() || msg.getSpeed() === 0) {
       const spdValue = msg.getSpeed();
       spd.setAttribute("data-value-text", spdValue);
       spd.setAttribute("data-value", spdValue);
-      
+
       // Set the speed text and track digit length for responsive font sizing
       const spdText = document.getElementById(idPrefix + "-spd-text");
       spdText.textContent = spdValue + " ft/s";
-      
+
       // Add a data attribute to track the number of digits for CSS responsive font sizing
       const digitLength = spdValue.toString().length;
       spdText.setAttribute("data-length", digitLength);
@@ -628,7 +719,7 @@ window.onload = () => {
     let stageEl = document.getElementById(idPrefix + "-stage");
     // Try to get stage number, checking both "Stage" and "State Flags" fields
     let stageNum = msg.getStateflag("Stage");
-    
+
     // TODO: define state list per stream
     let stageNames = [
       "Preflight",
@@ -638,7 +729,7 @@ window.onload = () => {
       "Main Parachute",
       "Landed",
     ];
-    
+
     if (stageNum !== null && stageNum < stageNames.length) {
       stageEl.textContent = stageNames[stageNum];
     }
@@ -731,7 +822,7 @@ window.onload = () => {
           "ft/s",
           1 / 3600,
           1,
-          chartsConfig
+          chartsConfig,
         );
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
@@ -746,7 +837,7 @@ window.onload = () => {
 
       // interval between grid lines
       let interval = parseInt(
-        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
+        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4,
       );
 
       // get each grid line
@@ -779,11 +870,11 @@ window.onload = () => {
       // store new data to be retreived later
       sessionStorage.setItem(
         idPrefix + "-altData",
-        JSON.stringify(altG.data.datasets[index].data)
+        JSON.stringify(altG.data.datasets[index].data),
       );
       sessionStorage.setItem(
         idPrefix + "-spdData",
-        JSON.stringify(spdG.data.datasets[index].data)
+        JSON.stringify(spdG.data.datasets[index].data),
       );
 
       // force update of the charts
@@ -800,8 +891,8 @@ window.onload = () => {
         coords[0],
         coords[1],
         `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(
-          true
-        )}</span></div>`
+          true,
+        )}</span></div>`,
       );
       lastCoords = coords;
     }
@@ -828,7 +919,7 @@ window.onload = () => {
       // update the t0 display
       setInterval(() => {
         document.getElementById("t-plus-value").textContent = mstohhmmss(
-          Date.now() - t0
+          Date.now() - t0,
         );
       }, 10);
     }

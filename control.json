@@ -1,0 +1,37 @@
+[
+	{
+		"name": "RESET",
+		"syntax": [],
+        "values": []
+	},
+    {
+		"name": "HANDSHAKE",
+		"syntax": [ 
+            "<sequence>"
+        ],
+        "values": [
+            [""]
+        ]
+	},
+    {
+		"name": "HS_DONE",
+		"syntax": [ 
+            "<success?>"
+        ],
+        "values": [
+            ["SUCCESS",
+            "FAIL"]
+        ]
+	},
+    {
+		"name": "SET_MODE",
+		"syntax": [ 
+            "<mode>"
+        ],
+        "values": [
+            ["SLEEP",
+            "NORMAL",
+            "HITL"]
+        ]
+	}
+]
