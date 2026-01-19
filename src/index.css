@@ -1,4 +1,4 @@
-@import url('./fonts/roboto.css');
+@import url("./fonts/roboto.css");
 
 :root {
   --top-bg: #111;
@@ -22,7 +22,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: Verdana, Geneva, Tahoma,'Roboto', sans-serif;
+  font-family: Verdana, Geneva, Tahoma, "Roboto", sans-serif;
 }
 
 *:focus {
@@ -445,11 +445,11 @@ span .value {
   .gauge-text {
     font-size: calc(2.8vh + 2px); /* Base size */
   }
-  
+
   .gauge-text[data-length="4"] {
     font-size: calc(2.5vh + 2px); /* Slightly smaller for 4 digits */
   }
-  
+
   .gauge-text[data-length="5"] {
     font-size: calc(2.2vh + 2px); /* Even smaller for 5 digits */
   }
@@ -599,13 +599,13 @@ span.predicted-apogee {
   cursor: pointer;
 }
 
-#reset-command {
-  width: 30%;
+#command-type {
+  width: 35%;
   margin-right: 10%;
 }
 
 #send-command {
-  width: 60%;
+  width: 55%;
   position: relative;
 }
 
@@ -622,7 +622,9 @@ span.predicted-apogee {
   height: calc(100% + 10px);
   position: absolute;
   top: calc(-100% - 10px);
-  transition: 0.2s top linear, 0.2s background-color linear;
+  transition:
+    0.2s top linear,
+    0.2s background-color linear;
 }
 
 #confirm-send:hover {
