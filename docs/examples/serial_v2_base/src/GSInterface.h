@@ -6,19 +6,31 @@
 
 enum InputState
 {
-    HANDSHAKE, // performing a handshake
-    COMMAND,   // reading data from GS
-    WRITE,     // writing data to GS (unused)
-    READY,     // ready to read or write
-    IDLE       // not ready to read or write
+    IS_SLEEP,     // not ready to read or write
+    IS_HANDSHAKE, // performing a handshake
+    IS_NORMAL,    // ready to read or write
+    IS_HITL       // in Hardware In The Loop mode
 };
+
+enum LogLevel
+{
+    LL_DEBUG,
+    LL_WARN,
+    LL_ERROR,
+    LL_FATAL
+};
+
+typedef bool (*GSInterface_DataCB)(GSMessage *);
+typedef void (*GSInterface_ModeCB)(InputState);
 
 // struct to consolidate information about a single stream
 struct GSStream
 {
-    GSStream(uint8_t type, uint8_t streamIndex, Metrics *m) : streamData(type, streamIndex), streamMetrics(m) {}
-    // the GSData object for the stream
-    GSMessage streamData;
+    GSStream(uint8_t type, uint8_t streamId, Metrics *m) : type(type), id(streamId), streamMetrics(m) {}
+    // stream type for multiplexing metadata
+    uint8_t type;
+    // stream id for multiplexing metadata
+    uint8_t id;
     // pointer to the Metrics for the stream
     // each metrics could be connected to multiple streams, so it is a pointer
     // references to all pointers are stored in the GSInterface object
@@ -29,6 +41,8 @@ struct GSStream
 class GSInterface
 {
 public:
+    // interface version
+    static const char version[];
     // the baud rate to use for the primary interface
     uint32_t baud = 115200;
     // the baud rate to use for the debug interface
@@ -43,7 +57,7 @@ public:
     // whether a handshake with the ground station has successfully been accomplished
     bool handshake = false;
     // the current state of the interface
-    InputState state = IDLE;
+    InputState state = IS_SLEEP;
 
     // the index of the next stream
     // incremented when a new stream is created
@@ -57,21 +71,24 @@ public:
     uint16_t numMetrics = 0;
     // the interval at which to log metrics in ms
     uint32_t metricsInterval = 1000;
+    // the id used for all status out (GSControl, Metrics, etc)
+    uint8_t statusId = streamIndex++;
     // the GSMessage object for metrics (always stream index 1)
-    GSMessage metricsGSData = {Metrics::type, this->streamIndex++};
+    GSMessage output = {Metrics::type, statusId};
 
-    // message to use for encoding data
-    // Message m;
     // used to store the size of input from the ground station
     uint16_t inputSize = 0;
     // used to decode input from the ground station
     GSMessage input;
     // whether there is input from the ground station
     bool hasInput = false;
+    // whether there is input that needs to be manually processed
+    bool hasData = false;
 
     // GSInterface constructor
     // - baud : the type of the message
     // - debugBaud : the multiplexing id of the message
+    // - interval : the frequency at which to send Metrics for each stream in ms
     GSInterface(uint32_t baud, uint32_t debugBaud = 0, uint32_t interval = 1000);
     // GSInterface destructor
     ~GSInterface();
@@ -85,6 +102,7 @@ public:
     // - read()
     // - readC()
     // - time()
+    // - reset
 #ifdef ARDUINO
     // setup the serial ports ```s``` and ```sd```, being the primary and debug serial ports
     bool begin(HardwareSerial *s, HardwareSerial *sd = nullptr);
@@ -98,9 +116,10 @@ public:
 #endif
 
     // handles all standard GSInterface tasks that need to run every loop, should run as fast as possible
-    int run();
+    // returns whether there is input that needs to be handled manually
+    bool run();
 
-    // whether the GSInterface is ready
+    // returns whether the GSInterface is ready
     bool isReady();
 
     // create a new GSStream of RadioMessage type ```type```, coming from device with id ```deviceId```
@@ -115,14 +134,44 @@ public:
 
     // read up to ```dataLen``` bytes from the serial port into ```data```
     // returns the number of bytes read
-    int readStream(Data *data);
+    bool readInput(Data *data);
 
+    // set the user defined GSControl handler, does not override the default handler
+    void setUserControlHandler(GSControl_CB c);
+    // set the user defined Data handler, which handles Data input such as commands
+    void setUserDataHandler(GSInterface_DataCB c);
+    // set the user defined mode switch handler, which is called when switching to a new mode via GSControl command
+    void setUserModeHandler(GSInterface_ModeCB c);
+
+    // clears a previously set user defined GSControl handler
+    void clearUserControlHandler();
+    // clears a previously set user defined Data handler
+    void clearUserDataHandler();
+    // clear a previously set user defined mode switch handler
+    void clearUserModeHandler();
+
+    // logs to the Ground Station via GSControl command
+    void logM(LogLevel lvl, const char *str);
     // log to debug serial port, writes ```str1```, ```str2```, then ```str3```, followed by a newline
     void log(const char *str1, const char *str2 = "", const char *str3 = "");
 
 private:
+    // string array to convert the LogLevel enum to strings
+    static const char *const logLevelStr[];
+
     // timer variable for sending metrics at an interval
     uint32_t metricsTimer = 0;
+    // timer variable for input timeout, ensures the input does not get stuck waiting for a long message because of a bad header
+    uint32_t inputTimer = 0;
+
+    // the default GSControl handler
+    bool defaultControlHandler(char *cmd, uint16_t argc, char **argv);
+    // pointer for user defined GSControl handler
+    GSControl_CB userControlHandler = nullptr;
+    // pointer for user defined Data handler
+    GSInterface_DataCB userDataHandler = nullptr;
+    // pointer for user defined mode switch handler
+    GSInterface_ModeCB userModeHandler = nullptr;
 
     // returns the number of bytes available from the serial port
     int available();
@@ -138,6 +187,8 @@ private:
     char readC();
     // returns the current time since power on in milliseconds
     uint32_t time();
+    // performs a hard reset of the device
+    void reset();
 };
 
 #endif

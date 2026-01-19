@@ -1,11 +1,19 @@
 {
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"scale": {
 		"name": "Main Window Scale",
 		"description": "Changes the scale of the debug window for different sized screens.",
 		"value": 1,
 		"type": "dropdown",
-		"range": [0.50,0.75,1.00,1.25,1.50,1.75,2.00]
+		"range": [
+			0.5,
+			0.75,
+			1,
+			1.25,
+			1.5,
+			1.75,
+			2
+		]
 	},
 	"debug": {
 		"name": "Debug Mode",
@@ -37,19 +45,25 @@
 		"value": true,
 		"type": "toggle"
 	},
-	"cacheMaxSize": { 
+	"cacheMaxSize": {
 		"name": "Map Cache Size (bytes)",
 		"description": "The maximum size of the cache for loading tiles offline.",
 		"value": 100000000,
 		"type": "number",
-		"range": [0, -1]
+		"range": [
+			0,
+			-1
+		]
 	},
 	"baudRate": {
 		"name": "Serial Port Baud Rate",
 		"description": "The baud rate used when connecting to the radio receiver over serial.",
 		"value": 115200,
 		"type": "number",
-		"range": [0, -1]
+		"range": [
+			0,
+			-1
+		]
 	},
 	"streams": [
 		{
@@ -57,7 +71,7 @@
 			"type": "APRSTelem",
 			"id": 1,
 			"enabled": true,
-            "settings": {}
+			"settings": {}
 		}
 	]
 }
