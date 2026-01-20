@@ -384,13 +384,13 @@ window.onload = () => {
         return command.name === option;
       });
       document.getElementById("command-syntax").textContent =
-        controlsList[index].abbrv + ": " + controlsList[index].syntax.join(" ");
+        controlsList[index].name + " " + controlsList[index].syntax.join(" ");
       document.getElementById("command-args").value =
-        controlsList[index].abbrv + ": ";
+        controlsList[index].name + " ";
 
       // check if syntax is valid (in case there are no args)
       commandValid = controlsList[index].validator(
-        controlsList[index].abbrv + ": ",
+        controlsList[index].name + " ",
       );
       // if valid change color
       if (commandValid) commandArgs.className = "valid";
@@ -413,92 +413,130 @@ window.onload = () => {
       });
     }
   };
+
   // need to get the command list from the backend since it's being loaded from a file
   api.getCommandList().then((list) => {
-    // commandList = APRSCmd.createCommandList(list);
+    commandList = APRSCmd.createCommandList(list);
 
     // setup the commands dropdown
     setupDropdown("command", getCommands, false);
+  });
 
-    // validation for the command text input
-    commandArgs.addEventListener("input", () => {
-      let commandText = commandArgs.value;
+  // need to get the control command list from the backend since it's being loaded from a file
+  api.getControlsList().then((list) => {
+    controlsList = GSControl.createControlList(list);
+  });
 
-      if (commandText.length > 0) {
-        // see if text matches the command format
-        let cmdMatch = commandText.match(/[A-Z]+(:( [A-z0-9])*)?/g);
+  // validation for the command text input
+  commandArgs.addEventListener("input", () => {
+    let commandText = commandArgs.value;
 
-        if (cmdMatch) {
-          // if we found a match, figure out where the command abbreviation is
-          let command = cmdMatch[0];
-          let index = -1;
-          if ((index = commandText.search(":")) > 0) {
-            command = commandText.slice(0, index);
-          }
+    if (commandText.length > 0 && isCommand) {
+      // see if text matches the command format
+      let cmdMatch = commandText.match(/[A-Z]+(:( [A-z0-9])*)?/g);
+      let foundCommand = false;
 
-          let foundCommand = false;
-          for (let i = 0; i < commandList.length; i++) {
-            let cmdName = commandList[i].abbrv;
-            // check if current abbreviation matches the input
-            if (cmdName === command) {
-              // update syntax and dropdown
-              document.getElementById("command-syntax").textContent =
-                commandList[i].abbrv + ": " + commandList[i].syntax.join(" ");
-              document.getElementById("command-selected").textContent =
-                commandList[i].name;
-              // check if syntax is valid
-              commandValid = commandList[i].validator(commandText);
-              // if valid change color
-              if (commandValid) commandArgs.className = "valid";
-              // if invalid but valid command show partially valid
-              else commandArgs.className = "part-valid";
-              foundCommand = true;
-              break;
-            }
-          }
-          if (!foundCommand) {
-            document.getElementById("command-selected").textContent =
-              "Select Command";
-            document.getElementById("command-syntax").textContent =
-              "No command selected";
-            // if no match the command is invalid
-            commandValid = false;
-            commandArgs.className = "invalid";
-          }
-        } else {
-          document.getElementById("command-selected").textContent =
-            "Select Command";
-          document.getElementById("command-syntax").textContent =
-            "No command selected";
-          // if no match the command is invalid
-          commandValid = false;
-          commandArgs.className = "invalid";
+      if (cmdMatch) {
+        // if we found a match, figure out where the command abbreviation is
+        let command = cmdMatch[0];
+        let index = -1;
+        if ((index = commandText.search(":")) > 0) {
+          command = commandText.slice(0, index);
         }
-      } else {
+
+        for (let i = 0; i < commandList.length; i++) {
+          let cmdName = commandList[i].abbrv;
+          // check if current abbreviation matches the input
+          if (cmdName === command) {
+            // update syntax and dropdown
+            document.getElementById("command-syntax").textContent =
+              commandList[i].abbrv + ": " + commandList[i].syntax.join(" ");
+            document.getElementById("command-selected").textContent =
+              commandList[i].name;
+            // check if syntax is valid
+            commandValid = commandList[i].validator(commandText);
+            // if valid change color
+            if (commandValid) commandArgs.className = "valid";
+            // if invalid but valid command show partially valid
+            else commandArgs.className = "part-valid";
+            foundCommand = true;
+            break;
+          }
+        }
+      }
+      if (!foundCommand) {
         document.getElementById("command-selected").textContent =
           "Select Command";
         document.getElementById("command-syntax").textContent =
           "No command selected";
-        // otherwise text box is empty
+        // if no match the command is invalid
         commandValid = false;
-        commandArgs.className = "empty";
+        commandArgs.className = "invalid";
       }
-    });
-  });
+    } else if (commandText.length > 0 && !isCommand) {
+      // see if text matches the control format
+      let cmdMatch = commandText.match(/[A-Z]+( [A-z0-9])*/g);
+      let foundCommand = false;
 
-  // api.getControlsList().then((list) => {
-  //   controlsList = ...
-  // });
+      console.log("cmdMatch", cmdMatch);
+
+      if (cmdMatch) {
+        // if we found a match, figure out where the command part of the control is
+        let command = cmdMatch[0];
+        let index = -1;
+        if ((index = commandText.search(" ")) > 0) {
+          command = commandText.slice(0, index);
+        }
+
+        for (let i = 0; i < controlsList.length; i++) {
+          let cmdName = controlsList[i].name;
+          // check if current name matches the input
+          if (cmdName === command) {
+            // update syntax and dropdown
+            document.getElementById("command-syntax").textContent =
+              controlsList[i].name + " " + controlsList[i].syntax.join(" ");
+            document.getElementById("command-selected").textContent =
+              controlsList[i].name;
+            // check if syntax is valid
+            commandValid = controlsList[i].validator(commandText);
+            // if valid change color
+            if (commandValid) commandArgs.className = "valid";
+            // if invalid but valid command show partially valid
+            else commandArgs.className = "part-valid";
+            foundCommand = true;
+            break;
+          }
+        }
+      }
+      if (!foundCommand) {
+        document.getElementById("command-selected").textContent =
+          "Select Command";
+        document.getElementById("command-syntax").textContent =
+          "No command selected";
+        // if no match the command is invalid
+        commandValid = false;
+        commandArgs.className = "invalid";
+      }
+    } else {
+      document.getElementById("command-selected").textContent =
+        "Select Command";
+      document.getElementById("command-syntax").textContent =
+        "No command selected";
+      // otherwise text box is empty
+      commandValid = false;
+      commandArgs.className = "empty";
+    }
+  });
 
   // reset the dropdown, syntax display, and text box
   document.getElementById("command-type").addEventListener("click", () => {
     isCommand = !isCommand;
 
     if (isCommand) {
-      setupDropdown("command", getCommands, false);
+      getCommands("command");
       document.getElementById("command-type").textContent = "Command";
     } else {
-      setupDropdown("command", getControls, false);
+      getControls("command");
       document.getElementById("command-type").textContent = "Control";
     }
 
@@ -542,11 +580,11 @@ window.onload = () => {
     previousCommands.appendChild(span);
 
     // send command to backend
-    // first command sink (0) temporarily hardcoded until support for more is needed
+    // GSControl sink (0) temporarily hardcoded until better support is needed
     if (isCommand) {
-      api.sendCommand(command, 0);
-    } else {
       api.sendCommand(command, 1);
+    } else {
+      api.sendCommand(command, 0);
     }
   });
 

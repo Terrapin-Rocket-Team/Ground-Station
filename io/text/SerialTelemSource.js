@@ -25,7 +25,7 @@ class SerialTelemSource extends TextSource {
     // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
-    this.sd.addOutputStream(this.name);
+    this.sd.addStream(this.name);
 
     log.debug("Creating serial telem source for: " + this.name);
 
@@ -38,7 +38,7 @@ class SerialTelemSource extends TextSource {
     if (this.options.createLog) {
       const dataName = path.join(
         "data",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv",
       );
       const logName = path.join("log", this.name + ".txt");
       this.dataFile = fs.createWriteStream(dataName);
@@ -53,14 +53,9 @@ class SerialTelemSource extends TextSource {
         .split("\n")
         .forEach((line) => {
           if (line) {
-            this.options.parser(line);
+            let obj = this.options.parser(line);
             if (this.options.createLog && this.dataFile) {
               // write CSV of data to file
-              let obj;
-              // TODO: not ideal, but good enough for now, ideally we're coder agnostic here
-              if (options.isMetrics) obj = new Metrics(line, true);
-              if (!options.isMetrics) obj = new APRSTelem(line, this.name);
-
               // if first time write csv header
               this.dataFile.write(obj.toCSV(this.firstLine));
               if (this.firstLine) this.firstLine = false;

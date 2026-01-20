@@ -1,5 +1,5 @@
 /*
-format from the Message library
+format from the RadioMessage library
 {
     "type": "APRSTelem",
     "deviceId": 3,
@@ -16,7 +16,7 @@ format from the Message library
 */
 
 /**
- * A class to handling encoding and decoding of APRS messages
+ * A class to handle encoding and decoding of APRS telemetry messages
  */
 class APRSTelem {
   /**
@@ -107,7 +107,7 @@ class APRSTelem {
       if (encoding[i]) {
         this.stateflags.push(
           (this.rawStateflags >>> (totalLength - lengthAdded - encoding[i])) &
-            ((1 << encoding[i]) - 1)
+            ((1 << encoding[i]) - 1),
         );
         lengthAdded += encoding[i];
       } else {
@@ -136,7 +136,7 @@ class APRSTelem {
           stateFlags: csvArr[11],
         },
       },
-      csvArr[1]
+      csvArr[1],
     );
   }
 
@@ -201,13 +201,13 @@ class APRSTelem {
     let latDegrees = Math.floor(this.latitude),
       latMinutes = Math.floor(60 * (this.latitude - latDegrees)),
       latSeconds = Math.floor(
-        60 * (60 * (this.latitude - latDegrees) - latMinutes)
+        60 * (60 * (this.latitude - latDegrees) - latMinutes),
       );
     // convert longitude to DMS
     let longDegrees = Math.floor(this.longitude),
       longMinutes = Math.floor(60 * (this.longitude - longDegrees)),
       longSeconds = Math.floor(
-        60 * (60 * (this.longitude - longDegrees) - longMinutes)
+        60 * (60 * (this.longitude - longDegrees) - longMinutes),
       );
     // put it together
     return (
@@ -262,31 +262,38 @@ class APRSTelem {
     let index = this.stateflagsFormat.findIndex((name) => {
       return name === flagName;
     });
-    
+
     if (index >= 0) return this.stateflags[index];
-    
+
+    // TODO: what does this do
     // If not found and we're looking for "Stage", check for "State Flags" instead
     if (flagName === "Stage" && !this.stateflagsFormat.includes("Stage")) {
       // If there are no state flags defined but we have a raw value, use it directly
-      if (this.stateflagsFormat.length === 0 && this.rawStateflags !== undefined) {
+      if (
+        this.stateflagsFormat.length === 0 &&
+        this.rawStateflags !== undefined
+      ) {
         return this.rawStateflags;
       }
-      
+
       // Check for alternate name "State Flags"
       let altIndex = this.stateflagsFormat.findIndex((name) => {
         return name === "State Flags";
       });
       if (altIndex >= 0) return this.stateflags[altIndex];
     }
-    
+
     // If not found and we're looking for "State Flags", check for "Stage" instead
-    if (flagName === "State Flags" && !this.stateflagsFormat.includes("State Flags")) {
+    if (
+      flagName === "State Flags" &&
+      !this.stateflagsFormat.includes("State Flags")
+    ) {
       let altIndex = this.stateflagsFormat.findIndex((name) => {
         return name === "Stage";
       });
       if (altIndex >= 0) return this.stateflags[altIndex];
     }
-    
+
     return null;
   }
 
@@ -313,7 +320,10 @@ class APRSTelem {
     let csv = "";
     if (firstLine) {
       csv =
-        "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags\n";
+        "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,Stateflags";
+      if (this.stateflagsFormat.length > 0)
+        csv += "," + this.stateflagsFormat.join(",") + "\n";
+      else csv += "\n";
     }
     csv += `${this.time.toISOString().split("T")[1]},${this.stream},${
       this.deviceId
@@ -321,7 +331,10 @@ class APRSTelem {
       this.heading
     },${this.orientation[0]},${this.orientation[1]},${this.orientation[2]},${
       this.rawStateflags
-    }\n`;
+    }`;
+    if (this.stateflagsFormat.length > 0)
+      csv += "," + this.stateflags.join(",") + "\n";
+    else csv += "\n";
     return csv;
   }
 }
