@@ -3,12 +3,12 @@ const { log } = require("../../debug");
 const fs = require("fs");
 const path = require("path");
 const { serial, SerialDevice } = require("../../serial/SerialDevice");
-const APRSCmd = require("../../coders/APRSCmd");
+const GSControl = require("../../coders/GSControl");
 
 /**
- * A class write commands to a serial device
+ * A class write control commands to a serial device
  */
-class SerialCommandSink extends TextSink {
+class SerialControlSink extends TextSink {
   /**
    *
    * @param {String} name the name of the stream to create
@@ -24,7 +24,7 @@ class SerialCommandSink extends TextSink {
 
     this.sd.addStream(this.name);
 
-    log.debug("Creating serial command sink for: " + this.name);
+    log.debug("Creating serial control sink for: " + this.name);
 
     this.options = options ? options : {};
     this.dataFile = null;
@@ -51,20 +51,25 @@ class SerialCommandSink extends TextSink {
    * @param {String} text the command to be written
    */
   write(text) {
+    // TODO: update
+
     // always write the JSON ouput
     // that's what the Message library on the driver side is expecting
     // TODO: deviceId should not be hardcoded here
-    let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
-    if (!aprsCmd.loadCmd(text)) {
-      log.err("Error parsing command");
+    let control = new GSControl({
+      deviceId: 3,
+      data: { valid: 1, cmd: "", args: "" },
+    });
+    if (!control.loadCtrl(text)) {
+      log.err("Error parsing control command");
       return;
     }
-    let outputText = JSON.stringify(aprsCmd);
+    let outputText = JSON.stringify(control);
     // write the the serial device
     this.sd.write(this.name, outputText);
     // write to the log file if specified
     if (this.options.createLog && this.dataFile) {
-      this.dataFile.write(aprsCmd.toCSV(this.firstLine));
+      this.dataFile.write(control.toCSV(this.firstLine));
       if (this.firstLine) this.firstLine = false;
     }
     if (this.options.createLog && this.logFile) {
@@ -74,4 +79,4 @@ class SerialCommandSink extends TextSink {
   }
 }
 
-module.exports = SerialCommandSink;
+module.exports = SerialControlSink;

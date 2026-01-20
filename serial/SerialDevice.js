@@ -21,10 +21,8 @@ class SerialDevice extends EventEmitter {
     super();
     this.ready = false;
     this.connected = false;
-    this.inputStreamNames = [];
-    this.outputStreamNames = [];
-    this.deviceInput = [];
-    this.deviceOutput = [];
+    this.streamNames = [];
+    this.pipes = [];
 
     this.port = "";
 
@@ -58,28 +56,21 @@ class SerialDevice extends EventEmitter {
 
   /**
    * Adds a stream to the list of streams created when calling connect()
+   * If the stream has already been added, does nothing
    * @param {String} name the name of the input stream to add
    */
-  addInputStream(name) {
-    this.inputStreamNames.push(name);
-  }
-
-  /**
-   * Adds a stream to the list of streams created when calling connect()
-   * @param {String} name the name of the output stream to add
-   */
-  addOutputStream(name) {
-    this.outputStreamNames.push(name);
+  addStream(name) {
+    // check to ensure no duplicates, then add to array
+    if (!this.streamNames.includes(name)) this.streamNames.push(name);
   }
 
   clearStreams() {
     // remove all listeners on output stream data events to prevent duplicate events on stream reload
     // this is different from a driver reload which reconnects to a different serial port, but keeps the same streams
-    this.outputStreamNames.forEach((name) => {
+    this.streamNames.forEach((name) => {
       this.removeAllListeners(name + "-data");
     });
-    this.inputStreamNames = [];
-    this.outputStreamNames = [];
+    this.streamNames = [];
   }
 
   /**
@@ -88,7 +79,7 @@ class SerialDevice extends EventEmitter {
    * @param {Writable} outStream the stream to pipe to
    */
   pipe(name, outStream) {
-    let stream = this.deviceOutput.find((o) => o.name === name);
+    let stream = this.pipes.find((o) => o.name === name);
     if (stream) stream.stream.pipe(outStream);
     else log.err("Could not find output stream: " + name);
   }
@@ -109,7 +100,7 @@ class SerialDevice extends EventEmitter {
     } else {
       log.err(
         "Failed to start serial interface: Unsupported platform! Found platform " +
-          os.platform()
+          os.platform(),
       );
     }
 
@@ -153,7 +144,7 @@ class SerialDevice extends EventEmitter {
                   if (strings[i + 1].includes("serial connection error")) {
                     log.warn(
                       "Error communicating with serial device: " +
-                        strings[i + 1]
+                        strings[i + 1],
                     );
                     this.emit("close", this.port);
                     this.control.stream.write("close\n");
@@ -178,7 +169,7 @@ class SerialDevice extends EventEmitter {
 
     // setup debug output of all serial driver stdout data
     this.driver.stdout.pipe(
-      fs.createWriteStream(path.join(logPath, "serial_driver_debug.log"))
+      fs.createWriteStream(path.join(logPath, "serial_driver_debug.log")),
     );
   }
 
@@ -209,10 +200,7 @@ class SerialDevice extends EventEmitter {
       if (this.ready) {
         // remove all existing streams
         let stream;
-        while ((stream = this.deviceInput.pop())) {
-          stream.close();
-        }
-        while ((stream = this.deviceOutput.pop())) {
+        while ((stream = this.pipes.pop())) {
           stream.close();
         }
 
@@ -232,17 +220,11 @@ class SerialDevice extends EventEmitter {
             this.control.stream.write("data pipes\n");
 
             // write the total number of pipes
-            this.control.stream.write(this.inputStreamNames.length + "\n");
-            this.control.stream.write(this.outputStreamNames.length + "\n");
+            this.control.stream.write(this.streamNames.length + "\n");
 
-            // write the names of all the command pipes
-            for (let i = 0; i < this.inputStreamNames.length; i++) {
-              this.control.stream.write(this.inputStreamNames[i] + "\n");
-            }
-
-            // write the names of all the telemetry pipes
-            for (let i = 0; i < this.outputStreamNames.length; i++) {
-              this.control.stream.write(this.outputStreamNames[i] + "\n");
+            // write the names of all the pipes
+            for (let i = 0; i < this.streamNames.length; i++) {
+              this.control.stream.write(this.streamNames[i] + "\n");
             }
 
             // wait for all the pipes to successfully be created
@@ -252,13 +234,7 @@ class SerialDevice extends EventEmitter {
 
               if (success) {
                 // handle sending commands
-                this.inputStreamNames.forEach((name) => {
-                  let newStream = new PipeStream(name);
-                  this.deviceInput.push(newStream);
-                });
-
-                // handle telemetry data
-                this.outputStreamNames.forEach((name) => {
+                this.streamNames.forEach((name) => {
                   let newStream = new PipeStream(name);
                   newStream.on("data", (data) => {
                     try {
@@ -267,28 +243,25 @@ class SerialDevice extends EventEmitter {
                     } catch (err) {
                       this.emit(
                         "error",
-                        "Error receiving on " + name + ": " + err.message
+                        "Error receiving on " + name + ": " + err.message,
                       );
                       log.debug("During error, received data: " + data);
                     }
                   });
-                  this.deviceOutput.push(newStream);
+                  this.pipes.push(newStream);
                 });
 
                 // check if we actually created any pipes
-                if (this.deviceInput.length + this.deviceOutput.length > 0) {
+                if (this.pipes.length > 0) {
                   // wait for all pipes to be ready
-                  this.waitReady(
-                    this.deviceInput.concat(this.deviceOutput),
-                    () => {
-                      // tell the serial driver the ground station is ready
-                      this.control.stream.write("interface ready\n");
-                      this.emit("connected");
-                      this.connected = true;
-                      // resolve the promise
-                      res(1);
-                    }
-                  );
+                  this.waitReady(this.pipes, () => {
+                    // tell the serial driver the ground station is ready
+                    this.control.stream.write("interface ready\n");
+                    this.emit("connected");
+                    this.connected = true;
+                    // resolve the promise
+                    res(1);
+                  });
                 } else {
                   // otherwise resolve the promise
                   this.control.stream.write("interface ready\n");
@@ -318,7 +291,7 @@ class SerialDevice extends EventEmitter {
    */
   write(name, data) {
     if (this.ready) {
-      let stream = this.deviceInput.find((o) => o.name === name);
+      let stream = this.pipes.find((o) => o.name === name);
       if (stream) {
         stream.stream.write(data);
 

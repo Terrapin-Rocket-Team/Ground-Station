@@ -45,10 +45,6 @@ int main(int argc, char **argv)
     NamedPipe **pipes = nullptr;
     // the multiplexing ids/indexes for each pipe
     uint8_t *pipeDemuxIds = nullptr;
-    // the number of input pipes
-    int numInputPipes = 0;
-    // the number of output pipes
-    int numOutputPipes = 0;
     // the total number of pipes (input and output)
     int numTotalPipes = 0;
 
@@ -217,31 +213,17 @@ int main(int argc, char **argv)
             // check for data pipes command
             if (strcmp(controlStr, "data pipes") == 0)
             {
-                // get number of input pipes
-                bool gotNumInputPipes = false;
-                char numInputPipesStr[3] = {0};
-                while (!gotNumInputPipes)
+                // get number of pipes
+                bool gotNumPipes = false;
+                char numPipesStr[3] = {0};
+                while (!gotNumPipes)
                 {
-                    memset(numInputPipesStr, 0, sizeof(numInputPipesStr));
-                    if (pipeControl->readStr(numInputPipesStr, sizeof(numInputPipesStr)) > 0)
+                    memset(numPipesStr, 0, sizeof(numPipesStr));
+                    if (pipeControl->readStr(numPipesStr, sizeof(numPipesStr)) > 0)
                     {
-                        numInputPipesStr[sizeof(numInputPipesStr) - 1] = '\0';
-                        std::cout << "Received num pipes: " << numInputPipesStr << std::endl;
-                        gotNumInputPipes = true;
-                    }
-                }
-
-                // get number of output pipes
-                bool gotNumOutputPipes = false;
-                char numOutputPipesStr[3] = {0};
-                while (!gotNumOutputPipes)
-                {
-                    memset(numOutputPipesStr, 0, sizeof(numOutputPipesStr));
-                    if (pipeControl->readStr(numOutputPipesStr, sizeof(numOutputPipesStr)) > 0)
-                    {
-                        numOutputPipesStr[sizeof(numOutputPipesStr) - 1] = '\0';
-                        std::cout << "Received num pipes: " << numOutputPipesStr << std::endl;
-                        gotNumOutputPipes = true;
+                        numPipesStr[sizeof(numPipesStr) - 1] = '\0';
+                        std::cout << "Received num pipes: " << numPipesStr << std::endl;
+                        gotNumPipes = true;
                     }
                 }
 
@@ -264,9 +246,7 @@ int main(int argc, char **argv)
                 }
 
                 // convert numbers of input and output pipes from string
-                numInputPipes = atoi(numInputPipesStr);
-                numOutputPipes = atoi(numOutputPipesStr);
-                numTotalPipes = numInputPipes + numOutputPipes;
+                numTotalPipes = atoi(numPipesStr);
 
                 // make sure more than 0 pipes should be requested
                 if (numTotalPipes > 0)
@@ -590,8 +570,7 @@ int main(int argc, char **argv)
                             else
                             {
                                 std::cout << "Error parsing header, at least one field was not set correctly" << std::endl;
-                                dataHandled += GSMessage::headerLen; // want to get rid of these bytes
-                                mOut.clear();                        // clear erroneous data in the message
+                                mOut.clear(); // clear erroneous data in the message
                             }
                         }
                         else
@@ -668,7 +647,7 @@ int main(int argc, char **argv)
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
                             // need to skip over all the input pipe ids
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
@@ -685,7 +664,7 @@ int main(int argc, char **argv)
                             VideoData outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
@@ -728,7 +707,7 @@ int main(int argc, char **argv)
                             GenericData outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
@@ -771,12 +750,12 @@ int main(int argc, char **argv)
                             APRSCmd outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
                                     memset(outStr, 0, sizeof(outStr));
-                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[numInputPipes + i]);
+                                    outData.toJSON(outStr, sizeof(outStr), pipeDemuxIds[i]);
                                     strcat(outStr, "\n");
                                     pipes[i]->write(outStr, strlen(outStr));
                                 }
@@ -788,7 +767,7 @@ int main(int argc, char **argv)
                             APRSText outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
@@ -805,7 +784,7 @@ int main(int argc, char **argv)
                             Metrics outData;
                             mOut.decode(&outData);
                             // locate the proper pipe and send data
-                            for (int i = numInputPipes; i < numTotalPipes; i++)
+                            for (int i = 0; i < numTotalPipes; i++)
                             {
                                 if (pipeDemuxIds[i] == mOut.id)
                                 {
@@ -820,9 +799,6 @@ int main(int argc, char **argv)
                         // reset
                         mOut.clear();
                         headerFound = false;
-                        // msgType = 0;
-                        // msgIndex = 0;
-                        // msgSize = 0;
                     }
                 }
 
@@ -831,26 +807,87 @@ int main(int argc, char **argv)
             }
 
             // handle commands
-            for (int i = 0; i < numInputPipes; i++)
+            for (int i = 0; i < numTotalPipes; i++)
             {
                 // check to see if we received a command from the GUI
                 memset(inStr, 0, sizeof(inStr));
-                if (pipes[i]->read(inStr, sizeof(inStr)))
+                if (pipes[i]->read(inStr, sizeof(inStr) - 1)) // ensure null terminated
                 {
-                    // assume APRSCmd for now
-                    // encode the APRSCmd from the JSON
-                    APRSCmd inData;
-                    int id = 0;
-                    strlen(inStr);
-                    std::cout << inStr << std::endl;
-                    inData.fromJSON(inStr, strlen(inStr), id);
-                    mIn.setMetadata(APRSCmd::type, pipeDemuxIds[i]);
-                    mIn.encode(&inData);
-                    std::cout << "Sending command: " << mIn.buf << std::endl;
-                    // tell the device we are sending a command
-                    // device->writeSerialPort((void *)"command\n", strlen("command\n"));
-                    // write the new message formatted for multiplexing
-                    device->writeSerialPort(mIn.buf, mIn.size);
+                    char type[30];
+                    memset(type, 0, sizeof(type)); // initialize entire array to 0 to ensure null terminated
+                    std::cout << "Got input: " << inStr << std::endl;
+                    if (Data::extractStr(inStr, strlen(inStr), "\"type\":\"", '\"', type, sizeof(type)))
+                    {
+                        if (strcmp(type, "GSControl") == 0)
+                        {
+                            // this is a GSControl, encode it from the JSON
+                            GSControl inData;
+                            int id = 0;
+                            inData.fromJSON(inStr, strlen(inStr), id);
+                            mIn.setMetadata(GSControl::type, pipeDemuxIds[i]);
+                            mIn.encode(&inData);
+                            std::cout << "Sending to device: " << mIn.buf + GSMessage::headerLen << std::endl;
+                            // write the new message formatted for multiplexing
+                            device->writeSerialPort(mIn.buf, mIn.size);
+                        }
+                        else if (strcmp(type, "APRSTelem") == 0)
+                        {
+                            // this is an APRSTelem, encode it from the JSON
+                            APRSTelem inData;
+                            int id = 0;
+                            inData.fromJSON(inStr, strlen(inStr), id);
+                            mIn.setMetadata(APRSTelem::type, pipeDemuxIds[i]);
+                            mIn.encode(&inData);
+                            std::cout << "Sending to device: " << mIn.buf + GSMessage::headerLen << std::endl;
+                            // write the new message formatted for multiplexing
+                            device->writeSerialPort(mIn.buf, mIn.size);
+                        }
+                        else if (strcmp(type, "APRSCmd") == 0)
+                        {
+                            // this is an APRSCmd, encode it from the JSON
+                            APRSCmd inData;
+                            int id = 0;
+                            inData.fromJSON(inStr, strlen(inStr), id);
+                            mIn.setMetadata(APRSCmd::type, pipeDemuxIds[i]);
+                            mIn.encode(&inData);
+                            std::cout << "Sending to device: " << mIn.buf + GSMessage::headerLen << std::endl;
+                            // write the new message formatted for multiplexing
+                            device->writeSerialPort(mIn.buf, mIn.size);
+                        }
+                        else if (strcmp(type, "Metrics") == 0)
+                        {
+                            // this is a Metrics, encode it from the JSON
+                            Metrics inData;
+                            int id = 0;
+                            inData.fromJSON(inStr, strlen(inStr), id);
+                            mIn.setMetadata(Metrics::type, pipeDemuxIds[i]);
+                            mIn.encode(&inData);
+                            std::cout << "Sending to device: " << mIn.buf + GSMessage::headerLen << std::endl;
+                            // write the new message formatted for multiplexing
+                            device->writeSerialPort(mIn.buf, mIn.size);
+                        }
+                        else if (strcmp(type, "HITLData") == 0)
+                        {
+                            // this is a HITLData, encode it from the JSON
+                            // TODO: update when HITLData is written
+                            Metrics inData;
+                            int id = 0;
+                            inData.fromJSON(inStr, strlen(inStr), id);
+                            mIn.setMetadata(Metrics::type, pipeDemuxIds[i]);
+                            mIn.encode(&inData);
+                            std::cout << "Sending to device: " << mIn.buf + GSMessage::headerLen << std::endl;
+                            // write the new message formatted for multiplexing
+                            device->writeSerialPort(mIn.buf, mIn.size);
+                        }
+                        else
+                        {
+                            std::cout << "Error: type not in supported types, type was: " << type << std::endl;
+                        }
+                    }
+                    else
+                    {
+                        std::cout << "Error: could not find type for JSON: " << inStr << std::endl;
+                    }
                 }
             }
         }

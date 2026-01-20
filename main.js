@@ -9,11 +9,14 @@ const {
   SerialTelemSource,
   SerialCommandSink,
   FileCommandSink,
+  SerialControlSink,
+  FileControlSink,
 } = require("./io/text-io");
 const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
+const GSControl = require("./coders/GSControl");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
@@ -26,6 +29,7 @@ let windows = { main: null, video: null },
   config,
   cmdList,
   stateflags,
+  ctrlList,
   cacheMeta,
   closed,
   videoControls = {
@@ -148,6 +152,21 @@ try {
 }
 
 try {
+  // load control list
+  ctrlList = JSON.parse(fs.readFileSync("./control.json"));
+
+  GSControl.createControlList(ctrlList);
+
+  log.debug("Control commands loaded");
+} catch (err) {
+  log.warn(
+    "Failed to load control command file, some features will not be available: " +
+      err.message,
+  );
+  ctrlList = [];
+}
+
+try {
   // load cache metadata
   cacheMeta = JSON.parse(
     fs.readFileSync(
@@ -202,6 +221,12 @@ const loadStreams = () => {
   commandSinks = [];
   serial.clearStreams();
 
+  commandSinks.push(
+    new SerialControlSink("device-status-1", {
+      createLog: true,
+    }),
+  );
+
   // load streams from config
   config.streams.forEach((stream) => {
     if (stream.enabled) {
@@ -217,6 +242,7 @@ const loadStreams = () => {
               log.info(telem);
               if (windows.main) windows.main.webContents.send("data", telem);
               if (windows.video) windows.video.webContents.send("data", telem);
+              return telem;
             },
             createLog: true,
           }),
@@ -238,6 +264,8 @@ const loadStreams = () => {
               if (windows.main) windows.main.webContents.send("metrics", telem);
               if (windows.video)
                 windows.video.webContents.send("metrics", telem);
+
+              return telem;
             },
             isMetrics: true,
             createLog: true,
@@ -448,6 +476,10 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
 
       APRSTelem.createStateflagList(stateflags);
+
+      ctrlList = JSON.parse(fs.readFileSync("./control.json"));
+
+      GSControl.createControlList(ctrlList);
 
       log.debug("Reloaded commands and stateflags");
     } catch (err) {
@@ -760,6 +792,10 @@ ipcMain.handle("get-stateflag-list", (event, args) => {
   return stateflags;
 });
 
+ipcMain.handle("get-controls-list", (event, args) => {
+  return ctrlList;
+});
+
 ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
@@ -994,6 +1030,11 @@ if (config.dataDebug.value) {
     }
 
     // create the command sink
+    commandSinks.push(
+      new FileControlSink(path.join(logPath, "control.txt"), {
+        asString: true,
+      }),
+    );
     commandSinks.push(
       new FileCommandSink(path.join(logPath, "commands.txt"), {
         asString: true,

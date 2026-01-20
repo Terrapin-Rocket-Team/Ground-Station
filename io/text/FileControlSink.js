@@ -1,12 +1,12 @@
 const TextSink = require("./TextSink");
 const { log } = require("../../debug");
 const fs = require("fs");
-const APRSCmd = require("../../coders/APRSCmd");
+const GSControl = require("../../coders/GSControl");
 
 /**
- * A class write commands to a local file
+ * A class write control commands to a local file
  */
-class FileCommandSink extends TextSink {
+class FileControlSink extends TextSink {
   /**
    * @param {String} file the file name to read from
    * @param {Object} [options] output configuration options (only one should be specified)
@@ -17,7 +17,7 @@ class FileCommandSink extends TextSink {
   constructor(file, options, name) {
     super(name ? name : file, fs.createWriteStream(file));
 
-    log.debug("Creating file command sink for: " + this.name);
+    log.debug("Creating file control sink for: " + this.name);
 
     this.file = file;
     this.options = options ? options : {};
@@ -27,6 +27,7 @@ class FileCommandSink extends TextSink {
    * @param {String} text the command to be written
    */
   write(text) {
+    // TODO: update
     let outputText;
     // if no format was written, just write the plain text
     if (!this.options) {
@@ -34,25 +35,31 @@ class FileCommandSink extends TextSink {
     }
     // if asString was set, write formatted text
     if (this.options.asString) {
-      let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
-      if (!aprsCmd.loadCmd(text)) {
-        log.err("Error parsing command");
+      let control = new GSControl({
+        deviceId: 3,
+        data: { valid: 1, cmd: 0, args: 0 },
+      });
+      if (!control.loadCtrl(text)) {
+        log.err("Error parsing control command");
         return;
       }
-      outputText = aprsCmd.toString();
+      outputText = control.toString();
     }
     // if asJSON was set, write the command as JSON text
     if (this.options.asJSON) {
-      let aprsCmd = new APRSCmd({ deviceId: 3, data: { cmd: 0, args: 0 } });
-      if (!aprsCmd.loadCmd(text)) {
-        log.err("Error parsing command");
+      let control = new GSControl({
+        deviceId: 3,
+        data: { valid: 1, cmd: 0, args: 0 },
+      });
+      if (!control.loadCtrl(text)) {
+        log.err("Error parsing control command");
         return;
       }
-      outputText = JSON.stringify(aprsCmd);
+      outputText = JSON.stringify(control);
     }
     // write to the file
     this.o.write(outputText + "\n");
   }
 }
 
-module.exports = FileCommandSink;
+module.exports = FileControlSink;

@@ -385,7 +385,8 @@ bool GSInterface::defaultControlHandler(char *cmd, uint16_t argc, char **argv)
     // all other commands are invalid if no handshake
     if (this->handshake || this->state == IS_HANDSHAKE)
     {
-        if (strcmp(cmd, "HS_DONE") == 0)
+        // HS_DONE only valid if there is an active handshake
+        if (this->state == IS_HANDSHAKE && strcmp(cmd, "HS_DONE") == 0)
         {
             // if not 1 arg, there's an issue with the message
             if (argc == 1)
@@ -443,6 +444,13 @@ bool GSInterface::defaultControlHandler(char *cmd, uint16_t argc, char **argv)
                 {
                     newState = IS_HITL != this->state;
                     this->state = IS_HITL;
+                }
+
+                if (newState)
+                {
+                    char s[sizeof("Changing mode to: ") + 10];
+                    snprintf(s, sizeof(s), "Changing mode to: %s", argv[0]);
+                    this->logM(LL_DEBUG, s);
                 }
 
                 if (newState && this->userModeHandler != nullptr)

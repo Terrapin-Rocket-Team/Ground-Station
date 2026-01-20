@@ -16,7 +16,7 @@ const ffmpegPath =
         "build",
         "coders",
         "ffmpeg-7.0.1",
-        "ffmpeg.exe"
+        "ffmpeg.exe",
       )
     : path.join("/usr", "bin", "ffmpeg");
 
@@ -44,7 +44,7 @@ class SerialVideoSource extends VideoSource {
     // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
-    this.sd.addOutputStream(this.name);
+    this.sd.addStream(this.name);
 
     log.debug("Creating serial video source for: " + file);
 
@@ -53,7 +53,7 @@ class SerialVideoSource extends VideoSource {
     this.ffmpeg = null;
     // allocate a Buffer for frame data
     this.data = Buffer.alloc(
-      this.options.resolution.width * this.options.resolution.height * 2
+      this.options.resolution.width * this.options.resolution.height * 2,
     );
     this.dataLen = 0;
 
@@ -106,7 +106,7 @@ class SerialVideoSource extends VideoSource {
     if (this.options.createLog) {
       const logName = path.join(
         "data",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1"
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1",
       );
       this.dataFile = fs.createWriteStream(logName);
 
@@ -154,9 +154,9 @@ class SerialVideoSource extends VideoSource {
                 (this.options.resolution.width *
                   this.options.resolution.height *
                   3) /
-                  2
-              )
-            )
+                  2,
+              ),
+            ),
           );
           this.data.copy(
             this.data,
@@ -165,7 +165,7 @@ class SerialVideoSource extends VideoSource {
               this.options.resolution.height *
               3) /
               2,
-            this.datalen
+            this.datalen,
           );
           this.dataLen -=
             (this.options.resolution.width *
@@ -214,7 +214,7 @@ class SerialVideoSource extends VideoSource {
       return this.decomposeYUV(
         this.frames.shift(),
         this.options.resolution.width,
-        this.options.resolution.height
+        this.options.resolution.height,
       );
     else return null;
   }
