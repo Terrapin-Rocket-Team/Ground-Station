@@ -15,7 +15,7 @@ const ffmpegPath =
         "build",
         "coders",
         "ffmpeg-7.0.1",
-        "ffmpeg.exe"
+        "ffmpeg.exe",
       )
     : path.join("/usr", "bin", "ffmpeg");
 
@@ -25,6 +25,7 @@ const ffmpegPath =
 class FileVideoSource extends VideoSource {
   /**
    * @param {String} file the file name to read from
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Object} options the video format configuration
    * @param {Object} options.resolution the video resolution
    * @param {Number} options.resolution.width the width of the video
@@ -35,11 +36,11 @@ class FileVideoSource extends VideoSource {
    * @param {Boolean} [options.createDecoderLog] whether to create a log of ffmpeg's output
    * @param {String} [name] the name to use instead of the file name
    */
-  constructor(file, options, name) {
+  constructor(file, id, options, name) {
     // call the VideoSource constructor with the name as the file name if "name" is not given
-    super(name ? name : file, fs.createReadStream(file));
+    super(name ? name : file, id, fs.createReadStream(file));
 
-    log.debug("Creating file video source for: " + file);
+    log.debug("Creating file video source for: " + file + " id: " + this.id);
 
     this.file = file;
     this.options = options;
@@ -47,7 +48,7 @@ class FileVideoSource extends VideoSource {
     this.logFile = null;
     // allocate a Buffer for frame data
     this.data = Buffer.alloc(
-      this.options.resolution.width * this.options.resolution.height * 2
+      this.options.resolution.width * this.options.resolution.height * 2,
     );
     this.dataLen = 0;
 
@@ -114,7 +115,7 @@ class FileVideoSource extends VideoSource {
     if (this.options.createLog) {
       const logName = path.join(
         "data",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1"
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".av1",
       );
       this.dataFile = fs.createWriteStream(logName);
 
@@ -160,9 +161,9 @@ class FileVideoSource extends VideoSource {
                 (this.options.resolution.width *
                   this.options.resolution.height *
                   3) /
-                  2
-              )
-            )
+                  2,
+              ),
+            ),
           );
           this.data.copy(
             this.data,
@@ -171,7 +172,7 @@ class FileVideoSource extends VideoSource {
               this.options.resolution.height *
               3) /
               2,
-            this.datalen
+            this.datalen,
           );
           this.dataLen -=
             (this.options.resolution.width *
@@ -220,7 +221,7 @@ class FileVideoSource extends VideoSource {
       return this.decomposeYUV(
         this.frames.shift(),
         this.options.resolution.width,
-        this.options.resolution.height
+        this.options.resolution.height,
       );
     else return null;
   }

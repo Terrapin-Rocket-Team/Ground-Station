@@ -12,19 +12,22 @@ class SerialCommandSink extends TextSink {
   /**
    *
    * @param {String} name the name of the stream to create
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Object} [options] output configuration options
    * @param {Boolean} options.createLog whether to create a log of the commands
    * @param {SerialDevice} [sd] the serial device to write to, if not the default
    */
-  constructor(name, options, sd) {
-    super(name, sd ? sd : serial);
+  constructor(name, id, options, sd) {
+    super(name, id, sd ? sd : serial);
 
     // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
-    this.sd.addStream(this.name);
+    this.sd.addStream(this.id);
 
-    log.debug("Creating serial command sink for: " + this.name);
+    log.debug(
+      "Creating serial command sink for: " + this.name + " id: " + this.id,
+    );
 
     this.options = options ? options : {};
     this.dataFile = null;
@@ -61,7 +64,7 @@ class SerialCommandSink extends TextSink {
     }
     let outputText = JSON.stringify(aprsCmd);
     // write the the serial device
-    this.sd.write(this.name, outputText);
+    this.sd.write(this.id, outputText);
     // write to the log file if specified
     if (this.options.createLog && this.dataFile) {
       this.dataFile.write(aprsCmd.toCSV(this.firstLine));

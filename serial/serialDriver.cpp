@@ -125,7 +125,7 @@ int main(int argc, char **argv)
     std::cout << "driver ready" << std::endl;
 
     // identify the driver
-    std::cout << "main driver v2.0.0" << std::endl;
+    std::cout << "main driver v2.1.0" << std::endl;
 
     // controls the exiting the main loop
     bool exit = false;
@@ -269,26 +269,20 @@ int main(int argc, char **argv)
                         {
                             // get the pipe name
                             pipeName[sizeof(pipeName) - 1] = '\0';
-                            int indexPos = 0;
-                            for (int i = 0; i < strlen(pipeName); i++)
-                            {
-                                if (pipeName[i] == '-')
-                                    indexPos = i;
-                            }
 
-                            // separate the multiplexing id and create a pipe
-                            int pipeId = atoi(pipeName + indexPos + 1);
-                            std::cout << pipeId << std::endl;
-                            pipeDemuxIds[gotPipeNames] = pipeId;
+                            // create the pipe
+                            int pipeId = atoi(pipeName);               // pipeName will always be a number (the id)
+                            pipeDemuxIds[gotPipeNames] = pipeId;       // store ids as numbers in array for easy access
                             createPipe(pipes, gotPipeNames, pipeName); // this increments gotPipeNames
                         }
                     }
                     // print all the multiplexing ids for debugging
-                    std::cout << "Pipe Demux Ids: " << std::endl;
+                    std::cout << "Pipe Demux Ids: ";
                     for (int i = 0; i < numTotalPipes; i++)
                     {
-                        std::cout << (int)pipeDemuxIds[i] << std::endl;
+                        std::cout << (int)pipeDemuxIds[i] << " ";
                     }
+                    std::cout << std::endl;
                 }
                 // tell the connected program the pipes have been created
                 pipeStatus->writeStr("pipe creation successful");

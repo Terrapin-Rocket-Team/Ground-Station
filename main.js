@@ -222,7 +222,7 @@ const loadStreams = () => {
   serial.clearStreams();
 
   commandSinks.push(
-    new SerialControlSink("device-status-1", {
+    new SerialControlSink("device-status", 1, {
       createLog: true,
     }),
   );
@@ -232,7 +232,7 @@ const loadStreams = () => {
     if (stream.enabled) {
       if (stream.type === "APRSTelem") {
         telemSources.push(
-          new SerialTelemSource(`${stream.name}-${stream.id}`, {
+          new SerialTelemSource(stream.name, stream.id, {
             parser: (data) => {
               let telem = new APRSTelem(
                 data,
@@ -250,14 +250,14 @@ const loadStreams = () => {
       }
       if (stream.type === "APRSCmd") {
         commandSinks.push(
-          new SerialCommandSink(`${stream.name}-${stream.id}`, {
+          new SerialCommandSink(stream.name, stream.id, {
             createLog: true,
           }),
         );
       }
       if (stream.type === "Metrics") {
         telemSources.push(
-          new SerialTelemSource(`${stream.name}-${stream.id}`, {
+          new SerialTelemSource(stream.name, stream.id, {
             parser: (data) => {
               let telem = new Metrics(data, true);
               log.info(telem);
@@ -274,7 +274,7 @@ const loadStreams = () => {
       }
       if (stream.type === "video" && config.video.value) {
         videoSources.push(
-          new SerialVideoSource(`${stream.name}-${stream.id}`, {
+          new SerialVideoSource(stream.name, stream.id, {
             resolution: { width: 640, height: 832 },
             framerate: 30,
             rotation: "cw",
@@ -932,7 +932,7 @@ if (config.dataDebug.value) {
     // test to see whether the first telemetry stream data file exists
     if (fs.existsSync("./test-0.csv")) {
       try {
-        const ts1D = new FileTelemSource("./test-0.csv", {
+        const ts1D = new FileTelemSource("./test-0.csv", 2, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -964,7 +964,7 @@ if (config.dataDebug.value) {
     // test to see whether the second telemetry stream data file exists
     if (fs.existsSync("./test-1.csv")) {
       try {
-        const ts2D = new FileTelemSource("./test-1.csv", {
+        const ts2D = new FileTelemSource("./test-1.csv", 3, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -987,7 +987,7 @@ if (config.dataDebug.value) {
     // test to see whether the third telemetry stream data file exists
     if (fs.existsSync("./test-2.csv")) {
       try {
-        const ts3D = new FileTelemSource("./test-2.csv", {
+        const ts3D = new FileTelemSource("./test-2.csv", 4, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -1010,7 +1010,7 @@ if (config.dataDebug.value) {
     // test to see whether the telmetry stream metrics data file exists
     if (fs.existsSync("./metrics.csv")) {
       try {
-        const metrics = new FileTelemSource("./metrics.csv", {
+        const metrics = new FileTelemSource("./metrics.csv", 1, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -1031,12 +1031,12 @@ if (config.dataDebug.value) {
 
     // create the command sink
     commandSinks.push(
-      new FileControlSink(path.join(logPath, "control.txt"), {
+      new FileControlSink(path.join(logPath, "control.txt"), 1, {
         asString: true,
       }),
     );
     commandSinks.push(
-      new FileCommandSink(path.join(logPath, "commands.txt"), {
+      new FileCommandSink(path.join(logPath, "commands.txt"), 5, {
         asString: true,
       }),
     );

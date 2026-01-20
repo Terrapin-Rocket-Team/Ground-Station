@@ -16,6 +16,9 @@ GSInterface gsi(115200);
 GSStream telemAvionics = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 GSStream telemPayload = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 
+// define user callbacks if needed
+bool dataCB(GSMessage *m);
+
 // ==========================================================
 // Assemble sample data
 // Note: not needed for real implementation
@@ -41,6 +44,11 @@ void setup()
   {
     Serial.println("Error: GSI failed to begin");
   }
+
+  // commenting out this line will switch to handling APRSCmd in the manual handler under gsi.run()
+  // otherwise APRSCmd will be handled in dataCB()
+  gsi.setUserDataHandler(dataCB);
+  gsi.clearUserDataHandler();
 
   if (CrashReport)
     Serial.println(CrashReport);
@@ -89,4 +97,19 @@ void loop()
       gsi.writeStream(&telemPayload, &telem2, -50);
   }
   // ==========================================================
+}
+
+bool dataCB(GSMessage *m)
+{
+  if (m->dataType == APRSCmd::type)
+  {
+    m->decode(&cmd);
+    cmd.config = commandConfig;
+    commandMsg.encode(&cmd);
+    gsi.logM(LL_DEBUG, (char *)commandMsg.buf);
+    // send commandMsg to radio here
+    return true; // return true because we successfully handled the data
+  }
+
+  return false; // return false if the data was not successfully handled
 }

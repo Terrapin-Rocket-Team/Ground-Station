@@ -7,11 +7,13 @@ const { Readable } = require("stream");
 class TextSink extends EventEmitter {
   /**
    * @param {string} name the source name to identify it later
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Readable} output the output data stream for the sink
    */
-  constructor(name, output) {
+  constructor(name, id, output) {
     super();
     this.name = name;
+    this.id = id;
     this.o = output; // output
     this.lines = [];
   }

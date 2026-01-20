@@ -478,8 +478,6 @@ window.onload = () => {
       let cmdMatch = commandText.match(/[A-Z]+( [A-z0-9])*/g);
       let foundCommand = false;
 
-      console.log("cmdMatch", cmdMatch);
-
       if (cmdMatch) {
         // if we found a match, figure out where the command part of the control is
         let command = cmdMatch[0];
