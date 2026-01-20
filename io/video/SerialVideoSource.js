@@ -26,6 +26,7 @@ const ffmpegPath =
 class SerialVideoSource extends VideoSource {
   /**
    * @param {String} file the file name to read from
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Object} options the video format configuration
    * @param {Object} options.resolution the video resolution
    * @param {Number} options.resolution.width the width of the video
@@ -37,16 +38,16 @@ class SerialVideoSource extends VideoSource {
    * @param {SerialDevice} [sd] the serial device to read from, if not the default
    * @param {String} [name] the name to use instead of the file name
    */
-  constructor(file, options, sd, name) {
+  constructor(file, id, options, sd, name) {
     // call the VideoSource constructor with the name as the file name if "name" is not given
-    super(name ? name : file, sd ? sd : serial);
+    super(name ? name : file, id, sd ? sd : serial);
 
     // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
-    this.sd.addStream(this.name);
+    this.sd.addStream(this.id);
 
-    log.debug("Creating serial video source for: " + file);
+    log.debug("Creating serial video source for: " + file + " id: " + this.id);
 
     this.file = file;
     this.options = options;
@@ -132,7 +133,7 @@ class SerialVideoSource extends VideoSource {
     //connect pipes
     if (this.ffmpeg !== null) {
       this.o = this.ffmpeg.stdout;
-      this.i.pipe(this.name, this.ffmpeg.stdin);
+      this.i.pipe(this.id, this.ffmpeg.stdin);
       // connect video log pipe if necessary
       // if (this.options.createLog && this.dataFile)
       //   this.i.pipe(this.name, this.dataFile);

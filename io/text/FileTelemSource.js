@@ -11,16 +11,19 @@ class FileTelemSource extends TextSource {
   /**
    *
    * @param {String} file the file name to read from
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Object} options data handling configuration
    * @param {Number} options.datarate how fast the data should be emitted in seconds
    * @param {Function} options.parser called for each message received, this is how data is output
    * @param {Boolean} [options.createLog] whether to create a log of the telemetry
    * @param {String} [name] the name to use instead of the file name
    */
-  constructor(file, options, name) {
-    super(name ? name : file, fs.createReadStream(file));
+  constructor(file, id, options, name) {
+    super(name ? name : file, id, fs.createReadStream(file));
 
-    log.debug("Creating file telem source for: " + this.name);
+    log.debug(
+      "Creating file telem source for: " + this.name + " id: " + this.id,
+    );
 
     this.file = file;
     this.options = options;
@@ -55,7 +58,7 @@ class FileTelemSource extends TextSource {
     if (this.options.createLog) {
       const logName = path.join(
         "data",
-        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv"
+        this.name + "_" + new Date().toISOString().replace(/:/g, "-") + ".csv",
       );
       this.dataFile = fs.createWriteStream(logName);
 

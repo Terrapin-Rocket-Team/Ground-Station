@@ -13,21 +13,24 @@ class SerialTelemSource extends TextSource {
   /**
    *
    * @param {String} name the name of the stream to create
+   * @param {Number} id the stream id to link to a particular pipe
    * @param {Object} options data handling configuration
    * @param {Function} options.parser called for each message received, this is how data is output
    * @param {Boolean} [options.isMetrics] whether this is a Metrics stream (otherwise it's a APRSTelem stream), needs a better solution
    * @param {Boolean} [options.createLog] whether to create a log of the telemetry
    * @param {SerialDevice} [sd] the serial device to read from, if not the default
    */
-  constructor(name, options, sd) {
-    super(name, sd ? sd : serial);
+  constructor(name, id, options, sd) {
+    super(name, id, sd ? sd : serial);
 
     // setup serial interface for this stream
     this.sd = sd ? sd : serial;
 
-    this.sd.addStream(this.name);
+    this.sd.addStream(this.id);
 
-    log.debug("Creating serial telem source for: " + this.name);
+    log.debug(
+      "Creating serial telem source for: " + this.name + " id: " + this.id,
+    );
 
     this.options = options;
     this.dataFile = null;
@@ -47,7 +50,7 @@ class SerialTelemSource extends TextSource {
       log.debug("Data log file created for " + this.name + ": " + dataName);
     }
 
-    this.sd.on(this.name + "-data", (data) => {
+    this.sd.on(this.id + "-data", (data) => {
       data
         .toString()
         .split("\n")
