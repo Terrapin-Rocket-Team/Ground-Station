@@ -22,9 +22,9 @@ int main(int argc, char const *argv[])
     VideoData video2Data;
     // Message video1;
     // Message video2;
-    GSMessage telem(APRSTelem::type, 1);
-    GSMessage video1(VideoData::type, 2);
-    GSMessage video2(VideoData::type, 3);
+    GSMessage telem(APRSTelem::type, 2);
+    GSMessage video1(VideoData::type, 3);
+    GSMessage video2(VideoData::type, 4);
     Metrics device1Metrics(1);
     Metrics device2Metrics(2);
     Metrics device3Metrics(3);

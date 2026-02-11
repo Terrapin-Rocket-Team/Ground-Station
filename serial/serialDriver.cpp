@@ -805,7 +805,8 @@ int main(int argc, char **argv)
             {
                 // check to see if we received a command from the GUI
                 memset(inStr, 0, sizeof(inStr));
-                if (pipes[i]->read(inStr, sizeof(inStr) - 1)) // ensure null terminated
+                std::cout << "Reading from pipe: " << i << std::endl;
+                if (pipes[i]->read(inStr, sizeof(inStr) - 1) > 0) // ensure null terminated
                 {
                     char type[30];
                     memset(type, 0, sizeof(type)); // initialize entire array to 0 to ensure null terminated

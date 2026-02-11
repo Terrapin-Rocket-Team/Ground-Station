@@ -143,6 +143,15 @@ window.onload = () => {
     const getStreamOptions = (idPrefix) => {
       setupStaticOptions(idPrefix, types, (option) => {
         streamType = option;
+        console.log(option);
+        if (option === "Telemetry") {
+          // ensure fields are set up properly
+          if (!stream.settings) stream.settings = { stateflags: [] };
+          if (!stream.settings.stateflags) stream.settings.stateflags = [];
+        } else {
+          // remove fields unused fields
+          if (stream.settings) delete stream.settings;
+        }
         return true;
       });
     };
