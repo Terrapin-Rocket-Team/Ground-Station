@@ -18,6 +18,7 @@
 #include <ostream>
 #include <cstdint>
 #include <cstdlib>
+#include <chrono>
 
 #include "RadioMessage.h"
 #include "rs.h"
@@ -26,6 +27,8 @@ const char deviceLogFile[] = "log/serial_device.log";
 const char *inputFileName = "out.gsm";
 
 void createPipe(NamedPipe **arr, int &index, const char *name);
+
+std::chrono::milliseconds::rep elapsed(std::chrono::time_point<std::chrono::steady_clock> start);
 
 int main(int argc, char **argv)
 {
@@ -51,7 +54,7 @@ int main(int argc, char **argv)
     // whether the gsm file has a valid header
     bool validHeader = false;
     // timer to throttle file reading
-    clock_t timer = clock();
+    auto timer = std::chrono::steady_clock::now();
     // the target byte rate, taken from gsm
     uint32_t bytesPerSecond = 0;
     // how long to wait in between reads
@@ -295,7 +298,7 @@ int main(int argc, char **argv)
             {
                 std::cout << "interface ready" << std::endl;
                 ready = true;
-                timer = clock();
+                timer = std::chrono::steady_clock::now();
             }
             // check for connected command
             if (strcmp(controlStr, "connected") == 0)
@@ -313,7 +316,7 @@ int main(int argc, char **argv)
         }
 
         // if interface is ready and handshake was successful, then we can read from the device
-        if (ready && input && validHeader && feof(input) == 0 && clock() - timer > timeToWait)
+        if (ready && input && validHeader && feof(input) == 0 && elapsed(timer) > timeToWait)
         {
             // try reading multiplexing data from the file
             x = fread(data, sizeof(char), MAX_DATA_LENGTH, input);
@@ -595,17 +598,18 @@ int main(int argc, char **argv)
 
             timeToWait = ((double)x / bytesPerSecond * 1000) - 2; // minus 2 cause we would rather have slightly too high bitrate than slightly too low
             std::cout << "Waiting: " << timeToWait << std::endl;
-            timer = clock();
+            timer = std::chrono::steady_clock::now();
 
             // handle commands
             for (int i = 0; i < numTotalPipes; i++)
             {
                 // check to see if we received a command from the GUI
                 memset(inStr, 0, sizeof(inStr));
-                if (pipes[i]->read(inStr, sizeof(inStr)))
+                if (pipes[i]->read(inStr, sizeof(inStr) - 1) > 0)
                 {
                     char type[30];
                     memset(type, 0, sizeof(type)); // initialize entire array to 0 to ensure null terminated
+                    std::cout << "Got input: " << inStr << std::endl;
                     if (Data::extractStr(inStr, strlen(inStr), "\"type\":\"", '\"', type, sizeof(type)))
                     {
                         if (strcmp(type, "GSControl"))
@@ -725,4 +729,9 @@ void createPipe(NamedPipe **arr, int &index, const char *name)
     strcat(pipePath, name);
     arr[index++] = new LinuxNamedPipe(pipePath, true);
 #endif
+}
+
+std::chrono::milliseconds::rep elapsed(std::chrono::time_point<std::chrono::steady_clock> start)
+{
+    return (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)).count();
 }
