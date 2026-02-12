@@ -52,7 +52,7 @@ try {
     config.version !== app.getVersion()
   ) {
     log.warn(
-      "Older config version (likely v1.5) detected, save your settings to remove this warning"
+      "Older config version (likely v1.5) detected, save your settings to remove this warning",
     );
     throw new Error("old config version"); // throw an error to get the default config to load
   }
@@ -61,7 +61,7 @@ try {
   serial.useDebug = config.driverDebug.value;
   if (config.dataDebug.value && config.driverDebug.value)
     log.warn(
-      'Configuration warning: "Debug Data Input" and "Serial Driver Debug" have both been turned on. These settings can create conflicting streams of data so it is recommended to disable one of them.'
+      'Configuration warning: "Debug Data Input" and "Serial Driver Debug" have both been turned on. These settings can create conflicting streams of data so it is recommended to disable one of them.',
     );
   log.debug("Config loaded");
 } catch (err) {
@@ -69,17 +69,17 @@ try {
   log.warn("Failed to load config file, using defaults: " + err.message);
   try {
     config = JSON.parse(
-      fs.readFileSync(path.join(__dirname, "default-config.json"))
+      fs.readFileSync(path.join(__dirname, "default-config.json")),
     );
     if (config.version !== app.getVersion()) {
       log.warn(
-        "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version."
+        "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version.",
       );
       // update config file version if app version has changed
       config.version = app.getVersion();
       fs.writeFileSync(
         path.join(__dirname, "default-config.json"),
-        JSON.stringify(config, null, "\t")
+        JSON.stringify(config, null, "\t"),
       );
     }
     // create new config file
@@ -131,7 +131,7 @@ try {
 } catch (err) {
   log.warn(
     "Failed to load commands file, some features will not be available: " +
-      err.message
+      err.message,
   );
   cmdList = [];
 }
@@ -146,7 +146,7 @@ try {
 } catch (err) {
   log.warn(
     "Failed to load stateflags file, some features will not be available: " +
-      err.message
+      err.message,
   );
   stateflags = [];
 }
@@ -161,7 +161,7 @@ try {
 } catch (err) {
   log.warn(
     "Failed to load control command file, some features will not be available: " +
-      err.message
+      err.message,
   );
   ctrlList = [];
 }
@@ -169,7 +169,9 @@ try {
 try {
   // load cache metadata
   cacheMeta = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "src", "cachedtiles", "metadata.json"))
+    fs.readFileSync(
+      path.join(__dirname, "src", "cachedtiles", "metadata.json"),
+    ),
   );
   log.debug("Cache metadata loaded");
 } catch (err) {
@@ -180,7 +182,7 @@ try {
     runningSize: 0,
   };
   log.warn(
-    'Failed to load cache metadata file, using defaults: "' + err.message + '"'
+    'Failed to load cache metadata file, using defaults: "' + err.message + '"',
   );
   // create new metadata file
   try {
@@ -190,12 +192,12 @@ try {
     // write the file if it doesn't exist
     if (
       !fs.existsSync(
-        path.join(__dirname, "src", "cachedtiles", "metadata.json")
+        path.join(__dirname, "src", "cachedtiles", "metadata.json"),
       )
     ) {
       fs.writeFileSync(
         path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-        JSON.stringify(cacheMeta, null, "\t")
+        JSON.stringify(cacheMeta, null, "\t"),
       );
       log.info("Metadata file successfully created");
     }
@@ -222,7 +224,7 @@ const loadStreams = () => {
   commandSinks.push(
     new SerialControlSink("device-status", 1, {
       createLog: true,
-    })
+    }),
   );
 
   // load streams from config
@@ -234,13 +236,13 @@ const loadStreams = () => {
             parser: (data) => {
               if (!stream.settings || !stream.settings.stateflags) {
                 log.err(
-                  "Stream does not have associated stateflags array in config.json! This was caused by an old version of the Ground Station and should now be fixed. Updating your config file should fix the issue."
+                  "Stream does not have associated stateflags array in config.json! This was caused by an old version of the Ground Station and should now be fixed. Updating your config file should fix the issue.",
                 );
               }
               let telem = new APRSTelem(
                 data,
                 stream.name,
-                stream.settings.stateflags
+                stream.settings.stateflags,
               );
               log.info(telem);
               if (windows.main) windows.main.webContents.send("data", telem);
@@ -248,14 +250,14 @@ const loadStreams = () => {
               return telem;
             },
             createLog: true,
-          })
+          }),
         );
       }
       if (stream.type === "APRSCmd") {
         commandSinks.push(
           new SerialCommandSink(stream.name, stream.id, {
             createLog: true,
-          })
+          }),
         );
       }
       if (stream.type === "Metrics") {
@@ -272,7 +274,7 @@ const loadStreams = () => {
             },
             isMetrics: true,
             createLog: true,
-          })
+          }),
         );
       }
       if (stream.type === "video" && config.video.value) {
@@ -283,12 +285,12 @@ const loadStreams = () => {
             rotation: "cw",
             createLog: true,
             createDecoderLog: config.debug.value,
-          })
+          }),
         );
       } else if (stream.type === "video" && !config.video.value) {
         log.warn(
           "Not in video mode. Skipping video stream source for: " +
-            `${stream.name}-${stream.id}`
+            `${stream.name}-${stream.id}`,
         );
       }
     } else {
@@ -549,7 +551,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       let oldTile = cacheMeta.fileList.shift();
       let oldFolders = oldTile.split(path.sep);
       let fileSize = fs.lstatSync(
-        path.join(__dirname, "src", "cachedtiles", oldTile + ".png")
+        path.join(__dirname, "src", "cachedtiles", oldTile + ".png"),
       ).size;
 
       //remove the file
@@ -557,7 +559,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 
       cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
         cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(oldFolders[2]),
-        1
+        1,
       );
 
       //remove the folder one level above the file if it is empty
@@ -568,8 +570,8 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
             "src",
             "cachedtiles",
             oldFolders[0],
-            oldFolders[1]
-          )
+            oldFolders[1],
+          ),
         ).length === 0
       ) {
         fs.rmdirSync(
@@ -578,8 +580,8 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
             "src",
             "cachedtiles",
             oldFolders[0],
-            oldFolders[1]
-          )
+            oldFolders[1],
+          ),
         );
         delete cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
       }
@@ -587,7 +589,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       //remove the folder two levels above the file if it is empty
       if (
         fs.readdirSync(
-          path.join(__dirname, "src", "cachedtiles", oldFolders[0])
+          path.join(__dirname, "src", "cachedtiles", oldFolders[0]),
         ).length === 0
       ) {
         fs.rmdirSync(path.join(__dirname, "src", "cachedtiles", oldFolders[0]));
@@ -602,7 +604,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       "src",
       "cachedtiles",
       tilePath[0],
-      tilePath[1]
+      tilePath[1],
     );
 
     //create folders if necessary
@@ -633,14 +635,14 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
     if (hasY) {
       //if the file already exists, check if it is a different size
       let fileSize = fs.lstatSync(
-        path.join(folderPath, tilePath[2] + ".png")
+        path.join(folderPath, tilePath[2] + ".png"),
       ).size;
       if (fileSize != tile.byteLength) {
         cacheMeta.runningSize -= fileSize;
         cacheMeta.runningSize += tile.byteLength;
         fs.writeFileSync(
           path.join(folderPath, tilePath[2] + ".png"),
-          Buffer.from(tile)
+          Buffer.from(tile),
         );
       }
     } else {
@@ -649,14 +651,14 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       cacheMeta.fileList.push(path.join(tilePath[0], tilePath[1], tilePath[2]));
       fs.writeFileSync(
         path.join(folderPath, tilePath[2] + ".png"),
-        Buffer.from(tile)
+        Buffer.from(tile),
       );
     }
 
     //write metadata
     fs.writeFileSync(
       path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-      JSON.stringify(cacheMeta, null, "\t")
+      JSON.stringify(cacheMeta, null, "\t"),
     );
   } catch (err) {
     log.err('Error caching tile: "' + err.message + '"');
@@ -719,7 +721,7 @@ ipcMain.on("export-stream-config", (event, args) => {
   try {
     fs.writeFileSync(
       path.join(dataPath, "commands.json"),
-      JSON.stringify(exportedCommandConfig)
+      JSON.stringify(exportedCommandConfig),
     );
   } catch (err) {
     log.err("Failed to export commands: " + err.message);
@@ -744,11 +746,11 @@ ipcMain.on("export-stream-config", (event, args) => {
       try {
         fs.writeFileSync(
           path.join(dataPath, stream.name + "-stateflags.json"),
-          JSON.stringify(exportedStateflagsConfig)
+          JSON.stringify(exportedStateflagsConfig),
         );
       } catch (err) {
         log.err(
-          "Failed to export stateflags for " + stream.name + ": " + err.message
+          "Failed to export stateflags for " + stream.name + ": " + err.message,
         );
       }
     }
@@ -803,10 +805,9 @@ ipcMain.handle("get-video", (event, args) => {
   let videoData = [];
   videoSources.forEach((stream) => {
     if (stream.hasFrame()) {
-      let streamName = stream.name.split("-");
-      streamName.pop();
+      let streamName = stream.name;
       // must use readFrame() to get rid of old frame
-      videoData.push({ name: streamName.join("-"), data: stream.readFrame() });
+      videoData.push({ name: streamName, data: stream.readFrame() });
     } else videoData.push(null); // TODO: this seems a bit odd
   });
   return videoData;
@@ -838,13 +839,13 @@ ipcMain.handle("set-port", (event, portConfig) => {
               portConfig.path +
               ': "' +
               err.message +
-              '"'
+              '"',
           );
           res(0);
         });
     } else {
       log.warn(
-        "Attempted serial connection in data debug mode. Switch out of data debug mode to use the serial driver"
+        "Attempted serial connection in data debug mode. Switch out of data debug mode to use the serial driver",
       );
       res(0);
     }
@@ -1036,12 +1037,12 @@ if (config.dataDebug.value) {
     commandSinks.push(
       new FileControlSink(path.join(logPath, "control.txt"), 1, {
         asString: true,
-      })
+      }),
     );
     commandSinks.push(
       new FileCommandSink(path.join(logPath, "commands.txt"), 5, {
         asString: true,
-      })
+      }),
     );
 
     if (config.video.value) {
@@ -1049,14 +1050,15 @@ if (config.dataDebug.value) {
       if (fs.existsSync("./video0.av1")) {
         // create new video source from file
         let vs1 = new FileVideoSource(
-          "./video0.av1",
+          "video0.av1",
+          0,
           {
             resolution: { width: 640, height: 832 },
             framerate: 30,
             rotation: "cw",
             createDecoderLog: config.debug.value,
           },
-          "video0-0"
+          "video0",
         );
         videoSources.push(vs1);
         // start the video
@@ -1067,14 +1069,15 @@ if (config.dataDebug.value) {
       if (fs.existsSync("./video1.av1")) {
         // create new video source from file
         let vs2 = new FileVideoSource(
-          "./video1.av1",
+          "video1.av1",
+          1,
           {
             resolution: { width: 640, height: 832 },
             framerate: 30,
             rotation: "cw",
             createDecoderLog: config.debug.value,
           },
-          "video1-0"
+          "video1",
         );
         videoSources.push(vs2);
         // start the video
