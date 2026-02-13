@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <poll.h>
+#include <fcntl.h>
 
 LinuxNamedPipe::LinuxNamedPipe(const char *name, bool create) : NamedPipe(name)
 {
@@ -76,7 +77,12 @@ int LinuxNamedPipe::read(void *buffer, int bufferSize)
         };
         poll(&fds, 1, 0);
         if (fds.revents & POLLIN)
-            handle = accept4(sockFd, NULL, NULL, SOCK_NONBLOCK);
+        {
+            handle = accept(sockFd, NULL, NULL);
+            // set nonblocking
+            int flags = fcntl(handle, F_GETFL, 0);
+            fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+        }
     }
     if (handle != -1 && (bytesRead = ::read(handle, buffer, bufferSize)) < 0)
     {
@@ -121,7 +127,12 @@ int LinuxNamedPipe::write(const void *buffer, int bufferSize)
         };
         poll(&fds, 1, 0);
         if (fds.revents & POLLIN)
-            handle = accept4(sockFd, NULL, NULL, SOCK_NONBLOCK);
+        {
+            handle = accept(sockFd, NULL, NULL);
+            // set nonblocking
+            int flags = fcntl(handle, F_GETFL, 0);
+            fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+        }
     }
     if (handle != -1 && (bytesWritten = ::write(handle, buffer, bufferSize)) < 0)
     {
