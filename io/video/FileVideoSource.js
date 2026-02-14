@@ -1,6 +1,6 @@
 const VideoSource = require("./VideoSource");
 const { log } = require("../../debug");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");
@@ -17,7 +17,18 @@ const ffmpegPath =
         "ffmpeg-7.0.1",
         "ffmpeg.exe",
       )
-    : path.join("/usr", "bin", "ffmpeg");
+    : (() => {
+        // Prefer whatever `which ffmpeg` returns (e.g. /opt/homebrew/bin/ffmpeg on macOS)
+        try {
+          const p = execFileSync("which", ["ffmpeg"], { encoding: "utf8" })
+            .trim();
+          if (p) return p;
+        } catch (e) {
+          // ignore and fall back
+        }
+        // fallback for typical Linux installs
+        return path.join("/usr", "bin", "ffmpeg");
+      })();
 
 /**
  * A class to play a local file as a video source
