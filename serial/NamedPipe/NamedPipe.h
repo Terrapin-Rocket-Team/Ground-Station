@@ -25,4 +25,6 @@ public:
   virtual int writeStr(const char *buffer) = 0;
 };
 
+
+
 #endif // NAMEDPIPE_H

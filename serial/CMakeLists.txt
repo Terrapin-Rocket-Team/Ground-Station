@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.20.0)
 set(CMAKE_CXX_COMPILER g++)
-
+set (CMAKE_CXX_COMPILER g++)
+set (CMAKE_C_COMPILER gcc)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 project(SerialDriver)
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be the path to the include directory of the project
