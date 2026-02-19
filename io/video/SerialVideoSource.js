@@ -18,7 +18,7 @@ const ffmpegPath =
         "ffmpeg-7.0.1",
         "ffmpeg.exe",
       )
-    : path.join("/usr", "bin", "ffmpeg");
+    : path.join("/opt","homebrew", "bin", "ffmpeg");
 
 /**
  * A class to stream video from a serial device
