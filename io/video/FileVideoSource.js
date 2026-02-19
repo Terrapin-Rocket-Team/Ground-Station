@@ -7,27 +7,28 @@ const path = require("path");
 const os = require("node:os");
 
 const ffmpegPath =
-  os.platform() == "win32"
-    ? path.join(
-        __dirname,
-        "..",
-        "..",
-        "build",
-        "coders",
-        "ffmpeg-7.0.1",
-        "ffmpeg.exe",
-      )
+  os.platform() === "win32"
+    ? path.join(__dirname, "..", "..", "build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe")
     : (() => {
-        // Prefer whatever `which ffmpeg` returns (e.g. /opt/homebrew/bin/ffmpeg on macOS)
-        try {
-          const p = execFileSync("which", ["ffmpeg"], { encoding: "utf8" })
-            .trim();
-          if (p) return p;
-        } catch (e) {
-          // ignore and fall back
+        const candidates = [
+          process.env.FFMPEG_PATH,    // manual override
+          "/opt/homebrew/bin/ffmpeg", // Apple Silicon
+          "/usr/local/bin/ffmpeg",    // Intel mac
+        ];
+
+        for (const p of candidates) {
+          if (p && fs.existsSync(p)) return p;
         }
-        // fallback for typical Linux installs
-        return path.join("/usr", "bin", "ffmpeg");
+
+        // fallback to PATH lookup
+        try {
+          const found = execFileSync("which", ["ffmpeg"], { encoding: "utf8" }).trim();
+          if (found && fs.existsSync(found)) return found;
+        } catch {}
+
+        throw new Error(
+          "ffmpeg not found.\n\nInstall with:\n  brew install ffmpeg"
+        );
       })();
 
 /**
