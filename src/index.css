@@ -125,6 +125,7 @@ img.drop-arrow {
   display: flex;
 }
 
+
 .options span {
   display: flex;
   align-items: center;
@@ -390,6 +391,10 @@ img.drop-arrow {
 
 #apogee {
   float: right;
+}
+
+#rocket-wrapper.active {
+  display: flex;
 }
 
 span .value {
