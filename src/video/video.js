@@ -12,6 +12,89 @@ window.onload = () => {
   const video0 = document.getElementById("video-0"),
     video1 = document.getElementById("video-1");
 
+  // Camera support
+  const cameraState = {
+    video0: { stream: null, deviceId: null, el: null },
+    video1: { stream: null, deviceId: null, el: null },
+  };
+
+  const stopCamera = (slot) => {
+    const s = cameraState[slot];
+    if (!s) return;
+
+    if (s.stream) {
+      s.stream.getTracks().forEach((t) => t.stop());
+      s.stream = null;
+    }
+    s.deviceId = null;
+
+    // remove element from pool
+    if (s.el && s.el.parentNode) s.el.parentNode.removeChild(s.el);
+    s.el = null;
+  };
+
+  const ensureCameraElement = (slot) => {
+    const s = cameraState[slot];
+    if (s.el) return s.el;
+
+    const v = document.createElement("video");
+    v.autoplay = true;
+    v.muted = true; // avoid autoplay restrictions
+    v.playsInline = true;
+    v.setAttribute("playsinline", "");
+
+    v.style.width = "100%";
+    v.style.height = "100%";
+    v.style.objectFit = "cover";
+
+    // stable ids
+    v.id = slot === "video0" ? "camera-video-0" : "camera-video-1";
+
+    s.el = v;
+
+    // keep it in the same "pool" as other sources
+    videoSources.appendChild(v);
+
+    return v;
+  };
+
+  const setCamera = async (slot, deviceId) => {
+    const s = cameraState[slot];
+
+    if (s.stream && s.deviceId === deviceId) return ensureCameraElement(slot);
+
+    stopCamera(slot);
+
+    const v = ensureCameraElement(slot);
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: deviceId } },
+      audio: false,
+    });
+
+    s.stream = stream;
+    s.deviceId = deviceId;
+
+    v.srcObject = stream;
+
+    try {
+      await v.play();
+    } catch (e) {
+      console.warn("video.play() failed:", e);
+    }
+
+    return v;
+  };
+
+  const isCameraControl = (value) =>
+    typeof value === "string" && value.startsWith("camera:");
+
+  const getCameraDeviceId = (value) => value.slice("camera:".length);
+
+  const moveSlotChildBackToPool = (slotEl) => {
+    if (slotEl.firstChild) videoSources.appendChild(slotEl.firstChild);
+  };
+
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
       "--t1-color"
@@ -236,6 +319,7 @@ window.onload = () => {
       }
     }
   };
+
   const updateCharts = (idPrefix, msg) => {
     // get the index in the charts dataset
     let index = parseInt(idPrefix.split("t")[1]) - 1;
@@ -355,27 +439,27 @@ window.onload = () => {
         const altValue = Math.max(msg.getAlt() || 0, 0);
         alt.setAttribute("data-value-text", altValue);
         alt.setAttribute("data-value", altValue / 1000);
-        
+
         // Set the altitude text and track digit length for responsive font sizing
         const altText = document.getElementById("alt-text");
         altText.textContent = altValue + " ft";
-        
+
         // Add a data attribute to track the number of digits for CSS responsive font sizing
         const digitLength = altValue.toString().length;
         altText.setAttribute("data-length", digitLength);
       } else {
         alt.setAttribute("data-value-text", "\u2014");
       }
-      
+
       if (msg.getSpeed() || msg.getSpeed() === 0) {
-        const spdValue = Math.max(msg.getSpeed() || 0, 0)
+        const spdValue = Math.max(msg.getSpeed() || 0, 0);
         spd.setAttribute("data-value-text", spdValue);
         spd.setAttribute("data-value", spdValue / 100);
-        
+
         // Set the speed text and track digit length for responsive font sizing
         const spdText = document.getElementById("spd-text");
         spdText.textContent = spdValue + " ft/s";
-        
+
         // Add a data attribute to track the number of digits for CSS responsive font sizing
         const digitLength = spdValue.toString().length;
         spdText.setAttribute("data-length", digitLength);
@@ -385,7 +469,7 @@ window.onload = () => {
 
       //update max altitude and speed
       if (msg.getAlt() > maxAlt) {
-        maxAlt = Math.max(msg.getAlt() || 0, 0)
+        maxAlt = Math.max(msg.getAlt() || 0, 0);
         maxAltEl.textContent = maxAlt + " ft";
         sessionStorage.setItem("max-alt", maxAlt);
       }
@@ -403,7 +487,7 @@ window.onload = () => {
       let ffText = document.getElementById("fun-fact-text");
       // Try to get stage number using the updated getStateflag method that handles both "Stage" and "State Flags"
       let sn = msg.getStateflag("Stage");
-      let percents = [5.5, 17, 31, 49, 76, 100];    // think these percents work better for 1080p, but may need to be checked
+      let percents = [5.5, 17, 31, 49, 76, 100]; // think these percents work better for 1080p, but may need to be checked
       let stageNames = [
         "On the Pad",
         "Powered Flight",
@@ -425,15 +509,15 @@ window.onload = () => {
         // Update progress bar
         prog.textContent = percents[sn] + "%";
         prog.setAttribute("value", percents[sn]);
-        
+
         // Mark current stage as active
         document.getElementById("s" + sn).className = "stage active";
-        
+
         // Make sure all previous stages are also marked as active
         for (let i = 0; i <= sn; i++) {
           document.getElementById("s" + i).className = "stage active";
         }
-        
+
         // Show fun facts if we've moved to a new stage
         if (sn > lastStage) {
           ff.className = "hide";
@@ -462,19 +546,62 @@ window.onload = () => {
   };
 
   //reconfigure layout when we get a new set of video controls
-  api.on("video-controls", (controls) => {
+  api.on("video-controls", async (controls) => {
     changeLayout(controls.layout);
-    if (video0.firstChild) videoSources.appendChild(video0.firstChild);
-    if (video1.firstChild) videoSources.appendChild(video1.firstChild);
-    video0.appendChild(document.getElementById(controls.video0));
-    if (controls.layout === "two-video")
-      video1.appendChild(document.getElementById(controls.video1));
-  });
 
+    // Move whatever was mounted back into the pool before swapping
+    moveSlotChildBackToPool(video0);
+    moveSlotChildBackToPool(video1);
+
+    // VIDEO 0
+    if (isCameraControl(controls.video0)) {
+      const deviceId = getCameraDeviceId(controls.video0);
+      try {
+        const camEl = await setCamera("video0", deviceId);
+        video0.appendChild(camEl);
+      } catch (e) {
+        console.error("Failed to start camera for video0:", e);
+        stopCamera("video0");
+        video0.appendChild(none0);
+      }
+    } else {
+      // turning camera off if we leave camera mode
+      stopCamera("video0");
+
+      const el0 = document.getElementById(controls.video0);
+      video0.appendChild(el0 ? el0 : none0);
+    }
+
+    // VIDEO 1 (only if two-video layout)
+    if (controls.layout === "two-video") {
+      if (isCameraControl(controls.video1)) {
+        const deviceId = getCameraDeviceId(controls.video1);
+        try {
+          const camEl = await setCamera("video1", deviceId);
+          video1.appendChild(camEl);
+        } catch (e) {
+          console.error("Failed to start camera for video1:", e);
+          stopCamera("video1");
+          video1.appendChild(none1);
+        }
+      } else {
+        stopCamera("video1");
+
+        const el1 = document.getElementById(controls.video1);
+        video1.appendChild(el1 ? el1 : none1);
+      }
+    } else {
+      // if not in two-video layout, ensure cam1 isn't left running
+      stopCamera("video1");
+    }
+  });
 
   console.log("Babylon.js core modules and OBJ loader imported successfully.");
   canvas = document.getElementById("3d-visualization");
-  babylonEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+  babylonEngine = new BABYLON.Engine(canvas, true, {
+    preserveDrawingBuffer: true,
+    stencil: true,
+  });
   console.log("Babylon.js Engine created.");
   console.log(BABYLON.Engine.isSupported());
 
@@ -484,76 +611,81 @@ window.onload = () => {
 
     const camera = new BABYLON.ArcRotateCamera(
       "cam",
-      BABYLON.Tools.ToRadians(0),    // α = 0° → side-on
-      BABYLON.Tools.ToRadians(100),   // β = 90° → horizontal
-      1000,          
+      BABYLON.Tools.ToRadians(0), // α = 0° → side-on
+      BABYLON.Tools.ToRadians(100), // β = 90° → horizontal
+      1000,
       new BABYLON.Vector3(0, 255, 0),
       scene
     );
     // camera.attachControl(canvas, true);
 
-    new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.5), scene);
-
+    new BABYLON.HemisphericLight(
+      "light",
+      new BABYLON.Vector3(0.5, 1, 0.5),
+      scene
+    );
 
     BABYLON.SceneLoader.ImportMesh(
-      null,                   // import all meshes
+      null, // import all meshes
       "../models/",
       "rocket.obj",
       scene,
-      function(meshes) {
+      function (meshes) {
         console.log("Imported OBJ:", meshes);
 
         // Grab your rocket (e.g. the first mesh)
         const rocket = meshes[0];
 
         // Now it's safe to set properties on it:
-        rocket.position = new BABYLON.Vector3(0, -40, 0); 
+        rocket.position = new BABYLON.Vector3(0, -40, 0);
         rocket.scaling.setAll(2);
 
-        const MAX_DEG_PER_SEC = 10;                          //  ⟵ tweak
-        const maxRadPerMs     = (MAX_DEG_PER_SEC * Math.PI/180) / 1000;
+        const MAX_DEG_PER_SEC = 10; //  ⟵ tweak
+        const maxRadPerMs = (MAX_DEG_PER_SEC * Math.PI) / 180 / 1000;
 
         rocket.rotationQuaternion = new BABYLON.Quaternion(); // start clean
-        let targetQuat = rocket.rotationQuaternion.clone();   // current goal
+        let targetQuat = rocket.rotationQuaternion.clone(); // current goal
 
-        //update target
-        api.on("data", (msg) => {
-            if (msg.stream !== "telem-avionics") return;
+        // update target (NOTE: api.on("data") gives raw data; parse it like above)
+        api.on("data", (data) => {
+          const msg = new APRSTelem(data);
+          if (msg.stream !== "telem-avionics") return;
 
-            // Convert incoming Euler angles (deg) → quaternion
-            targetQuat = BABYLON.Quaternion.FromEulerAngles(
-                BABYLON.Angle.FromDegrees(msg.orientation[0]).radians(),
-                BABYLON.Angle.FromDegrees(msg.orientation[1]).radians(),
-                BABYLON.Angle.FromDegrees(msg.orientation[2]).radians()
-            );
+          // If msg.orientation is present and is [roll,pitch,yaw] in degrees:
+          if (!msg.orientation || msg.orientation.length < 3) return;
+
+          targetQuat = BABYLON.Quaternion.FromEulerAngles(
+            BABYLON.Angle.FromDegrees(msg.orientation[0]).radians(),
+            BABYLON.Angle.FromDegrees(msg.orientation[1]).radians(),
+            BABYLON.Angle.FromDegrees(msg.orientation[2]).radians()
+          );
         });
 
-        //blend
+        // blend
         scene.onBeforeRenderObservable.add(() => {
-            const dt     = babylonEngine.getDeltaTime();          // ms since last frame
-            const step   = maxRadPerMs * dt;               // max radians this frame
+          const dt = babylonEngine.getDeltaTime(); // ms since last frame
+          const step = maxRadPerMs * dt; // max radians this frame
 
-            const current = rocket.rotationQuaternion;
-            const dot     = BABYLON.Quaternion.Dot(current, targetQuat);
+          const current = rocket.rotationQuaternion;
+          const dot = BABYLON.Quaternion.Dot(current, targetQuat);
 
-            // theta = 2·acos(|dot|)  → full angle between quaternions
-            const angle = 2 * Math.acos(Math.min(1, Math.abs(dot)));
+          // theta = 2·acos(|dot|)  → full angle between quaternions
+          const angle = 2 * Math.acos(Math.min(1, Math.abs(dot)));
 
-            if (angle < 1e-6) return;                      // already there
+          if (angle < 1e-6) return; // already there
 
-            const t = Math.min(1, step / angle);           // blend fraction
-            BABYLON.Quaternion.SlerpToRef(current, targetQuat, t, current);
+          const t = Math.min(1, step / angle); // blend fraction
+          BABYLON.Quaternion.SlerpToRef(current, targetQuat, t, current);
         });
       }
     );
     return scene;
   };
 
-  createScene().then(scene => {
-      babylonEngine.runRenderLoop(() => scene.render());
+  createScene().then((scene) => {
+    babylonEngine.runRenderLoop(() => scene.render());
   });
   window.addEventListener("resize", () => babylonEngine.resize());
 
   console.log("Babylon.js initialization complete. Render loop started.");
-  
 };
