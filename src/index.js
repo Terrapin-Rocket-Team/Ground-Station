@@ -4,10 +4,50 @@ window.onload = () => {
   let videoControls = {};
   let portInUse = { path: null, idPrefix: null };
 
+  // Camera support
+  // Cache camera labels so we can display them later when video-controls arrive.
+  let cameraLabelById = {};
+
+  // Best-effort: some platforms only expose device labels after camera permission is granted once.
+  const ensureCameraPermissionForLabels = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      // immediately stop so we don't keep the camera on
+      stream.getTracks().forEach((t) => t.stop());
+    } catch {
+      // ignore: user may deny permission; dropdown can still show Camera 1/2...
+    }
+  };
+
+  const getCameraDevices = async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+
+    let devices = await navigator.mediaDevices.enumerateDevices();
+    let cams = devices.filter((d) => d.kind === "videoinput");
+
+    // If labels are empty, try to request permission once then re-enumerate.
+    const anyMissingLabels = cams.some((c) => !c.label || c.label.trim().length === 0);
+    if (anyMissingLabels) {
+      await ensureCameraPermissionForLabels();
+      devices = await navigator.mediaDevices.enumerateDevices();
+      cams = devices.filter((d) => d.kind === "videoinput");
+    }
+
+    cameraLabelById = {};
+    cams.forEach((c, i) => {
+      const label = c.label && c.label.trim().length > 0 ? c.label : `Camera ${i + 1}`;
+      cameraLabelById[c.deviceId] = label;
+    });
+
+    return cams;
+  };
+
   // get colors from css
-  const t1Color = getComputedStyle(document.body).getPropertyValue(
-      "--t1-color",
-    ),
+  const t1Color = getComputedStyle(document.body).getPropertyValue("--t1-color"),
     t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
     t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
 
@@ -36,27 +76,25 @@ window.onload = () => {
     // call the callback if we're not going to call it every time the dropdown is clicked
     if (!reload) callback(idPrefix);
     // listener to activate the dropdown
-    document
-      .getElementById(idPrefix + "-drop")
-      .addEventListener("click", () => {
-        // activate/deactivate dropdown
-        if (drop.classList.contains("active")) {
-          options.style.display = "none";
-          document
-            .getElementById(idPrefix + "-arrow")
-            .setAttribute("src", "./images/arrow_right.svg");
-        } else {
-          options.style.display = "block";
-          // if we want to reload the dropdown every time
-          if (reload) callback(idPrefix); // call callback if we're opening the dropdown
-          document
-            .getElementById(idPrefix + "-arrow")
-            .setAttribute("src", "./images/arrow_down.svg");
-        }
-        drop.classList.toggle("active");
-        drop.classList.toggle("inactive");
-        options.classList.toggle("active");
-      });
+    document.getElementById(idPrefix + "-drop").addEventListener("click", () => {
+      // activate/deactivate dropdown
+      if (drop.classList.contains("active")) {
+        options.style.display = "none";
+        document
+          .getElementById(idPrefix + "-arrow")
+          .setAttribute("src", "./images/arrow_right.svg");
+      } else {
+        options.style.display = "block";
+        // if we want to reload the dropdown every time
+        if (reload) callback(idPrefix); // call callback if we're opening the dropdown
+        document
+          .getElementById(idPrefix + "-arrow")
+          .setAttribute("src", "./images/arrow_down.svg");
+      }
+      drop.classList.toggle("active");
+      drop.classList.toggle("inactive");
+      options.classList.toggle("active");
+    });
   };
 
   // adds available ports to the custom dropdown
@@ -221,62 +259,125 @@ window.onload = () => {
     });
   };
 
+  // Video display dropdowns (UPDATED: adds cameras)
   const getVideo0Displays = (idPrefix) => {
-    const video0Options = [
-      "Input 0",
-      "Input 1",
-      "Charts",
-      "3D Visualization",
-      "None",
-    ];
+    const optionsEl = document.getElementById(idPrefix + "-options");
+    const selectedEl = document.getElementById(idPrefix + "-selected");
 
-    setupStaticOptions(idPrefix, video0Options, (option) => {
-      // video0 and video1 can't be set to the same thing
-      let newSetting;
-      if (option == "Input 0") newSetting = "live-video-0";
-      if (option == "Input 1") newSetting = "live-video-1";
-      if (option == "Charts") newSetting = "charts";
-      if (option == "3D Visualization") newSetting = "3d-visualization";
-      if (option == "None") newSetting = "none-0";
-      if (newSetting !== videoControls.video1) {
-        // figure out what value the option text corresponds to
-        videoControls.video0 = newSetting;
-        return true;
-      }
-      return false;
-    });
+    while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+
+    const loading = document.createElement("SPAN");
+    loading.className = idPrefix;
+    loading.textContent = "Loading...";
+    optionsEl.appendChild(loading);
+
+    getCameraDevices()
+      .then((cams) => {
+        while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+
+        const baseOptions = [
+          { label: "Input 0", value: "live-video-0" },
+          { label: "Input 1", value: "live-video-1" },
+          { label: "Charts", value: "charts" },
+          { label: "3D Visualization", value: "3d-visualization" },
+          { label: "None", value: "none-0" },
+        ];
+
+        const camOptions = cams.map((c, i) => ({
+          label: `Camera: ${cameraLabelById[c.deviceId] || `Camera ${i + 1}`}`,
+          value: `camera:${c.deviceId}`,
+        }));
+
+        const all = [...baseOptions, ...camOptions];
+
+        all.forEach((opt) => {
+          const span = document.createElement("SPAN");
+          span.className = idPrefix;
+          span.textContent = opt.label;
+          span.addEventListener("click", () => {
+            // video0 and video1 can't be set to the same thing
+            if (opt.value !== videoControls.video1) {
+              videoControls.video0 = opt.value;
+              selectedEl.textContent = opt.label;
+            }
+          });
+          optionsEl.appendChild(span);
+        });
+      })
+      .catch(() => {
+        while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+        const span = document.createElement("SPAN");
+        span.className = idPrefix;
+        span.textContent = "No cameras found";
+        span.addEventListener("click", () => {
+          selectedEl.textContent = "Select Display";
+        });
+        optionsEl.appendChild(span);
+      });
   };
 
   const getVideo1Displays = (idPrefix) => {
-    const video1Options = [
-      "Input 1",
-      "Input 0",
-      "Charts",
-      "3D Visualization",
-      "None",
-    ];
+    const optionsEl = document.getElementById(idPrefix + "-options");
+    const selectedEl = document.getElementById(idPrefix + "-selected");
 
-    setupStaticOptions(idPrefix, video1Options, (option) => {
-      // video1 and video0 can't be set to the same thing
-      let newSetting;
-      if (option == "Input 0") newSetting = "live-video-0";
-      if (option == "Input 1") newSetting = "live-video-1";
-      if (option == "Charts") newSetting = "charts";
-      if (option == "3D Visualization") newSetting = "3d-visualization";
-      if (option == "None") newSetting = "none-1"; // FIX (was none-0)
-      if (newSetting !== videoControls.video0) {
-        // figure out what value the option text corresponds to
-        videoControls.video1 = newSetting;
-        return true;
-      }
-      return false;
-    });
+    while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+
+    const loading = document.createElement("SPAN");
+    loading.className = idPrefix;
+    loading.textContent = "Loading...";
+    optionsEl.appendChild(loading);
+
+    getCameraDevices()
+      .then((cams) => {
+        while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+
+        const baseOptions = [
+          { label: "Input 1", value: "live-video-1" },
+          { label: "Input 0", value: "live-video-0" },
+          { label: "Charts", value: "charts" },
+          { label: "3D Visualization", value: "3d-visualization" },
+          { label: "None", value: "none-1" }, // FIX (was none-0)
+        ];
+
+        const camOptions = cams.map((c, i) => ({
+          label: `Camera: ${cameraLabelById[c.deviceId] || `Camera ${i + 1}`}`,
+          value: `camera:${c.deviceId}`,
+        }));
+
+        const all = [...baseOptions, ...camOptions];
+
+        all.forEach((opt) => {
+          const span = document.createElement("SPAN");
+          span.className = idPrefix;
+          span.textContent = opt.label;
+          span.addEventListener("click", () => {
+            // video1 and video0 can't be set to the same thing
+            if (opt.value !== videoControls.video0) {
+              videoControls.video1 = opt.value;
+              selectedEl.textContent = opt.label;
+            }
+          });
+          optionsEl.appendChild(span);
+        });
+      })
+      .catch(() => {
+        while (optionsEl.childElementCount > 0) optionsEl.removeChild(optionsEl.firstChild);
+        const span = document.createElement("SPAN");
+        span.className = idPrefix;
+        span.textContent = "No cameras found";
+        span.addEventListener("click", () => {
+          selectedEl.textContent = "Select Display";
+        });
+        optionsEl.appendChild(span);
+      });
   };
 
   // setup each dropdown with their callbacks
   setupDropdown("video-layout", getVideoLayouts, false);
-  setupDropdown("video-0", getVideo0Displays, false);
-  setupDropdown("video-1", getVideo1Displays, false);
+
+  // UPDATED: reload=true so cameras refresh when you open the dropdown
+  setupDropdown("video-0", getVideo0Displays, true);
+  setupDropdown("video-1", getVideo1Displays, true);
 
   // listeners for buttons in the video panel controls section
   document.getElementById("reload-video").addEventListener("click", () => {
@@ -290,29 +391,37 @@ window.onload = () => {
   api.on("video-controls", (controls) => {
     videoControls = controls;
     let option = "";
+
     // set each video control dropdown based on controls
-    // there's probably a better way to write this
     if (videoControls.layout === "two-video") option = "Full";
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
     document.getElementById("video-layout-selected").textContent = option;
 
-    // video 0 dropdown display
-    if (videoControls.video0 === "live-video-0") option = "Input 0";
-    if (videoControls.video0 === "live-video-1") option = "Input 1";
-    if (videoControls.video0 === "charts") option = "Charts";
-    if (videoControls.video0 === "3d-visualization")
-      option = "3D Visualization";
-    if (videoControls.video0 === "none-0") option = "None";
+    // video 0 dropdown display (UPDATED: handle camera:<deviceId>)
+    if (videoControls.video0?.startsWith("camera:")) {
+      const id = videoControls.video0.split("camera:")[1];
+      option = `Camera: ${cameraLabelById[id] || "Camera"}`;
+    } else {
+      if (videoControls.video0 === "live-video-0") option = "Input 0";
+      if (videoControls.video0 === "live-video-1") option = "Input 1";
+      if (videoControls.video0 === "charts") option = "Charts";
+      if (videoControls.video0 === "3d-visualization") option = "3D Visualization";
+      if (videoControls.video0 === "none-0") option = "None";
+    }
     document.getElementById("video-0-selected").textContent = option;
 
-    // video 1 dropdown display
-    if (videoControls.video1 === "live-video-1") option = "Input 1";
-    if (videoControls.video1 === "live-video-0") option = "Input 0";
-    if (videoControls.video1 === "charts") option = "Charts";
-    if (videoControls.video1 === "3d-visualization")
-      option = "3D Visualization";
-    if (videoControls.video1 === "none-1") option = "None"; // FIX (was none-0)
+    // video 1 dropdown display (UPDATED: handle camera:<deviceId>)
+    if (videoControls.video1?.startsWith("camera:")) {
+      const id = videoControls.video1.split("camera:")[1];
+      option = `Camera: ${cameraLabelById[id] || "Camera"}`;
+    } else {
+      if (videoControls.video1 === "live-video-1") option = "Input 1";
+      if (videoControls.video1 === "live-video-0") option = "Input 0";
+      if (videoControls.video1 === "charts") option = "Charts";
+      if (videoControls.video1 === "3d-visualization") option = "3D Visualization";
+      if (videoControls.video1 === "none-1") option = "None"; // FIX (was none-0)
+    }
     document.getElementById("video-1-selected").textContent = option;
   });
 
@@ -352,13 +461,10 @@ window.onload = () => {
       });
       document.getElementById("command-syntax").textContent =
         commandList[index].abbrv + ": " + commandList[index].syntax.join(" ");
-      document.getElementById("command-args").value =
-        commandList[index].abbrv + ": ";
+      document.getElementById("command-args").value = commandList[index].abbrv + ": ";
 
       // check if syntax is valid (in case there are no args)
-      commandValid = commandList[index].validator(
-        commandList[index].abbrv + ": ",
-      );
+      commandValid = commandList[index].validator(commandList[index].abbrv + ": ");
       // if valid change color
       if (commandValid) commandArgs.className = "valid";
       // if invalid but valid command, show partially valid
@@ -389,13 +495,10 @@ window.onload = () => {
       });
       document.getElementById("command-syntax").textContent =
         controlsList[index].name + " " + controlsList[index].syntax.join(" ");
-      document.getElementById("command-args").value =
-        controlsList[index].name + " ";
+      document.getElementById("command-args").value = controlsList[index].name + " ";
 
       // check if syntax is valid (in case there are no args)
-      commandValid = controlsList[index].validator(
-        controlsList[index].name + " ",
-      );
+      commandValid = controlsList[index].validator(controlsList[index].name + " ");
       // if valid change color
       if (commandValid) commandArgs.className = "valid";
       // if invalid but valid command show partially valid
@@ -455,8 +558,7 @@ window.onload = () => {
             // update syntax and dropdown
             document.getElementById("command-syntax").textContent =
               commandList[i].abbrv + ": " + commandList[i].syntax.join(" ");
-            document.getElementById("command-selected").textContent =
-              commandList[i].name;
+            document.getElementById("command-selected").textContent = commandList[i].name;
             // check if syntax is valid
             commandValid = commandList[i].validator(commandText);
             // if valid change color
@@ -469,10 +571,8 @@ window.onload = () => {
         }
       }
       if (!foundCommand) {
-        document.getElementById("command-selected").textContent =
-          "Select Command";
-        document.getElementById("command-syntax").textContent =
-          "No command selected";
+        document.getElementById("command-selected").textContent = "Select Command";
+        document.getElementById("command-syntax").textContent = "No command selected";
         // if no match the command is invalid
         commandValid = false;
         commandArgs.className = "invalid";
@@ -497,8 +597,7 @@ window.onload = () => {
             // update syntax and dropdown
             document.getElementById("command-syntax").textContent =
               controlsList[i].name + " " + controlsList[i].syntax.join(" ");
-            document.getElementById("command-selected").textContent =
-              controlsList[i].name;
+            document.getElementById("command-selected").textContent = controlsList[i].name;
             // check if syntax is valid
             commandValid = controlsList[i].validator(commandText);
             // if valid change color
@@ -511,19 +610,15 @@ window.onload = () => {
         }
       }
       if (!foundCommand) {
-        document.getElementById("command-selected").textContent =
-          "Select Command";
-        document.getElementById("command-syntax").textContent =
-          "No command selected";
+        document.getElementById("command-selected").textContent = "Select Command";
+        document.getElementById("command-syntax").textContent = "No command selected";
         // if no match the command is invalid
         commandValid = false;
         commandArgs.className = "invalid";
       }
     } else {
-      document.getElementById("command-selected").textContent =
-        "Select Command";
-      document.getElementById("command-syntax").textContent =
-        "No command selected";
+      document.getElementById("command-selected").textContent = "Select Command";
+      document.getElementById("command-syntax").textContent = "No command selected";
       // otherwise text box is empty
       commandValid = false;
       commandArgs.className = "empty";
@@ -542,8 +637,7 @@ window.onload = () => {
       document.getElementById("command-type").textContent = "Control";
     }
 
-    document.getElementById("command-syntax").textContent =
-      "No command selected";
+    document.getElementById("command-syntax").textContent = "No command selected";
     commandArgs.value = "";
     document.getElementById("command-selected").textContent = "Select Command";
     commandArgs.className = "empty";
@@ -565,8 +659,7 @@ window.onload = () => {
   // if the user confirms sending the command, reset the inputs and hand command off to the backend
   document.getElementById("confirm-send").addEventListener("click", () => {
     let command = commandArgs.value;
-    document.getElementById("command-syntax").textContent =
-      "No command selected";
+    document.getElementById("command-syntax").textContent = "No command selected";
     commandArgs.value = "";
     document.getElementById("command-selected").textContent = "Select Command";
     commandArgs.className = "empty";
@@ -635,14 +728,10 @@ window.onload = () => {
     chartDataIds.forEach((idPrefix) => {
       let index = parseInt(idPrefix.split("t")[1]) - 1;
 
-      altG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-altData",
-      )
+      altG.data.datasets[index].data = sessionStorage.getItem(idPrefix + "-altData")
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
         : [];
-      spdG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-spdData",
-      )
+      spdG.data.datasets[index].data = sessionStorage.getItem(idPrefix + "-spdData")
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
         : [];
     });
@@ -651,10 +740,7 @@ window.onload = () => {
     spdG.update();
 
     // check for stored apogee in case of reload during flight
-    if (
-      sessionStorage.getItem("apogee") &&
-      parseInt(sessionStorage.getItem("apogee"))
-    ) {
+    if (sessionStorage.getItem("apogee") && parseInt(sessionStorage.getItem("apogee"))) {
       document.getElementById("apogee-value").textContent =
         parseInt(sessionStorage.getItem("apogee")) + " ft";
       loadedApogee = true;
@@ -666,9 +752,7 @@ window.onload = () => {
       t0Set = true;
 
       setInterval(() => {
-        document.getElementById("t-plus-value").textContent = mstohhmmss(
-          Date.now() - t0,
-        );
+        document.getElementById("t-plus-value").textContent = mstohhmmss(Date.now() - t0);
       }, 10);
     }
 
@@ -703,8 +787,7 @@ window.onload = () => {
     }
 
     // set text displays
-    document.getElementById(idPrefix + "-strength").textContent =
-      metric.getRSSI() + " dBm";
+    document.getElementById(idPrefix + "-strength").textContent = metric.getRSSI() + " dBm";
     document.getElementById(idPrefix + "-bitrate").textContent =
       metric.getBitrate("k").toFixed(2) + " kbps"; // bitrate
   };
@@ -754,6 +837,7 @@ window.onload = () => {
       spd.setAttribute("data-value-text", "\u2014");
     }
   };
+
   const updateStage = (idPrefix, msg) => {
     // update the given stage element
     let stageEl = document.getElementById(idPrefix + "-stage");
@@ -786,6 +870,7 @@ window.onload = () => {
       ? fcoords.split("/")[1]
       : "000.0000\u00b0W";
   };
+
   const updateTemp = (idPrefix, msg) => {
     let tempEl = document.getElementById(idPrefix + "-temp");
     let tempNum = msg.getStateflag("Internal Temp");
@@ -793,6 +878,7 @@ window.onload = () => {
       tempEl.textContent = tempNum;
     }
   };
+
   const updateFlapAngle = (idPrefix, msg) => {
     let angleEl = document.getElementById(idPrefix + "-flap-angle");
     let angleNum = msg.getStateflag("Flap Angle");
@@ -800,6 +886,7 @@ window.onload = () => {
       angleEl.textContent = angleNum;
     }
   };
+
   const updatePredApogee = (idPrefix, msg) => {
     let apogeeEl = document.getElementById(idPrefix + "-apogee");
     let apogeeNum = msg.getStateflag("Predicted Apogee");
@@ -807,6 +894,7 @@ window.onload = () => {
       apogeeEl.textContent = apogeeNum;
     }
   };
+
   const updateHeading = (idPrefix, msg) => {
     // update given heading element from message
     let hdg = document.getElementById(idPrefix + "-heading");
@@ -856,14 +944,7 @@ window.onload = () => {
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
         altG = createChart("alt-graph", "hr", "ft", 1 / 3600, 1, chartsConfig);
-        spdG = createChart(
-          "spd-graph",
-          "hr",
-          "ft/s",
-          1 / 3600,
-          1,
-          chartsConfig,
-        );
+        spdG = createChart("spd-graph", "hr", "ft/s", 1 / 3600, 1, chartsConfig);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
@@ -872,19 +953,15 @@ window.onload = () => {
       }
 
       // time is store in seconds, so need to multiply by a factor based on the scale
-      let factor =
-        chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
+      let factor = chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
 
       // interval between grid lines
-      let interval = parseInt(
-        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4,
-      );
+      let interval = parseInt((ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4);
 
       // get each grid line
       let arrL = [];
       for (let i = 0; i < 5; i++) {
-        arrL[i] =
-          Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
+        arrL[i] = Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
       }
 
       // set min and max for x scale
@@ -898,30 +975,22 @@ window.onload = () => {
       spdG.data.labels = JSON.parse(JSON.stringify(arrL));
 
       // add new data to the graph
-      altG.data.datasets[index].data.push({
-        x: ts,
-        y: msg.getAlt() ? msg.getAlt() : 0,
-      });
+      altG.data.datasets[index].data.push({ x: ts, y: msg.getAlt() ? msg.getAlt() : 0 });
       spdG.data.datasets[index].data.push({
         x: ts,
         y: msg.getSpeed() ? msg.getSpeed() : 0,
       });
 
       // store new data to be retreived later
-      sessionStorage.setItem(
-        idPrefix + "-altData",
-        JSON.stringify(altG.data.datasets[index].data),
-      );
-      sessionStorage.setItem(
-        idPrefix + "-spdData",
-        JSON.stringify(spdG.data.datasets[index].data),
-      );
+      sessionStorage.setItem(idPrefix + "-altData", JSON.stringify(altG.data.datasets[index].data));
+      sessionStorage.setItem(idPrefix + "-spdData", JSON.stringify(spdG.data.datasets[index].data));
 
       // force update of the charts
       altG.update();
       spdG.update();
     }
   };
+
   const updateMap = (idPrefix, msg) => {
     // update map
     let coords = msg.getLatLong();
@@ -950,20 +1019,17 @@ window.onload = () => {
       // need to add empty element so the chart scale doesn't look weird
       // hardcoded for 3 streams for now
       for (let i = 0; i < 3; i++) {
-        if (altG.data.datasets[i].data.length === 0)
-          altG.data.datasets[i].data = [{ x: 0, y: null }];
-        if (spdG.data.datasets[i].data.length === 0)
-          spdG.data.datasets[i].data = [{ x: 0, y: null }];
+        if (altG.data.datasets[i].data.length === 0) altG.data.datasets[i].data = [{ x: 0, y: null }];
+        if (spdG.data.datasets[i].data.length === 0) spdG.data.datasets[i].data = [{ x: 0, y: null }];
       }
 
       // update the t0 display
       setInterval(() => {
-        document.getElementById("t-plus-value").textContent = mstohhmmss(
-          Date.now() - t0,
-        );
+        document.getElementById("t-plus-value").textContent = mstohhmmss(Date.now() - t0);
       }, 10);
     }
   };
+
   const updateApogee = (idPrefix, msg) => {
     // apogee check
     // don't need to find apogee if it was loaded
@@ -976,11 +1042,7 @@ window.onload = () => {
         apogeeTime = Date.now();
       }
       // if the apogee hasn't yet been found, we're actually in the air, and the timer expires, we've found apogee
-      if (
-        !apogeeFound &&
-        msg.getStateflag("Stage") > 0 &&
-        Date.now() - apogeeTime > 6000
-      ) {
+      if (!apogeeFound && msg.getStateflag("Stage") > 0 && Date.now() - apogeeTime > 6000) {
         apogeeFound = true;
         // update the displays
         document.getElementById("apogee-value").textContent = lastAlt + " ft";
@@ -1021,22 +1083,10 @@ window.onload = () => {
       ]);
     }
     if (msg.stream === "telem-airbrake") {
-      updateDisplays("t2", msg, [
-        updateGauges,
-        updateFlapAngle,
-        updatePredApogee,
-        updateStage,
-        updateCharts,
-      ]);
+      updateDisplays("t2", msg, [updateGauges, updateFlapAngle, updatePredApogee, updateStage, updateCharts]);
     }
     if (msg.stream === "telem-payload") {
-      updateDisplays("t3", msg, [
-        updateGauges,
-        updateLatLong,
-        updateHeading,
-        updateStage,
-        updateCharts,
-      ]);
+      updateDisplays("t3", msg, [updateGauges, updateLatLong, updateHeading, updateStage, updateCharts]);
     }
   });
 
@@ -1046,8 +1096,7 @@ window.onload = () => {
       const img = document.getElementById(portInUse.idPrefix + "-connection");
       img.setAttribute("src", "./images/serial_disconnected.svg");
       img.setAttribute("title", "Connection Error");
-      document.getElementById(portInUse.idPrefix + "-selected").textContent =
-        "Select Port";
+      document.getElementById(portInUse.idPrefix + "-selected").textContent = "Select Port";
       portInUse = { path: null, idPrefix: null };
     }
   });
@@ -1055,18 +1104,15 @@ window.onload = () => {
 
 // convert milliseconds to HH:MM:SS format
 const mstohhmmss = (ms) => {
-  let seconds =
-    Math.floor((ms / 1000) % 60) > 0 ? Math.floor((ms / 1000) % 60) : 0;
+  let seconds = Math.floor((ms / 1000) % 60) > 0 ? Math.floor((ms / 1000) % 60) : 0;
   let minutes =
-    Math.floor((ms / (1000 * 60)) % 60) > 0
-      ? Math.floor((ms / (1000 * 60)) % 60)
-      : 0;
+    Math.floor((ms / (1000 * 60)) % 60) > 0 ? Math.floor((ms / (1000 * 60)) % 60) : 0;
   let hours =
     Math.floor((ms / (1000 * 60 * 60)) % 24) > 0
       ? Math.floor((ms / (1000 * 60 * 60)) % 24)
       : 0;
 
-  return `${hours < 10 ? "0" + hours : hours}:${
-    minutes < 10 ? "0" + minutes : minutes
-  }:${seconds < 10 ? "0" + seconds : seconds}`;
+  return `${hours < 10 ? "0" + hours : hours}:${minutes < 10 ? "0" + minutes : minutes}:${
+    seconds < 10 ? "0" + seconds : seconds
+  }`;
 };
