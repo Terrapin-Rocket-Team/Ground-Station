@@ -7,7 +7,7 @@ if ("${BUILD_ENV}" STREQUAL "WINDOWS")
 
     add_library(SerialPort STATIC ${LIB_DIR}/WinSerialPort.cpp)
 
-elseif ("${BUILD_ENV}" STREQUAL "LINUX")
+elseif ("${BUILD_ENV}" STREQUAL "LINUX" || "${BUILD_ENV}" STREQUAL "APPLE")
 
     add_library(SerialPort STATIC ${LIB_DIR}/LinuxSerialPort.cpp)
 

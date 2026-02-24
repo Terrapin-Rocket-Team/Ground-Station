@@ -8,11 +8,11 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
-#ifdef __linux__
-  #include <linux/termios.h>   // termios2, TCGETS/TCSETSW, BOTHER, etc.
-#else
-  #include <termios.h>         // macOS / POSIX
-  #include <IOKit/serial/ioss.h> // IOSSIOSPEED (macOS)
+#ifdef LINUX
+#include <linux/termios.h> // termios2, TCGETS/TCSETSW, BOTHER, etc.
+#elif APPLE
+#include <termios.h>           // macOS / POSIX
+#include <IOKit/serial/ioss.h> // IOSSIOSPEED (macOS)
 #endif
 
 LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
@@ -27,7 +27,7 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
     return;
   }
 
-#ifdef __linux__
+#ifdef LINUX
   struct termios2 tty;
 
   if (ioctl(portHandle, TCGETS, &tty) != 0)
@@ -72,7 +72,7 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
     return;
   }
 
-#else
+#elif APPLE
   struct termios tty;
 
   if (tcgetattr(portHandle, &tty) != 0)
@@ -102,19 +102,35 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
 
   // set “standard” baud if possible
   speed_t spd = 0;
-  switch (baud) {
-    case 9600: spd = B9600; break;
-    case 19200: spd = B19200; break;
-    case 38400: spd = B38400; break;
-    case 57600: spd = B57600; break;
-    case 115200: spd = B115200; break;
+  switch (baud)
+  {
+  case 9600:
+    spd = B9600;
+    break;
+  case 19200:
+    spd = B19200;
+    break;
+  case 38400:
+    spd = B38400;
+    break;
+  case 57600:
+    spd = B57600;
+    break;
+  case 115200:
+    spd = B115200;
+    break;
 #ifdef B230400
-    case 230400: spd = B230400; break;
+  case 230400:
+    spd = B230400;
+    break;
 #endif
-    default: spd = 0; break;
+  default:
+    spd = 0;
+    break;
   }
 
-  if (spd != 0) {
+  if (spd != 0)
+  {
     cfsetispeed(&tty, spd);
     cfsetospeed(&tty, spd);
   }
@@ -127,7 +143,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
   }
 
   // If baud isn't a standard enum, try IOSSIOSPEED (some devices/drivers support it)
-  if (spd == 0) {
+  if (spd == 0)
+  {
     speed_t iosSpeed = (speed_t)baud;
     ioctl(portHandle, IOSSIOSPEED, &iosSpeed);
   }
@@ -135,7 +152,8 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
 
   // clear nonblocking after configuration
   int flags = fcntl(portHandle, F_GETFL, 0);
-  if (flags != -1) fcntl(portHandle, F_SETFL, flags & ~O_NONBLOCK);
+  if (flags != -1)
+    fcntl(portHandle, F_SETFL, flags & ~O_NONBLOCK);
 
   connected = true;
 }
