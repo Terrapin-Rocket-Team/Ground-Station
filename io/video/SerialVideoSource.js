@@ -7,18 +7,40 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const ffmpegPath =
-  os.platform() == "win32"
-    ? path.join(
-        __dirname,
-        "..",
-        "..",
-        "build",
-        "coders",
-        "ffmpeg-7.0.1",
-        "ffmpeg.exe",
-      )
-    : path.join("/opt","homebrew", "bin", "ffmpeg");
+const platform = os.platform();
+const ffmpegExe = platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+
+// check if the user built ffmpeg
+// fallback on OS ffmpeg
+
+const ffmpegDefaultPath = path.join(
+  __dirname,
+  "..",
+  "..",
+  "build",
+  "coders",
+  "ffmpeg-7.0.1",
+  ffmpegExe,
+);
+
+let ffmpegPath = ffmpegDefaultPath;
+
+if (!fs.existsSync(ffmpegDefaultPath)) {
+  // fallback to PATH lookup
+  let lookupCmd = platform === "win32" ? "where" : "which";
+  try {
+    const found = execFileSync(lookupCmd, ["ffmpeg"], {
+      encoding: "utf8",
+    }).trim();
+    if (found && fs.existsSync(found)) ffmpegPath = found;
+    else ffmpegPath = "error";
+  } catch (err) {
+    log.err(
+      'Error locating ffmpeg via "' + lookupCmd + ' ffmpeg": ' + err.message,
+    );
+    ffmpegPath = "error";
+  }
+}
 
 /**
  * A class to stream video from a serial device
@@ -58,49 +80,61 @@ class SerialVideoSource extends VideoSource {
     );
     this.dataLen = 0;
 
-    // check if rotation should be used
-    if (this.options.rotation === undefined) {
-      // set up ffmpeg instance
-      this.ffmpeg = spawn(ffmpegPath, [
-        "-framerate",
-        this.options.framerate + "/1",
-        "-i",
-        "-",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "yuv420p",
-        "-s",
-        this.options.resolution.width + "x" + this.options.resolution.height,
-        "-framerate",
-        this.options.framerate + "/1",
-        "-",
-      ]);
-    } else {
-      // find proper rotation for ffmpeg
-      let r = 0;
-      if (this.options.rotation === "ccw") r = 0;
-      else if (this.options.rotation === "cw") r = 1;
-      else throw new Error("Invalid rotation");
+    try {
+      if (fs.existsSync(ffmpegPath)) {
+        // check if rotation should be used
+        if (this.options.rotation === undefined) {
+          // set up ffmpeg instance
+          this.ffmpeg = spawn(ffmpegPath, [
+            "-framerate",
+            this.options.framerate + "/1",
+            "-i",
+            "-",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "yuv420p",
+            "-s",
+            this.options.resolution.width +
+              "x" +
+              this.options.resolution.height,
+            "-framerate",
+            this.options.framerate + "/1",
+            "-",
+          ]);
+        } else {
+          // find proper rotation for ffmpeg
+          let r = 0;
+          if (this.options.rotation === "ccw") r = 0;
+          else if (this.options.rotation === "cw") r = 1;
+          else throw new Error("Invalid rotation");
 
-      // set up ffmpeg instance
-      this.ffmpeg = spawn(ffmpegPath, [
-        "-framerate",
-        this.options.framerate + "/1",
-        "-i",
-        "-",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "yuv420p",
-        "-vf",
-        "transpose=" + r,
-        "-s",
-        this.options.resolution.width + "x" + this.options.resolution.height,
-        "-framerate",
-        this.options.framerate + "/1",
-        "-",
-      ]);
+          // set up ffmpeg instance
+          this.ffmpeg = spawn(ffmpegPath, [
+            "-framerate",
+            this.options.framerate + "/1",
+            "-i",
+            "-",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "yuv420p",
+            "-vf",
+            "transpose=" + r,
+            "-s",
+            this.options.resolution.width +
+              "x" +
+              this.options.resolution.height,
+            "-framerate",
+            this.options.framerate + "/1",
+            "-",
+          ]);
+        }
+      } else {
+        log.err("Failed to locate ffmpeg at path: " + ffmpegPath);
+      }
+    } catch (err) {
+      log.err("Unexpected error when looking for ffmpeg: " + err.message);
     }
 
     // create video log file if necessary

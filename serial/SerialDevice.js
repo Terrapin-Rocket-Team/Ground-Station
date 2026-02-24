@@ -31,9 +31,6 @@ class SerialDevice extends EventEmitter {
     this.status = {};
 
     this.useDebug = false;
-
-    // ADDED: allow running without hardware/driver
-    this.noHw = process.env.NO_HW === "1";
   }
 
   /**
@@ -91,15 +88,6 @@ class SerialDevice extends EventEmitter {
    * Internal method for setting up the driver program
    */
   setupDriver() {
-    // ADDED: no-hardware mode: do not spawn driver
-    if (this.noHw) {
-      log.warn("NO_HW=1: skipping SerialDriver spawn (running without hardware)");
-      this.ready = false;
-      this.connected = false;
-      this.port = "";
-      return;
-    }
-
     // logic for starting the driver program
     if (os.platform() === "win32") {
       if (!this.useDebug)
@@ -114,6 +102,8 @@ class SerialDevice extends EventEmitter {
         "Failed to start serial interface: Unsupported platform! Found platform " +
           os.platform(),
       );
+
+      return;
     }
 
     // other listeners
@@ -207,14 +197,6 @@ class SerialDevice extends EventEmitter {
    * @returns {Promise<Number|Error>} 1 if the port was successfully connected, otherwise rejects with the error
    */
   connect(port, baudRate) {
-    // ADDED: no-hardware mode: do not reject
-    if (this.noHw) {
-      log.warn(`NO_HW=1: connect(${port}) ignored`);
-      this.connected = false;
-      this.port = "";
-      return Promise.resolve(0);
-    }
-
     return new Promise((res, rej) => {
       // serial driver must be ready to connect
       if (this.ready) {
@@ -327,11 +309,6 @@ class SerialDevice extends EventEmitter {
    * @returns {Promise<Object|Error>} whether the serial driver is connected, reject with error if one occurs
    */
   isConnected() {
-    // ADDED: no-hardware mode: do not reject
-    if (this.noHw) {
-      return Promise.resolve({ path: "", connected: false });
-    }
-
     return new Promise((res, rej) => {
       if (this.ready) {
         this.control.stream.write("connected\n");
@@ -375,12 +352,6 @@ class SerialDevice extends EventEmitter {
    * Completely close and then relaunch the serial driver
    */
   reload() {
-    // ADDED: no-hardware mode: nothing to reload
-    if (this.noHw) {
-      log.warn("NO_HW=1: reload ignored");
-      return;
-    }
-
     if (this.ready) this.control.stream.write("exit\n");
     else if (this.driver) this.driver.kill();
     else this.emit("exit");

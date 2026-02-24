@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(CMAKE_CXX_COMPILER g++)
-set (CMAKE_CXX_COMPILER g++)
-set (CMAKE_C_COMPILER gcc)
+# set(CMAKE_C_COMPILER gcc)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# set(CMAKE_CXX_EXTENSIONS OFF)
 project(SerialDriver)
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/") # Define PROJECT_INCLUDE to be the path to the include directory of the project
@@ -39,6 +38,11 @@ elseif ("${BUILD_ENV}" STREQUAL "LINUX")
 
     target_compile_definitions(SerialDriver PUBLIC LINUX=1)
     target_compile_definitions(DriverShell PUBLIC LINUX=1)
+
+elseif ("${BUILD_ENV}" STREQUAL "APPLE")
+
+    target_compile_definitions(SerialDriver PUBLIC APPLE=1)
+    target_compile_definitions(DriverShell PUBLIC APPLE=1)
 
 endif()
 

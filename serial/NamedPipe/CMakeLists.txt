@@ -7,7 +7,7 @@ if ("${BUILD_ENV}" STREQUAL "WINDOWS")
 
     add_library(NamedPipe STATIC ${LIB_DIR}/WinNamedPipe.cpp)
 
-elseif ("${BUILD_ENV}" STREQUAL "LINUX")
+elseif ("${BUILD_ENV}" STREQUAL "LINUX" || "${BUILD_ENV}" STREQUAL "APPLE")
 
     add_library(NamedPipe STATIC ${LIB_DIR}/LinuxNamedPipe.cpp)
 

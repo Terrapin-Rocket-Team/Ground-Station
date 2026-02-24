@@ -6,30 +6,40 @@ const fs = require("fs");
 const path = require("path");
 const os = require("node:os");
 
-const ffmpegPath =
-  os.platform() === "win32"
-    ? path.join(__dirname, "..", "..", "build", "coders", "ffmpeg-7.0.1", "ffmpeg.exe")
-    : (() => {
-        const candidates = [
-          process.env.FFMPEG_PATH,    // manual override
-          "/opt/homebrew/bin/ffmpeg", // Apple Silicon
-          "/usr/local/bin/ffmpeg",    // Intel mac
-        ];
+const platform = os.platform();
+const ffmpegExe = platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
 
-        for (const p of candidates) {
-          if (p && fs.existsSync(p)) return p;
-        }
+// check if the user built ffmpeg
+// fallback on OS ffmpeg
 
-        // fallback to PATH lookup
-        try {
-          const found = execFileSync("which", ["ffmpeg"], { encoding: "utf8" }).trim();
-          if (found && fs.existsSync(found)) return found;
-        } catch {}
+const ffmpegDefaultPath = path.join(
+  __dirname,
+  "..",
+  "..",
+  "build",
+  "coders",
+  "ffmpeg-7.0.1",
+  ffmpegExe,
+);
 
-        throw new Error(
-          "ffmpeg not found.\n\nInstall with:\n  brew install ffmpeg"
-        );
-      })();
+let ffmpegPath = ffmpegDefaultPath;
+
+if (!fs.existsSync(ffmpegDefaultPath)) {
+  // fallback to PATH lookup
+  let lookupCmd = platform === "win32" ? "where" : "which";
+  try {
+    const found = execFileSync(lookupCmd, ["ffmpeg"], {
+      encoding: "utf8",
+    }).trim();
+    if (found && fs.existsSync(found)) ffmpegPath = found;
+    else ffmpegPath = "error";
+  } catch (err) {
+    log.err(
+      'Error locating ffmpeg via "' + lookupCmd + ' ffmpeg": ' + err.message,
+    );
+    ffmpegPath = "error";
+  }
+}
 
 /**
  * A class to play a local file as a video source
@@ -52,6 +62,7 @@ class FileVideoSource extends VideoSource {
     // call the VideoSource constructor with the name as the file name if "name" is not given
     super(name ? name : file, id, fs.createReadStream(file));
 
+    log.debug("Using ffmpeg at: " + ffmpegPath);
     log.debug("Creating file video source for: " + file + " id: " + this.id);
 
     this.file = file;
@@ -117,7 +128,7 @@ class FileVideoSource extends VideoSource {
           ]);
         }
       } else {
-        log.err("Failed to locate ffmpeg at path:" + ffmpegPath);
+        log.err("Failed to locate ffmpeg at path: " + ffmpegPath);
       }
     } catch (err) {
       log.err("Unexpected error when looking for ffmpeg: " + err.message);
@@ -205,7 +216,7 @@ class FileVideoSource extends VideoSource {
 
       return this.o;
     }
-    console.err("ffmpeg was not initialized properly, cannot start video");
+    log.err("ffmpeg was not initialized properly, cannot start video");
     return null;
   }
 

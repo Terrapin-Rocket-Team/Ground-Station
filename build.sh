@@ -15,7 +15,7 @@ if [ $# = 0 ] || [ $1 = "help" ] ; then
     echo "  coders  : build the video decoding dependencies"
     echo "  serial  : build the serial driver"
     echo "  icons   : build the icons"
-    echo "  utils   : build the utilities"
+    echo "  utils   : build the utilities (GSM Muxer)"
     echo "  help    : display this message and exit"
     exit 0
 fi
@@ -70,8 +70,8 @@ if ! type nasm &> /dev/null ; then
     echo "ERROR: Unable to locate nasm"
     exit 1
 fi
-if ! type python3 &> /dev/null ; then
-    echo "ERROR: Unable to locate python3"
+if ! type python3 &> /dev/null || ! type python &> /dev/null ; then
+    echo "ERROR: Unable to locate python"
     exit 1
 fi
 if ! type meson &> /dev/null ; then
