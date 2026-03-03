@@ -10,7 +10,7 @@
       connect-src 'self' https://threejs.org blob: https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; 
       script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/npm/chart.js https://threejs.org; 
       img-src * data: blob:; 
-      object-src 'self' blob:; 
+      object-src 'self' blob:;
       style-src 'self' 'unsafe-inline';"
     />
     <link rel="stylesheet" href="index.css" />
@@ -109,7 +109,9 @@
               <div id="map"></div>
             </div>
             <!-- Rocket visual -->
-            <div id="rocket-wrapper" class="visual">Not Implemented</div>
+            <div id="rocket-wrapper" class="visual">
+              <div id="rocket"></div>
+            </div>
           </div>
           <!-- Container for bottom visual -->
           <div id="visual-bottom">
@@ -506,5 +508,6 @@
     <script src="./libraries/map/leaflet/easy-button/easy-button.js"></script>
     <script src="./libraries/map/map.js"></script>
     <script src="index.js"></script>
+    <script type="module" src="./libraries/Visualizations/rocket_visualization.js"></script>
   </body>
 </html>
