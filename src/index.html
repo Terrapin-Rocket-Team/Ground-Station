@@ -120,46 +120,71 @@
             </div>
             <!-- Video controls -->
             <div id="control-wrapper" class="visual">
-              <!--Custom dropdowns-->
-              <div id="video-layout-control" class="video-control-section">
+
+              <!-- Video Layout -->
+              <div class="ctrl-section">
+                <span class="ctrl-label">Video Layout</span>
                 <div class="dropdown inactive" id="video-layout-drop">
                   <span id="video-layout-selected">Full</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-layout-arrow"
-                    class="drop-arrow"
-                  />
+                  <img src="./images/arrow_right.svg" alt=">" id="video-layout-arrow" class="drop-arrow" />
                   <div class="options" id="video-layout-options"></div>
                 </div>
               </div>
-              <div id="video-0-control" class="video-control-section">
-                <div class="dropdown inactive" id="video-0-drop">
-                  <span id="video-0-selected">None</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-0-arrow"
-                    class="drop-arrow"
-                  />
-                  <div class="options" id="video-0-options"></div>
+
+              <div class="ctrl-divider"></div>
+
+              <!-- Video 0 -->
+              <div class="ctrl-section">
+                <span class="ctrl-label">Video 0</span>
+                <div class="ctrl-row">
+                  <span class="ctrl-row-label">Source</span>
+                  <div class="dropdown inactive" id="video-0-drop">
+                    <span id="video-0-selected">None</span>
+                    <img src="./images/arrow_right.svg" alt=">" id="video-0-arrow" class="drop-arrow" />
+                    <div class="options" id="video-0-options"></div>
+                  </div>
+                </div>
+                <div class="ctrl-row">
+                  <span class="ctrl-row-label">Orientation</span>
+                  <div class="dropdown inactive" id="video-0-orient-drop">
+                    <span id="video-0-orient-selected">↑ 0° Normal</span>
+                    <img src="./images/arrow_right.svg" alt=">" id="video-0-orient-arrow" class="drop-arrow" />
+                    <div class="options orient-options" id="video-0-orient-options"></div>
+                  </div>
                 </div>
               </div>
-              <div id="video-1-control" class="video-control-section">
-                <div class="dropdown inactive" id="video-1-drop">
-                  <span id="video-1-selected">None</span>
-                  <img
-                    src="./images/arrow_right.svg"
-                    alt=">"
-                    id="video-1-arrow"
-                    class="drop-arrow"
-                  />
-                  <div class="options" id="video-1-options"></div>
+
+              <div class="ctrl-divider"></div>
+
+              <!-- Video 1 -->
+              <div class="ctrl-section">
+                <span class="ctrl-label">Video 1</span>
+                <div class="ctrl-row">
+                  <span class="ctrl-row-label">Source</span>
+                  <div class="dropdown inactive" id="video-1-drop">
+                    <span id="video-1-selected">None</span>
+                    <img src="./images/arrow_right.svg" alt=">" id="video-1-arrow" class="drop-arrow" />
+                    <div class="options" id="video-1-options"></div>
+                  </div>
+                </div>
+                <div class="ctrl-row">
+                  <span class="ctrl-row-label">Orientation</span>
+                  <div class="dropdown inactive" id="video-1-orient-drop">
+                    <span id="video-1-orient-selected">↑ 0° Normal</span>
+                    <img src="./images/arrow_right.svg" alt=">" id="video-1-orient-arrow" class="drop-arrow" />
+                    <div class="options orient-options" id="video-1-orient-options"></div>
+                  </div>
                 </div>
               </div>
+
+              <div class="ctrl-divider"></div>
+
               <!-- Control buttons -->
-              <button id="reload-video">Reload</button>
-              <button id="control-update">Update</button>
+              <div class="ctrl-buttons">
+                <button id="reload-video">Reload</button>
+                <button id="control-update">Update</button>
+              </div>
+
             </div>
           </div>
         </div>

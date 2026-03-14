@@ -70,14 +70,10 @@ window.onload = () => {
 
   // custom dropdown setup
   const setupDropdown = (idPrefix, callback, reload) => {
-    // get required elements from DOM
     const drop = document.getElementById(idPrefix + "-drop");
     const options = document.getElementById(idPrefix + "-options");
-    // call the callback if we're not going to call it every time the dropdown is clicked
     if (!reload) callback(idPrefix);
-    // listener to activate the dropdown
     document.getElementById(idPrefix + "-drop").addEventListener("click", () => {
-      // activate/deactivate dropdown
       if (drop.classList.contains("active")) {
         options.style.display = "none";
         document
@@ -85,8 +81,7 @@ window.onload = () => {
           .setAttribute("src", "./images/arrow_right.svg");
       } else {
         options.style.display = "block";
-        // if we want to reload the dropdown every time
-        if (reload) callback(idPrefix); // call callback if we're opening the dropdown
+        if (reload) callback(idPrefix);
         document
           .getElementById(idPrefix + "-arrow")
           .setAttribute("src", "./images/arrow_down.svg");
@@ -99,7 +94,6 @@ window.onload = () => {
 
   // adds available ports to the custom dropdown
   const getAvailPorts = (idPrefix) => {
-    // show loading
     const options = document.getElementById(idPrefix + "-options");
     while (options.childElementCount > 0) {
       options.removeChild(options.firstChild);
@@ -109,14 +103,11 @@ window.onload = () => {
     span.textContent = "Loading...";
     options.appendChild(span);
 
-    // when we have a response
     api.getPorts().then((ports) => {
-      // remove loading components
       while (options.childElementCount > 0) {
         options.removeChild(options.firstChild);
       }
       const selected = document.getElementById(idPrefix + "-selected");
-      // if there's no available ports, just put an element that says so in the dropdown
       if (ports.length === 0) {
         const span = document.createElement("SPAN");
         span.className = "serial";
@@ -126,24 +117,18 @@ window.onload = () => {
         });
         options.appendChild(span);
       } else {
-        // otherwise, for each port
         ports.forEach((port) => {
-          // if the port is not currently in use
           if (portInUse.path !== port.path) {
-            // create a new option in the dropdown for this port
             const span = document.createElement("SPAN");
             span.className = "serial";
             span.textContent = port.path;
             span.addEventListener("click", () => {
-              // show "connecting" until we know whether the connection succeeded
               const img = document.getElementById(idPrefix + "-connection");
               selected.textContent = "Connecting...";
               img.setAttribute("src", "./images/serial_disconnected.svg");
               img.setAttribute("title", "Connecting...");
 
-              // try to connect to the port
               api.setPort({ idPrefix, path: port.path }).then((success) => {
-                // set dropdown depending on whether we successfully connected
                 if (success) {
                   portInUse.path = port.path;
                   portInUse.idPrefix = idPrefix;
@@ -166,7 +151,6 @@ window.onload = () => {
     });
   };
 
-  // setup the serial port dropdown
   setupDropdown("serial", getAvailPorts, true);
   api
     .getPortStatus()
@@ -188,9 +172,7 @@ window.onload = () => {
   /// sidebar
 
   const setupSidebar = (buttons, visualContainer) => {
-    // get all the elements that are visuals in this container
     let visuals = visualContainer.querySelectorAll("div.visual");
-    // add buttons for each
     for (let i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", () => {
         for (let j = 0; j < visuals.length; j++) {
@@ -206,7 +188,6 @@ window.onload = () => {
     }
   };
 
-  // need to setup top and botton sidebars
   const visButtonsTop = document.getElementsByClassName("vis-button-top");
   const visButtonsBottom = document.getElementsByClassName("vis-button-bottom");
   const topVisual = document.getElementById("visual-top");
@@ -217,25 +198,20 @@ window.onload = () => {
 
   /// visuals
 
-  // adds options that are static once loaded to a dropdown
   const setupStaticOptions = (idPrefix, optionsList, clickCallback) => {
     const options = document.getElementById(idPrefix + "-options");
-    // make sure there's nothing in the dropdown
     while (options.childElementCount > 0) {
       options.removeChild(options.firstChild);
     }
     const selected = document.getElementById(idPrefix + "-selected");
 
-    // add an element for each option
     optionsList.forEach((option) => {
       const span = document.createElement("SPAN");
       span.className = idPrefix;
       span.textContent = option;
       span.addEventListener("click", () => {
         if (clickCallback) {
-          // call the given callback, it must return true if the selected option is valid
           if (clickCallback(option)) {
-            // only set the value of the dropdown if the selected option is valid
             selected.textContent = option;
           }
         } else {
@@ -246,12 +222,10 @@ window.onload = () => {
     });
   };
 
-  // video control dropdown options
   const getVideoLayouts = (idPrefix) => {
     const layoutOptions = ["Full", "Partial", "Telemetry Only"];
 
     setupStaticOptions(idPrefix, layoutOptions, (option) => {
-      // figure out what value the option text corresponds to
       if (option == "Full") videoControls.layout = "two-video";
       if (option == "Partial") videoControls.layout = "one-video";
       if (option == "Telemetry Only") videoControls.layout = "telemetry-only";
@@ -259,7 +233,6 @@ window.onload = () => {
     });
   };
 
-  // Video display dropdowns (UPDATED: adds cameras)
   const getVideo0Displays = (idPrefix) => {
     const optionsEl = document.getElementById(idPrefix + "-options");
     const selectedEl = document.getElementById(idPrefix + "-selected");
@@ -295,7 +268,6 @@ window.onload = () => {
           span.className = idPrefix;
           span.textContent = opt.label;
           span.addEventListener("click", () => {
-            // video0 and video1 can't be set to the same thing
             if (opt.value !== videoControls.video1) {
               videoControls.video0 = opt.value;
               selectedEl.textContent = opt.label;
@@ -336,7 +308,7 @@ window.onload = () => {
           { label: "Input 0", value: "live-video-0" },
           { label: "Charts", value: "charts" },
           { label: "3D Visualization", value: "3d-visualization" },
-          { label: "None", value: "none-1" }, // FIX (was none-0)
+          { label: "None", value: "none-1" },
         ];
 
         const camOptions = cams.map((c, i) => ({
@@ -351,7 +323,6 @@ window.onload = () => {
           span.className = idPrefix;
           span.textContent = opt.label;
           span.addEventListener("click", () => {
-            // video1 and video0 can't be set to the same thing
             if (opt.value !== videoControls.video0) {
               videoControls.video1 = opt.value;
               selectedEl.textContent = opt.label;
@@ -372,16 +343,108 @@ window.onload = () => {
       });
   };
 
-  // setup each dropdown with their callbacks
-  setupDropdown("video-layout", getVideoLayouts, false);
+  // ── Video orientation ──────────────────────────────────────────────────────
 
-  // UPDATED: reload=true so cameras refresh when you open the dropdown
+  const ORIENT_OPTIONS = [
+    { label: "↑ 0° — Normal",        value: "0"     },
+    { label: "↻ 90° — Clockwise",    value: "90"    },
+    { label: "↓ 180° — Flipped",     value: "180"   },
+    { label: "↺ 270° — Counter-CW",  value: "270"   },
+    { label: "⟷ Horizontal Flip",    value: "hflip" },
+    { label: "↕ Vertical Flip",      value: "vflip" },
+  ];
+
+  const ORIENT_TRANSFORMS = {
+    "0":     "rotate(0deg)",
+    "90":    "rotate(90deg)",
+    "180":   "rotate(180deg)",
+    "270":   "rotate(270deg)",
+    "hflip": "scaleX(-1)",
+    "vflip": "scaleY(-1)",
+  };
+
+  const applyVideoOrientation = (videoIndex, value) => {
+    const wrapper = document.getElementById("video-wrapper-" + videoIndex);
+    if (!wrapper) return;
+    const el = wrapper.querySelector("video, canvas, iframe");
+    if (!el) return;
+    el.style.transform = ORIENT_TRANSFORMS[value] ?? "rotate(0deg)";
+    el.style.transformOrigin = "center center";
+    if (value === "90" || value === "270") {
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+      el.style.width      = h + "px";
+      el.style.height     = w + "px";
+      el.style.marginLeft = (w - h) / 2 + "px";
+      el.style.marginTop  = (h - w) / 2 + "px";
+    } else {
+      el.style.width = el.style.height = el.style.marginLeft = el.style.marginTop = "";
+    }
+  };
+
+  // Populate orientation dropdowns using setupStaticOptions directly.
+  // We do NOT call setupDropdown for orientation — instead we manually wire the
+  // click-to-open on the drop div so we can stop propagation on option clicks,
+  // preventing the bubble-re-open bug that made selection impossible.
+  const setupOrientDropdown = (idPrefix, videoIndex) => {
+    const drop    = document.getElementById(idPrefix + "-drop");
+    const options = document.getElementById(idPrefix + "-options");
+    const arrow   = document.getElementById(idPrefix + "-arrow");
+    const selected = document.getElementById(idPrefix + "-selected");
+
+    // Populate options
+    while (options.childElementCount > 0) options.removeChild(options.firstChild);
+    ORIENT_OPTIONS.forEach((opt) => {
+      const span = document.createElement("SPAN");
+      span.className = idPrefix;
+      span.textContent = opt.label;
+      span.addEventListener("click", (e) => {
+        // Stop the click reaching the drop div so it doesn't re-toggle open
+        e.stopPropagation();
+        // Update displayed selection
+        selected.textContent = opt.label;
+        // Store and apply
+        videoControls["orient" + videoIndex] = opt.value;
+        applyVideoOrientation(videoIndex, opt.value);
+        // Close dropdown
+        options.style.display = "none";
+        arrow.setAttribute("src", "./images/arrow_right.svg");
+        drop.classList.remove("active");
+        drop.classList.add("inactive");
+        options.classList.remove("active");
+      });
+      options.appendChild(span);
+    });
+
+    // Toggle open/close on the drop div click
+    drop.addEventListener("click", () => {
+      if (drop.classList.contains("active")) {
+        options.style.display = "none";
+        arrow.setAttribute("src", "./images/arrow_right.svg");
+      } else {
+        options.style.display = "block";
+        arrow.setAttribute("src", "./images/arrow_down.svg");
+      }
+      drop.classList.toggle("active");
+      drop.classList.toggle("inactive");
+      options.classList.toggle("active");
+    });
+  };
+
+  setupOrientDropdown("video-0-orient", 0);
+  setupOrientDropdown("video-1-orient", 1);
+
+  window.applyVideoOrientation = applyVideoOrientation;
+  window.getVideoOrientation = (idx) => videoControls["orient" + idx] ?? "0";
+
+  // ── /Video orientation ─────────────────────────────────────────────────────
+
+  setupDropdown("video-layout", getVideoLayouts, false);
   setupDropdown("video-0", getVideo0Displays, true);
   setupDropdown("video-1", getVideo1Displays, true);
 
-  // listeners for buttons in the video panel controls section
   document.getElementById("reload-video").addEventListener("click", () => {
-    api.reload("video", true); // specify true so that the setting are kept for the video window
+    api.reload("video", true);
   });
 
   document.getElementById("control-update").addEventListener("click", () => {
@@ -392,13 +455,11 @@ window.onload = () => {
     videoControls = controls;
     let option = "";
 
-    // set each video control dropdown based on controls
     if (videoControls.layout === "two-video") option = "Full";
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
     document.getElementById("video-layout-selected").textContent = option;
 
-    // video 0 dropdown display (UPDATED: handle camera:<deviceId>)
     if (videoControls.video0?.startsWith("camera:")) {
       const id = videoControls.video0.split("camera:")[1];
       option = `Camera: ${cameraLabelById[id] || "Camera"}`;
@@ -411,7 +472,6 @@ window.onload = () => {
     }
     document.getElementById("video-0-selected").textContent = option;
 
-    // video 1 dropdown display (UPDATED: handle camera:<deviceId>)
     if (videoControls.video1?.startsWith("camera:")) {
       const id = videoControls.video1.split("camera:")[1];
       option = `Camera: ${cameraLabelById[id] || "Camera"}`;
@@ -420,9 +480,21 @@ window.onload = () => {
       if (videoControls.video1 === "live-video-0") option = "Input 0";
       if (videoControls.video1 === "charts") option = "Charts";
       if (videoControls.video1 === "3d-visualization") option = "3D Visualization";
-      if (videoControls.video1 === "none-1") option = "None"; // FIX (was none-0)
+      if (videoControls.video1 === "none-1") option = "None";
     }
     document.getElementById("video-1-selected").textContent = option;
+
+    // Restore orientation dropdowns from saved controls
+    if (videoControls.orient0) {
+      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient0);
+      if (match) document.getElementById("video-0-orient-selected").textContent = match.label;
+      applyVideoOrientation(0, videoControls.orient0);
+    }
+    if (videoControls.orient1) {
+      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient1);
+      if (match) document.getElementById("video-1-orient-selected").textContent = match.label;
+      applyVideoOrientation(1, videoControls.orient1);
+    }
   });
 
   // create the map
@@ -440,9 +512,6 @@ window.onload = () => {
   let altwr = document.getElementById("alt-wrapper");
   let spdwr = document.getElementById("spd-wrapper");
 
-  // rocket orientation
-  // TODO
-
   /// radio/commands
 
   const commandArgs = document.getElementById("command-args");
@@ -452,10 +521,9 @@ window.onload = () => {
   let isCommand = true;
   let commandList = [];
   let controlsList = [];
-  // adds commands to custom dropdown
+
   const getCommands = (idPrefix) => {
     const commandCallback = (option) => {
-      // figure out what index in the list was selected
       let index = commandList.findIndex((command) => {
         return command.name === option;
       });
@@ -463,11 +531,8 @@ window.onload = () => {
         commandList[index].abbrv + ": " + commandList[index].syntax.join(" ");
       document.getElementById("command-args").value = commandList[index].abbrv + ": ";
 
-      // check if syntax is valid (in case there are no args)
       commandValid = commandList[index].validator(commandList[index].abbrv + ": ");
-      // if valid change color
       if (commandValid) commandArgs.className = "valid";
-      // if invalid but valid command, show partially valid
       else commandArgs.className = "part-valid";
       return true;
     };
@@ -475,21 +540,16 @@ window.onload = () => {
     if (commandList.length > 0) {
       setupStaticOptions(
         idPrefix,
-        commandList.map((command) => {
-          return command.name;
-        }),
+        commandList.map((command) => command.name),
         commandCallback,
       );
     } else {
-      setupStaticOptions(idPrefix, ["No commands available"], () => {
-        return false;
-      });
+      setupStaticOptions(idPrefix, ["No commands available"], () => false);
     }
   };
-  // adds device controls to custom dropdown
+
   const getControls = (idPrefix) => {
     const controlCallback = (option) => {
-      // figure out what index in the list was selected
       let index = controlsList.findIndex((command) => {
         return command.name === option;
       });
@@ -497,11 +557,8 @@ window.onload = () => {
         controlsList[index].name + " " + controlsList[index].syntax.join(" ");
       document.getElementById("command-args").value = controlsList[index].name + " ";
 
-      // check if syntax is valid (in case there are no args)
       commandValid = controlsList[index].validator(controlsList[index].name + " ");
-      // if valid change color
       if (commandValid) commandArgs.className = "valid";
-      // if invalid but valid command show partially valid
       else commandArgs.className = "part-valid";
       return true;
     };
@@ -509,42 +566,31 @@ window.onload = () => {
     if (controlsList.length > 0) {
       setupStaticOptions(
         idPrefix,
-        controlsList.map((command) => {
-          return command.name;
-        }),
+        controlsList.map((command) => command.name),
         controlCallback,
       );
     } else {
-      setupStaticOptions(idPrefix, ["No controls available"], () => {
-        return false;
-      });
+      setupStaticOptions(idPrefix, ["No controls available"], () => false);
     }
   };
 
-  // need to get the command list from the backend since it's being loaded from a file
   api.getCommandList().then((list) => {
     commandList = APRSCmd.createCommandList(list);
-
-    // setup the commands dropdown
     setupDropdown("command", getCommands, false);
   });
 
-  // need to get the control command list from the backend since it's being loaded from a file
   api.getControlsList().then((list) => {
     controlsList = GSControl.createControlList(list);
   });
 
-  // validation for the command text input
   commandArgs.addEventListener("input", () => {
     let commandText = commandArgs.value;
 
     if (commandText.length > 0 && isCommand) {
-      // see if text matches the command format
       let cmdMatch = commandText.match(/[A-Z]+(:( [A-z0-9])*)?/g);
       let foundCommand = false;
 
       if (cmdMatch) {
-        // if we found a match, figure out where the command abbreviation is
         let command = cmdMatch[0];
         let index = -1;
         if ((index = commandText.search(":")) > 0) {
@@ -553,17 +599,12 @@ window.onload = () => {
 
         for (let i = 0; i < commandList.length; i++) {
           let cmdName = commandList[i].abbrv;
-          // check if current abbreviation matches the input
           if (cmdName === command) {
-            // update syntax and dropdown
             document.getElementById("command-syntax").textContent =
               commandList[i].abbrv + ": " + commandList[i].syntax.join(" ");
             document.getElementById("command-selected").textContent = commandList[i].name;
-            // check if syntax is valid
             commandValid = commandList[i].validator(commandText);
-            // if valid change color
             if (commandValid) commandArgs.className = "valid";
-            // if invalid but valid command show partially valid
             else commandArgs.className = "part-valid";
             foundCommand = true;
             break;
@@ -573,17 +614,14 @@ window.onload = () => {
       if (!foundCommand) {
         document.getElementById("command-selected").textContent = "Select Command";
         document.getElementById("command-syntax").textContent = "No command selected";
-        // if no match the command is invalid
         commandValid = false;
         commandArgs.className = "invalid";
       }
     } else if (commandText.length > 0 && !isCommand) {
-      // see if text matches the control format
       let cmdMatch = commandText.match(/[A-Z]+( [A-z0-9])*/g);
       let foundCommand = false;
 
       if (cmdMatch) {
-        // if we found a match, figure out where the command part of the control is
         let command = cmdMatch[0];
         let index = -1;
         if ((index = commandText.search(" ")) > 0) {
@@ -592,17 +630,12 @@ window.onload = () => {
 
         for (let i = 0; i < controlsList.length; i++) {
           let cmdName = controlsList[i].name;
-          // check if current name matches the input
           if (cmdName === command) {
-            // update syntax and dropdown
             document.getElementById("command-syntax").textContent =
               controlsList[i].name + " " + controlsList[i].syntax.join(" ");
             document.getElementById("command-selected").textContent = controlsList[i].name;
-            // check if syntax is valid
             commandValid = controlsList[i].validator(commandText);
-            // if valid change color
             if (commandValid) commandArgs.className = "valid";
-            // if invalid but valid command show partially valid
             else commandArgs.className = "part-valid";
             foundCommand = true;
             break;
@@ -612,20 +645,17 @@ window.onload = () => {
       if (!foundCommand) {
         document.getElementById("command-selected").textContent = "Select Command";
         document.getElementById("command-syntax").textContent = "No command selected";
-        // if no match the command is invalid
         commandValid = false;
         commandArgs.className = "invalid";
       }
     } else {
       document.getElementById("command-selected").textContent = "Select Command";
       document.getElementById("command-syntax").textContent = "No command selected";
-      // otherwise text box is empty
       commandValid = false;
       commandArgs.className = "empty";
     }
   });
 
-  // reset the dropdown, syntax display, and text box
   document.getElementById("command-type").addEventListener("click", () => {
     isCommand = !isCommand;
 
@@ -643,12 +673,10 @@ window.onload = () => {
     commandArgs.className = "empty";
   });
 
-  // make the confirm button disappear if we click away
   document.addEventListener("click", () => {
     document.getElementById("confirm-send").classList.add("inactive");
   });
 
-  // if we have a valid command, show the confirm button
   document.getElementById("send-command").addEventListener("click", (e) => {
     if (commandValid) {
       e.stopPropagation();
@@ -656,7 +684,6 @@ window.onload = () => {
     }
   });
 
-  // if the user confirms sending the command, reset the inputs and hand command off to the backend
   document.getElementById("confirm-send").addEventListener("click", () => {
     let command = commandArgs.value;
     document.getElementById("command-syntax").textContent = "No command selected";
@@ -664,7 +691,6 @@ window.onload = () => {
     document.getElementById("command-selected").textContent = "Select Command";
     commandArgs.className = "empty";
 
-    // add command to previous commands window
     const span = document.createElement("SPAN");
     span.className = "previous-command";
     span.textContent =
@@ -674,8 +700,6 @@ window.onload = () => {
       command;
     previousCommands.appendChild(span);
 
-    // send command to backend
-    // GSControl sink (0) temporarily hardcoded until better support is needed
     if (isCommand) {
       api.sendCommand(command, 1);
     } else {
@@ -686,11 +710,8 @@ window.onload = () => {
   /// middle/data display
 
   const resizeGauges = () => {
-    //set canvas gauges sizing
     let gauges = document.getElementsByClassName("gauge");
-
     let size = document.getElementById("telem-1").offsetHeight * 0.35;
-
     let numGauges = gauges.length;
     for (let i = 0; i < numGauges; i++) {
       gauges[i].setAttribute("data-width", size);
@@ -699,17 +720,14 @@ window.onload = () => {
   };
 
   resizeGauges();
-
   window.onresize = resizeGauges;
 
-  /// update GUI when size changes
   api.on("fullscreen-change", (res) => {
     if (res.win === "main") {
       fullscreened = res.isFullscreen;
     }
   });
 
-  // persistent variables for handling received telemetry
   let lastCoords = [];
   let lastAlt = 0;
   let apogeeTime = 0;
@@ -719,12 +737,8 @@ window.onload = () => {
   let t0 = {};
   let chartState = "seconds";
 
-  // load previous data if it exists
   {
-    // eventually this array will be part of the config
-    // so the user can choose how many streams they want
     let chartDataIds = ["t1", "t2", "t3"];
-    // get chart data for each stream
     chartDataIds.forEach((idPrefix) => {
       let index = parseInt(idPrefix.split("t")[1]) - 1;
 
@@ -739,14 +753,12 @@ window.onload = () => {
     altG.update();
     spdG.update();
 
-    // check for stored apogee in case of reload during flight
     if (sessionStorage.getItem("apogee") && parseInt(sessionStorage.getItem("apogee"))) {
       document.getElementById("apogee-value").textContent =
         parseInt(sessionStorage.getItem("apogee")) + " ft";
       loadedApogee = true;
     }
 
-    // check for stored t0 in case of reload during flight
     if (sessionStorage.getItem("t0")) {
       t0 = new Date(parseInt(sessionStorage.getItem("t0")));
       t0Set = true;
@@ -755,15 +767,10 @@ window.onload = () => {
         document.getElementById("t-plus-value").textContent = mstohhmmss(Date.now() - t0);
       }, 10);
     }
-
-    // TODO: load map data so it's not lost during reload
   }
 
-  /// radio panel updates
   const updateRadioStatus = (idPrefix, metric) => {
-    // set the signal strength for the given stream
     let ss = metric.getSignalStrength();
-    // set correct image
     const signalEl = document.getElementById(idPrefix + "-signal");
     if (ss === "High") {
       signalEl.setAttribute("src", "./images/signal_strong.svg");
@@ -786,37 +793,27 @@ window.onload = () => {
       signalEl.title = "No Signal";
     }
 
-    // set text displays
     document.getElementById(idPrefix + "-strength").textContent = metric.getRSSI() + " dBm";
     document.getElementById(idPrefix + "-bitrate").textContent =
-      metric.getBitrate("k").toFixed(2) + " kbps"; // bitrate
+      metric.getBitrate("k").toFixed(2) + " kbps";
   };
 
-  /// individual telemetry panel updates
   const updateDisplays = (idPrefix, msg, updateFunctions) => {
-    // calls each of the given update functions
     updateFunctions.forEach((f) => f(idPrefix, msg));
   };
 
-  /// update functions that are global across all telemetry streams (can be passed to updateDisplays)
   const updateGauges = (idPrefix, msg) => {
-    // get the given gauges elements
     let alt = document.getElementById(idPrefix + "-altitude");
     let spd = document.getElementById(idPrefix + "-speed");
 
-    // update altitude and speed if given in the message
     if (msg.getAlt() || msg.getAlt() === 0) {
       const altValue = msg.getAlt();
       alt.setAttribute("data-value-text", altValue);
       alt.setAttribute("data-value", altValue / 1000);
 
-      // Set the altitude text and track digit length for responsive font sizing
       const altText = document.getElementById(idPrefix + "-alt-text");
       altText.textContent = altValue + " ft";
-
-      // Add a data attribute to track the number of digits for CSS responsive font sizing
-      const digitLength = altValue.toString().length;
-      altText.setAttribute("data-length", digitLength);
+      altText.setAttribute("data-length", altValue.toString().length);
     } else {
       alt.setAttribute("data-value-text", "\u2014");
     }
@@ -826,25 +823,18 @@ window.onload = () => {
       spd.setAttribute("data-value-text", spdValue);
       spd.setAttribute("data-value", spdValue);
 
-      // Set the speed text and track digit length for responsive font sizing
       const spdText = document.getElementById(idPrefix + "-spd-text");
       spdText.textContent = spdValue + " ft/s";
-
-      // Add a data attribute to track the number of digits for CSS responsive font sizing
-      const digitLength = spdValue.toString().length;
-      spdText.setAttribute("data-length", digitLength);
+      spdText.setAttribute("data-length", spdValue.toString().length);
     } else {
       spd.setAttribute("data-value-text", "\u2014");
     }
   };
 
   const updateStage = (idPrefix, msg) => {
-    // update the given stage element
     let stageEl = document.getElementById(idPrefix + "-stage");
-    // Try to get stage number, checking both "Stage" and "State Flags" fields
     let stageNum = msg.getStateflag("Stage");
 
-    // TODO: define state list per stream
     let stageNames = [
       "Preflight",
       "Powered Flight",
@@ -859,9 +849,7 @@ window.onload = () => {
     }
   };
 
-  /// update functions that are specific to different streams (can be passed to updateDisplays)
   const updateLatLong = (idPrefix, msg) => {
-    // update the given lat/long element
     let fcoords = msg.getLatLongDecimal();
     document.getElementById(idPrefix + "-lat").textContent = fcoords
       ? fcoords.split("/")[0]
@@ -896,7 +884,6 @@ window.onload = () => {
   };
 
   const updateHeading = (idPrefix, msg) => {
-    // update given heading element from message
     let hdg = document.getElementById(idPrefix + "-heading");
     if (msg.getHeading() || msg.getHeading() === 0) {
       hdg.textContent = msg.getHeading();
@@ -905,17 +892,12 @@ window.onload = () => {
     }
   };
 
-  /// updates for visuals (can be passed to updateDisplays)
   const updateCharts = (idPrefix, msg) => {
-    // get the index in the charts dataset
     let index = parseInt(idPrefix.split("t")[1]) - 1;
-    // wait to put data on the chart until t0
     if (t0Set) {
-      //update charts
       let time = Date.now() - t0;
       let ts = time / 1000;
 
-      // if more than 120 seconds have passed, change the chart scale to minutes
       if (ts > 120 && ts < 120 * 60 && chartState != "minutes") {
         let altData = altG.data.datasets[index].data;
         let spdData = spdG.data.datasets[index].data;
@@ -932,8 +914,6 @@ window.onload = () => {
         altG.data.labels = altLabels;
         spdG.data.labels = spdLabels;
         chartState = "minutes";
-
-        // if more than 120 minutes have passed, change the chart scale to hours
       } else if (ts > 120 * 60 && chartState != "hours") {
         let altData = altG.data.datasets[index].data;
         let spdData = spdG.data.datasets[index].data;
@@ -952,78 +932,53 @@ window.onload = () => {
         chartState = "hours";
       }
 
-      // time is store in seconds, so need to multiply by a factor based on the scale
       let factor = chartState == "minutes" ? 15 : chartState == "hours" ? 200 : 1;
-
-      // interval between grid lines
       let interval = parseInt((ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4);
-
-      // get each grid line
       let arrL = [];
       for (let i = 0; i < 5; i++) {
         arrL[i] = Math.floor(altG.data.datasets[index].data[0].x) + i * interval;
       }
 
-      // set min and max for x scale
       altG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
       spdG.options.scales.x.min = arrL[0] < 0 ? 0 : arrL[0];
       altG.options.scales.x.suggestedMax = ts + 10 * factor;
       spdG.options.scales.x.suggestedMax = ts + 10 * factor;
 
-      // set labels of x axis (grid lines)
       altG.data.labels = JSON.parse(JSON.stringify(arrL));
       spdG.data.labels = JSON.parse(JSON.stringify(arrL));
 
-      // add new data to the graph
       altG.data.datasets[index].data.push({ x: ts, y: msg.getAlt() ? msg.getAlt() : 0 });
-      spdG.data.datasets[index].data.push({
-        x: ts,
-        y: msg.getSpeed() ? msg.getSpeed() : 0,
-      });
+      spdG.data.datasets[index].data.push({ x: ts, y: msg.getSpeed() ? msg.getSpeed() : 0 });
 
-      // store new data to be retreived later
       sessionStorage.setItem(idPrefix + "-altData", JSON.stringify(altG.data.datasets[index].data));
       sessionStorage.setItem(idPrefix + "-spdData", JSON.stringify(spdG.data.datasets[index].data));
 
-      // force update of the charts
       altG.update();
       spdG.update();
     }
   };
 
   const updateMap = (idPrefix, msg) => {
-    // update map
     let coords = msg.getLatLong();
     if (coords[0] !== lastCoords[0] || coords[1] !== lastCoords[1]) {
-      // move the marker to the new lat/long
       updateMarker(
         coords[0],
         coords[1],
-        `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(
-          true,
-        )}</span></div>`,
+        `<div style="display:flex;flex-direction:row;align-items:center;column-gap:1vh;"><img src="images/rocket.svg" alt="Rocket" style="height:min(3.5vh, 35px);margin-left:-1vh;"/><span style="margin-right:-1vh;font-size:min(12px,2.5vh);display:inline-block;">${msg.getLatLongDecimal(true)}</span></div>`,
       );
       lastCoords = coords;
     }
   };
 
-  /// updates for status bar (can be passed to updateDisplays)
   const updateT0 = (idPrefix, msg) => {
-    // wait until the flight computer reports the stage is >0 (out of preflight)
     if (msg.getStateflag("Stage") > 0 && !t0Set) {
-      // get the t0
       t0 = Date.now();
-      // save the t0 for later
       sessionStorage.setItem("t0", t0);
       t0Set = true;
-      // need to add empty element so the chart scale doesn't look weird
-      // hardcoded for 3 streams for now
       for (let i = 0; i < 3; i++) {
         if (altG.data.datasets[i].data.length === 0) altG.data.datasets[i].data = [{ x: 0, y: null }];
         if (spdG.data.datasets[i].data.length === 0) spdG.data.datasets[i].data = [{ x: 0, y: null }];
       }
-
-      // update the t0 display
       setInterval(() => {
         document.getElementById("t-plus-value").textContent = mstohhmmss(Date.now() - t0);
       }, 10);
@@ -1031,20 +986,13 @@ window.onload = () => {
   };
 
   const updateApogee = (idPrefix, msg) => {
-    // apogee check
-    // don't need to find apogee if it was loaded
     if (!loadedApogee) {
-      // TODO: this can get messed up if the app is reloaded near apogee
-      // if the current altitude is greater than the previous, and we're actually in the air (stage > 0)
       if (msg.getAlt() >= lastAlt || msg.getStateflag("Stage") == 0) {
         lastAlt = msg.getAlt();
-        // update the timer
         apogeeTime = Date.now();
       }
-      // if the apogee hasn't yet been found, we're actually in the air, and the timer expires, we've found apogee
       if (!apogeeFound && msg.getStateflag("Stage") > 0 && Date.now() - apogeeTime > 6000) {
         apogeeFound = true;
-        // update the displays
         document.getElementById("apogee-value").textContent = lastAlt + " ft";
         sessionStorage.setItem("apogee", lastAlt);
       }
@@ -1052,27 +1000,18 @@ window.onload = () => {
   };
 
   api.on("metrics", (metric) => {
-    // update signal strength and bitrate
     let m = new Metrics(metric);
-    // figure out which device display this metrics belongs to
-    if (m.deviceId === 3) {
-      updateRadioStatus("telem", m);
-    }
-    if (m.deviceId === 2) {
-      updateRadioStatus("video0", m);
-    }
-    if (m.deviceId === 1) {
-      updateRadioStatus("video1", m);
-    }
+    if (m.deviceId === 3) updateRadioStatus("telem", m);
+    if (m.deviceId === 2) updateRadioStatus("video0", m);
+    if (m.deviceId === 1) updateRadioStatus("video1", m);
   });
 
   api.on("data", (data) => {
     let msg = new APRSTelem(data);
 
-    // update the proper telemetry display with new data
     if (msg.stream === "telem-avionics") {
       updateDisplays("t1", msg, [
-        updateT0, // order matters, update t0 first since other things (charts) depend on it
+        updateT0,
         updateGauges,
         updateLatLong,
         updateTemp,
@@ -1090,7 +1029,6 @@ window.onload = () => {
     }
   });
 
-  //update UI if serial connection is lost
   api.on("serial-close", (portPath) => {
     if (portInUse.path === portPath) {
       const img = document.getElementById(portInUse.idPrefix + "-connection");
@@ -1102,15 +1040,10 @@ window.onload = () => {
   });
 };
 
-// convert milliseconds to HH:MM:SS format
 const mstohhmmss = (ms) => {
   let seconds = Math.floor((ms / 1000) % 60) > 0 ? Math.floor((ms / 1000) % 60) : 0;
-  let minutes =
-    Math.floor((ms / (1000 * 60)) % 60) > 0 ? Math.floor((ms / (1000 * 60)) % 60) : 0;
-  let hours =
-    Math.floor((ms / (1000 * 60 * 60)) % 24) > 0
-      ? Math.floor((ms / (1000 * 60 * 60)) % 24)
-      : 0;
+  let minutes = Math.floor((ms / (1000 * 60)) % 60) > 0 ? Math.floor((ms / (1000 * 60)) % 60) : 0;
+  let hours = Math.floor((ms / (1000 * 60 * 60)) % 24) > 0 ? Math.floor((ms / (1000 * 60 * 60)) % 24) : 0;
 
   return `${hours < 10 ? "0" + hours : hours}:${minutes < 10 ? "0" + minutes : minutes}:${
     seconds < 10 ? "0" + seconds : seconds
