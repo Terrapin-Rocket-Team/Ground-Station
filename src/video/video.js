@@ -92,8 +92,55 @@ window.onload = () => {
   const getCameraDeviceId = (value) => value.slice("camera:".length);
 
   const moveSlotChildBackToPool = (slotEl) => {
-    if (slotEl.firstChild) videoSources.appendChild(slotEl.firstChild);
+    // move only the first direct child that is the video/canvas source
+    // (skip the decoration divs and HUD which are always present)
+    const child = Array.from(slotEl.children).find(
+      (c) =>
+        c.tagName === "CANVAS" ||
+        c.tagName === "VIDEO" ||
+        c.classList.contains("no-signal") ||
+        c.id === "charts"
+    );
+    if (child) videoSources.appendChild(child);
   };
+
+  // ── Video orientation ────────────────────────────────────────────────────────
+  // Maps the orient value from videoControls to a CSS transform string.
+  const ORIENT_TRANSFORMS = {
+    "0":     "",
+    "90":    "rotate(90deg)",
+    "180":   "rotate(180deg)",
+    "270":   "rotate(270deg)",
+    "hflip": "scaleX(-1)",
+    "vflip": "scaleY(-1)",
+  };
+
+  /**
+   * Apply an orientation transform to the active source element inside a slot.
+   * Source elements use position:absolute + inset:0, so we only set the CSS
+   * transform and let object-fit:contain handle letterboxing naturally.
+   */
+  const applyOrientation = (slotEl, value) => {
+    const transform = ORIENT_TRANSFORMS[value] ?? "";
+    // Only target real media elements — never .no-signal placeholders.
+    // updateLayout() appends none0/none1 to the slot before the actual source
+    // is mounted, so they appear first in children order and would be found
+    // first if we included .no-signal in the search.
+    const el = Array.from(slotEl.children).find(
+      (c) =>
+        c.tagName === "CANVAS" ||
+        c.tagName === "VIDEO" ||
+        c.id === "charts"
+    );
+    if (!el) {
+      console.warn("[orient] no media element found in", slotEl.id, "— children:", Array.from(slotEl.children).map(c => c.id || c.tagName + "." + c.className));
+      return;
+    }
+    console.log("[orient]", slotEl.id, "→", el.id || el.tagName, "transform:", transform);
+    el.style.transform = transform;
+    el.style.transformOrigin = "center center";
+  };
+  // ── /Video orientation ───────────────────────────────────────────────────────
 
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
@@ -215,11 +262,12 @@ window.onload = () => {
   //add as event handler so the gauges stay the correct size
   window.onresize = sizeGauges;
 
-  //updates the layout switching between two-video, one-video, and telemetry-only based on the class of main
+  //updates the layout switching between two-video, one-video, wide-video, and telemetry-only based on the class of main
   const updateLayout = () => {
     let layout;
     if (main.classList.contains("two-video")) layout = "two-video";
     else if (main.classList.contains("one-video")) layout = "one-video";
+    else if (main.classList.contains("wide-video")) layout = "wide-video";
     else if (main.classList.contains("telemetry-only"))
       layout = "telemetry-only";
 
@@ -235,6 +283,14 @@ window.onload = () => {
     }
     if (layout === "one-video") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
+      telemetry.appendChild(document.getElementById("small-text-container"));
+      video0.appendChild(none0);
+      videoSources.appendChild(LV0.canvas);
+      videoSources.appendChild(LV1.canvas);
+      videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
+    }
+    if (layout === "wide-video") {
       telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(none0);
       videoSources.appendChild(LV0.canvas);
@@ -594,6 +650,13 @@ window.onload = () => {
       // if not in two-video layout, ensure cam1 isn't left running
       stopCamera("video1");
     }
+
+    // ── Apply orientation transforms ─────────────────────────────────────────
+    // Must run after the source elements have been appended above so the child
+    // element exists when applyOrientation searches for it.
+    if (controls.orient0) applyOrientation(video0, controls.orient0);
+    if (controls.orient1) applyOrientation(video1, controls.orient1);
+    // ── /orientation ─────────────────────────────────────────────────────────
   });
 
   console.log("Babylon.js core modules and OBJ loader imported successfully.");

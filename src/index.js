@@ -385,6 +385,102 @@ window.onload = () => {
       });
   };
 
+  // ── Video orientation ──────────────────────────────────────────────────────
+
+  const ORIENT_OPTIONS = [
+    { label: "↑ 0° — Normal",        value: "0"     },
+    { label: "↻ 90° — Clockwise",    value: "90"    },
+    { label: "↓ 180° — Flipped",     value: "180"   },
+    { label: "↺ 270° — Counter-CW",  value: "270"   },
+    { label: "⟷ Horizontal Flip",    value: "hflip" },
+    { label: "↕ Vertical Flip",      value: "vflip" },
+  ];
+
+  const ORIENT_TRANSFORMS = {
+    "0":     "rotate(0deg)",
+    "90":    "rotate(90deg)",
+    "180":   "rotate(180deg)",
+    "270":   "rotate(270deg)",
+    "hflip": "scaleX(-1)",
+    "vflip": "scaleY(-1)",
+  };
+
+  const applyVideoOrientation = (videoIndex, value) => {
+    const wrapper = document.getElementById("video-wrapper-" + videoIndex);
+    if (!wrapper) return;
+    const el = wrapper.querySelector("video, canvas, iframe");
+    if (!el) return;
+    el.style.transform = ORIENT_TRANSFORMS[value] ?? "rotate(0deg)";
+    el.style.transformOrigin = "center center";
+    if (value === "90" || value === "270") {
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+      el.style.width      = h + "px";
+      el.style.height     = w + "px";
+      el.style.marginLeft = (w - h) / 2 + "px";
+      el.style.marginTop  = (h - w) / 2 + "px";
+    } else {
+      el.style.width = el.style.height = el.style.marginLeft = el.style.marginTop = "";
+    }
+  };
+
+  // Populate orientation dropdowns using setupStaticOptions directly.
+  // We do NOT call setupDropdown for orientation — instead we manually wire the
+  // click-to-open on the drop div so we can stop propagation on option clicks,
+  // preventing the bubble-re-open bug that made selection impossible.
+  const setupOrientDropdown = (idPrefix, videoIndex) => {
+    const drop     = document.getElementById(idPrefix + "-drop");
+    const options  = document.getElementById(idPrefix + "-options");
+    const arrow    = document.getElementById(idPrefix + "-arrow");
+    const selected = document.getElementById(idPrefix + "-selected");
+
+    // Populate options
+    while (options.childElementCount > 0) options.removeChild(options.firstChild);
+    ORIENT_OPTIONS.forEach((opt) => {
+      const span = document.createElement("SPAN");
+      span.className = idPrefix;
+      span.textContent = opt.label;
+      span.addEventListener("click", (e) => {
+        // Stop the click reaching the drop div so it doesn't re-toggle open
+        e.stopPropagation();
+        // Update displayed selection
+        selected.textContent = opt.label;
+        // Store and apply
+        videoControls["orient" + videoIndex] = opt.value;
+        applyVideoOrientation(videoIndex, opt.value);
+        // Close dropdown
+        options.style.display = "none";
+        arrow.setAttribute("src", "./images/arrow_right.svg");
+        drop.classList.remove("active");
+        drop.classList.add("inactive");
+        options.classList.remove("active");
+      });
+      options.appendChild(span);
+    });
+
+    // Toggle open/close on the drop div click
+    drop.addEventListener("click", () => {
+      if (drop.classList.contains("active")) {
+        options.style.display = "none";
+        arrow.setAttribute("src", "./images/arrow_right.svg");
+      } else {
+        options.style.display = "block";
+        arrow.setAttribute("src", "./images/arrow_down.svg");
+      }
+      drop.classList.toggle("active");
+      drop.classList.toggle("inactive");
+      options.classList.toggle("active");
+    });
+  };
+
+  setupOrientDropdown("video-0-orient", 0);
+  setupOrientDropdown("video-1-orient", 1);
+
+  window.applyVideoOrientation = applyVideoOrientation;
+  window.getVideoOrientation = (idx) => videoControls["orient" + idx] ?? "0";
+
+  // ── /Video orientation ─────────────────────────────────────────────────────
+
   // setup each dropdown with their callbacks
   setupDropdown("video-layout", getVideoLayouts, false);
 
@@ -438,6 +534,18 @@ window.onload = () => {
       if (videoControls.video1 === "none-1") option = "None";
     }
     document.getElementById("video-1-selected").textContent = option;
+
+    // Restore orientation dropdowns from saved controls
+    if (videoControls.orient0) {
+      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient0);
+      if (match) document.getElementById("video-0-orient-selected").textContent = match.label;
+      applyVideoOrientation(0, videoControls.orient0);
+    }
+    if (videoControls.orient1) {
+      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient1);
+      if (match) document.getElementById("video-1-orient-selected").textContent = match.label;
+      applyVideoOrientation(1, videoControls.orient1);
+    }
   });
 
   // create the map
