@@ -18,3 +18,7 @@ stateflags.json
 *.yuv
 *.xz
 *.gsm
+# Large visualization assets
+src/libraries/Visualizations/farm.glb
+src/libraries/Visualizations/farm_3d+2d.glb
+src/libraries/Visualizations/farm_big.glb
