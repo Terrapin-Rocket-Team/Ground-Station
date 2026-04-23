@@ -33,5 +33,10 @@
         "name": "Stage",
         "width": 4,
         "functionName": "getStage"
+    },
+    {
+        "name": "Fix Quality",
+        "width": 5,
+        "functionName": "getFixQual"
     }
 ]  
