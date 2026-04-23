@@ -99,7 +99,7 @@ window.onload = () => {
         c.tagName === "CANVAS" ||
         c.tagName === "VIDEO" ||
         c.classList.contains("no-signal") ||
-        c.id === "charts"
+        c.id === "charts",
     );
     if (child) videoSources.appendChild(child);
   };
@@ -107,12 +107,12 @@ window.onload = () => {
   // ── Video orientation ────────────────────────────────────────────────────────
   // Maps the orient value from videoControls to a CSS transform string.
   const ORIENT_TRANSFORMS = {
-    "0":     "",
-    "90":    "rotate(90deg)",
-    "180":   "rotate(180deg)",
-    "270":   "rotate(270deg)",
-    "hflip": "scaleX(-1)",
-    "vflip": "scaleY(-1)",
+    0: "",
+    90: "rotate(90deg)",
+    180: "rotate(180deg)",
+    270: "rotate(270deg)",
+    hflip: "scaleX(-1)",
+    vflip: "scaleY(-1)",
   };
 
   /**
@@ -128,15 +128,27 @@ window.onload = () => {
     // first if we included .no-signal in the search.
     const el = Array.from(slotEl.children).find(
       (c) =>
-        c.tagName === "CANVAS" ||
-        c.tagName === "VIDEO" ||
-        c.id === "charts"
+        c.tagName === "CANVAS" || c.tagName === "VIDEO" || c.id === "charts",
     );
     if (!el) {
-      console.warn("[orient] no media element found in", slotEl.id, "— children:", Array.from(slotEl.children).map(c => c.id || c.tagName + "." + c.className));
+      console.warn(
+        "[orient] no media element found in",
+        slotEl.id,
+        "— children:",
+        Array.from(slotEl.children).map(
+          (c) => c.id || c.tagName + "." + c.className,
+        ),
+      );
       return;
     }
-    console.log("[orient]", slotEl.id, "→", el.id || el.tagName, "transform:", transform);
+    console.log(
+      "[orient]",
+      slotEl.id,
+      "→",
+      el.id || el.tagName,
+      "transform:",
+      transform,
+    );
     el.style.transform = transform;
     el.style.transformOrigin = "center center";
   };
@@ -144,7 +156,7 @@ window.onload = () => {
 
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
-      "--t1-color"
+      "--t1-color",
     ),
     t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
     t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
@@ -233,7 +245,7 @@ window.onload = () => {
             LV0.ctx.drawFrame(LV0.frame);
           } else {
             console.warn(
-              "Unrecognized video name " + video.name + ", ignoring"
+              "Unrecognized video name " + video.name + ", ignoring",
             );
           }
         }
@@ -328,12 +340,12 @@ window.onload = () => {
       let index = parseInt(idPrefix.split("t")[1]) - 1;
 
       altG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-altData"
+        idPrefix + "-altData",
       )
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
         : [];
       spdG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-spdData"
+        idPrefix + "-spdData",
       )
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
         : [];
@@ -420,7 +432,7 @@ window.onload = () => {
           "ft/s",
           1 / 3600,
           1,
-          chartsConfig
+          chartsConfig,
         );
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
@@ -435,7 +447,7 @@ window.onload = () => {
 
       // interval between grid lines
       let interval = parseInt(
-        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4
+        (ts - altG.data.datasets[index].data[0].x + 5 * factor) / 4,
       );
 
       // get each grid line
@@ -468,11 +480,11 @@ window.onload = () => {
       // store new data to be retreived later
       sessionStorage.setItem(
         idPrefix + "-altData",
-        JSON.stringify(altG.data.datasets[index].data)
+        JSON.stringify(altG.data.datasets[index].data),
       );
       sessionStorage.setItem(
         idPrefix + "-spdData",
-        JSON.stringify(spdG.data.datasets[index].data)
+        JSON.stringify(spdG.data.datasets[index].data),
       );
 
       // force update of the charts
@@ -585,9 +597,23 @@ window.onload = () => {
           lastStage = sn;
         }
       }
+
+      let pitch = document.getElementById("v-pitch");
+      let roll = document.getElementById("v-roll");
+      let yaw = document.getElementById("v-yaw");
+
+      pitch.textContent = msg.orientation[0];
+      roll.textContent = msg.orientation[1];
+      yaw.textContent = msg.orientation[2];
     }
     if (msg.stream === "telem-airbrake") {
       updateCharts("t2", msg);
+
+      let predApogee = msg.getStateflag("Predicted Apogee");
+      if (predApogee)
+        document.getElementById("v-papogee").textContent = predApogee;
+      let flapAngle = msg.getStateflag("Flap Angle");
+      if (flapAngle) document.getElementById("v-flap").textContent = flapAngle;
     }
     if (msg.stream === "telem-payload") {
       updateCharts("t3", msg);
@@ -678,14 +704,14 @@ window.onload = () => {
       BABYLON.Tools.ToRadians(100), // β = 90° → horizontal
       1000,
       new BABYLON.Vector3(0, 255, 0),
-      scene
+      scene,
     );
     // camera.attachControl(canvas, true);
 
     new BABYLON.HemisphericLight(
       "light",
       new BABYLON.Vector3(0.5, 1, 0.5),
-      scene
+      scene,
     );
 
     BABYLON.SceneLoader.ImportMesh(
@@ -720,7 +746,7 @@ window.onload = () => {
           targetQuat = BABYLON.Quaternion.FromEulerAngles(
             BABYLON.Angle.FromDegrees(msg.orientation[0]).radians(),
             BABYLON.Angle.FromDegrees(msg.orientation[1]).radians(),
-            BABYLON.Angle.FromDegrees(msg.orientation[2]).radians()
+            BABYLON.Angle.FromDegrees(msg.orientation[2]).radians(),
           );
         });
 
@@ -740,7 +766,7 @@ window.onload = () => {
           const t = Math.min(1, step / angle); // blend fraction
           BABYLON.Quaternion.SlerpToRef(current, targetQuat, t, current);
         });
-      }
+      },
     );
     return scene;
   };

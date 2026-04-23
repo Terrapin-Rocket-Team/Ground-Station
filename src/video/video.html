@@ -1,915 +1,1277 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta
-    http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; connect-src https://fonts.googleapis.com https://fonts.gstatic.com;"
-  />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap"
-    rel="stylesheet"
-  />
-  <script src="../libraries/video/yuv-canvas.js"></script>
-  <script src="../../coders/APRSTelem.js"></script>
-  <script src="../libraries/gauge.js"></script>
-  <title>TRGS · Video</title>
-  <style>
-  /* ─── TOKENS ─────────────────────────────────────────────────────────────── */
-  :root {
-    --bg-void:   #060a10;
-    --bg-panel:  #0b111a;
-    --bg-card:   #0e1620;
-    --bg-lift:   #131f2e;
-    --border:    #1a2535;
-    --border-hi: #253448;
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; connect-src https://fonts.googleapis.com https://fonts.gstatic.com;"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="../libraries/video/yuv-canvas.js"></script>
+    <script src="../../coders/APRSTelem.js"></script>
+    <script src="../libraries/gauge.js"></script>
+    <title>TRGS · Video</title>
+    <style>
+      /* ─── TOKENS ─────────────────────────────────────────────────────────────── */
+      :root {
+        --bg-void: #060a10;
+        --bg-panel: #0b111a;
+        --bg-card: #0e1620;
+        --bg-lift: #131f2e;
+        --border: #1a2535;
+        --border-hi: #253448;
 
-    /* UMD palette — red primary, gold secondary */
-    --accent:     #E03A3E;
-    --accent-dim: #5a1214;
-    --gold:       #FFD200;
-    --gold-dim:   #665200;
-    --t1: #E03A3E;   /* avionics */
-    --t2: #FFD200;   /* airbrake */
-    --t3: #fb923c;   /* payload  */
+        /* UMD palette — red primary, gold secondary */
+        --accent: #e03a3e;
+        --accent-dim: #5a1214;
+        --gold: #ffd200;
+        --gold-dim: #665200;
+        --t1: #e03a3e; /* avionics */
+        --t2: #ffd200; /* airbrake */
+        --t3: #fb923c; /* payload  */
 
-    --green:     #10b981;
-    --text-hi:   #e2e8f0;
-    --text-mid:  #94a3b8;
-    --text-lo:   #334155;
+        --green: #10b981;
+        --text-hi: #e2e8f0;
+        --text-mid: #94a3b8;
+        --text-lo: #334155;
 
-    --mono: 'Share Tech Mono', 'Courier New', monospace;
-    --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
-    --sans: 'Barlow', Arial, sans-serif;
+        --mono: "Share Tech Mono", "Courier New", monospace;
+        --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+        --sans: "Barlow", Arial, sans-serif;
 
-    --topbar-h:  36px;
-    --stage-h:   44px;
-    --telem-w:   264px;
-  }
+        --topbar-h: 36px;
+        --stage-h: 44px;
+        --telem-w: 264px;
+      }
 
-  /* ─── RESET ──────────────────────────────────────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: var(--bg-void);
-    color: var(--text-hi);
-    font-family: var(--sans);
-    font-size: 13px;
-  }
+      /* ─── RESET ──────────────────────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg-void);
+        color: var(--text-hi);
+        font-family: var(--sans);
+        font-size: 13px;
+      }
 
-  /* subtle scanline texture */
-  body::after {
-    content: '';
-    position: fixed; inset: 0; pointer-events: none; z-index: 9000;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent 0, transparent 3px,
-      rgba(0,0,0,0.035) 3px, rgba(0,0,0,0.035) 4px
-    );
-  }
+      /* subtle scanline texture */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 9000;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent 0,
+          transparent 3px,
+          rgba(0, 0, 0, 0.035) 3px,
+          rgba(0, 0, 0, 0.035) 4px
+        );
+      }
 
-  /* ─── TOP BAR ────────────────────────────────────────────────────────────── */
-  #top-bar {
-    height: var(--topbar-h);
-    display: flex; align-items: stretch;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
-    position: relative; z-index: 100;
-    -webkit-app-region: drag;
-    user-select: none;
-  }
-  #top-bar.hidden { display: none; }
+      /* ─── TOP BAR ────────────────────────────────────────────────────────────── */
+      #top-bar {
+        height: var(--topbar-h);
+        display: flex;
+        align-items: stretch;
+        background: var(--bg-panel);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        z-index: 100;
+        -webkit-app-region: drag;
+        user-select: none;
+      }
+      #top-bar.hidden {
+        display: none;
+      }
 
-  #top-left {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0 14px;
-    border-right: 1px solid var(--border);
-  }
-  #top-left img { height: 18px; }
-  #top-left span {
-    font-family: var(--cond); font-weight: 600;
-    font-size: 13px; letter-spacing: 0.12em;
-    color: var(--accent); text-transform: uppercase;
-  }
+      #top-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        border-right: 1px solid var(--border);
+      }
+      #top-left img {
+        height: 18px;
+      }
+      #top-left span {
+        font-family: var(--cond);
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+        text-transform: uppercase;
+      }
 
-  #top-right {
-    display: flex; align-items: stretch;
-    margin-left: auto;
-    -webkit-app-region: no-drag;
-  }
-  .top-button {
-    width: 36px; height: var(--topbar-h);
-    background: none; border: none; border-left: 1px solid var(--border);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
-    padding: 0;
-  }
-  .top-button img { width: 14px; height: 14px; filter: invert(0.6); }
-  .top-button:hover { background: var(--bg-lift); }
-  .top-button:hover img { filter: invert(0.9); }
-  .top-button#close:hover { background: rgba(224,58,62,0.25); }
+      #top-right {
+        display: flex;
+        align-items: stretch;
+        margin-left: auto;
+        -webkit-app-region: no-drag;
+      }
+      .top-button {
+        width: 36px;
+        height: var(--topbar-h);
+        background: none;
+        border: none;
+        border-left: 1px solid var(--border);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+        padding: 0;
+      }
+      .top-button img {
+        width: 14px;
+        height: 14px;
+        filter: invert(0.6);
+      }
+      .top-button:hover {
+        background: var(--bg-lift);
+      }
+      .top-button:hover img {
+        filter: invert(0.9);
+      }
+      .top-button#close:hover {
+        background: rgba(224, 58, 62, 0.25);
+      }
 
-  /* ─── MAIN GRID ──────────────────────────────────────────────────────────── */
-  #main {
-    display: grid;
-    width: 100%;
-    height: calc(100vh - var(--topbar-h));
-    overflow: hidden;
-  }
+      /* ─── MAIN GRID ──────────────────────────────────────────────────────────── */
+      #main {
+        display: grid;
+        width: 100%;
+        height: calc(100vh - var(--topbar-h));
+        overflow: hidden;
+      }
 
-  /* two-video: [v0][v1][telem] / [stage][stage][telem] */
-  #main.two-video {
-    grid-template-columns: 1fr 1fr var(--telem-w);
-    grid-template-rows: 1fr var(--stage-h);
-    grid-template-areas:
-      "v0 v1 telem"
-      "stage stage telem";
-  }
-  /* one-video: [v0][telem] / [stage][telem] */
-  #main.one-video {
-    grid-template-columns: 1fr var(--telem-w);
-    grid-template-rows: 1fr var(--stage-h);
-    grid-template-areas:
-      "v0 telem"
-      "stage telem";
-  }
-  /* telemetry-only: single col (charts go inside video-0) */
-  #main.telemetry-only {
-    grid-template-columns: 1fr var(--telem-w);
-    grid-template-rows: 1fr var(--stage-h);
-    grid-template-areas:
-      "v0 telem"
-      "stage telem";
-  }
+      /* two-video: [v0][v1][telem] / [stage][stage][telem] */
+      #main.two-video {
+        grid-template-columns: 1fr 1fr var(--telem-w);
+        grid-template-rows: 1fr var(--stage-h);
+        grid-template-areas:
+          "v0 v1 telem"
+          "stage stage telem";
+      }
+      /* one-video: [v0][telem] / [stage][telem] */
+      #main.one-video {
+        grid-template-columns: 1fr var(--telem-w);
+        grid-template-rows: 1fr var(--stage-h);
+        grid-template-areas:
+          "v0 telem"
+          "stage telem";
+      }
+      /* telemetry-only: single col (charts go inside video-0) */
+      #main.telemetry-only {
+        grid-template-columns: 1fr var(--telem-w);
+        grid-template-rows: 1fr var(--stage-h);
+        grid-template-areas:
+          "v0 telem"
+          "stage telem";
+      }
 
-  /* wide-video: single feed spans full width */
-  #main.wide-video {
-    grid-template-columns: 1fr var(--telem-w);
-    grid-template-rows: 1fr var(--stage-h);
-    grid-template-areas:
-      "v0 telem"
-      "stage telem";
-  }
-  .wide-video #video-1 { display: none; }
-  /* no 16:9 constraint here — let the video fill the entire area */
-  .wide-video #video-0 > canvas,
-  .wide-video #video-0 > video {
-    object-fit: contain;
-  }
+      /* wide-video: single feed spans full width */
+      #main.wide-video {
+        grid-template-columns: 1fr var(--telem-w);
+        grid-template-rows: 1fr var(--stage-h);
+        grid-template-areas:
+          "v0 telem"
+          "stage telem";
+      }
+      .wide-video #video-1 {
+        display: none;
+      }
+      /* no 16:9 constraint here — let the video fill the entire area */
+      .wide-video #video-0 > canvas,
+      .wide-video #video-0 > video {
+        object-fit: contain;
+      }
 
-  /* ─── VIDEO SLOTS ────────────────────────────────────────────────────────── */
-  #video-0 { grid-area: v0;    }
-  #video-1 { grid-area: v1;    }
-  #video-0, #video-1 {
-    position: relative;
-    background: #000;
-    overflow: hidden;
-    border-right: 1px solid var(--border);
-  }
-  /* video.js appendChild()s canvases/video here — fill slot, enforce 16:9 centering */
-  #video-0 > canvas,
-  #video-0 > video,
-  #video-1 > canvas,
-  #video-1 > video {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: contain; /* letterbox — preserves 16:9 COTS feeds */
-  }
-  /* none-0 / none-1 no-signal placeholders (moved here by video.js) */
-  #video-0 > .no-signal,
-  #video-1 > .no-signal {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 10px;
-    background: #000;
-  }
-  .no-signal svg { opacity: 0.1; }
-  .no-signal span {
-    font-family: var(--mono); font-size: 11px;
-    color: var(--text-lo); letter-spacing: 0.2em; text-transform: uppercase;
-  }
-  /* charts moved into video-0 in telemetry-only */
-  #video-0 > #charts,
-  #video-1 > #charts {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    padding: 12px;
-    gap: 8px; overflow: hidden;
-    color: var(--text-mid);
-    font-family: var(--cond); font-size: 11px; letter-spacing: 0.1em;
-  }
-  #video-0 > #charts .chart-wrapper,
-  #video-0 > #charts #alt-wrapper,
-  #video-0 > #charts #spd-wrapper { flex: 1; min-height: 0; }
+      /* ─── VIDEO SLOTS ────────────────────────────────────────────────────────── */
+      #video-0 {
+        grid-area: v0;
+      }
+      #video-1 {
+        grid-area: v1;
+      }
+      #video-0,
+      #video-1 {
+        position: relative;
+        background: #000;
+        overflow: hidden;
+        border-right: 1px solid var(--border);
+      }
+      /* video.js appendChild()s canvases/video here — fill slot, enforce 16:9 centering */
+      #video-0 > canvas,
+      #video-0 > video,
+      #video-1 > canvas,
+      #video-1 > video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* letterbox — preserves 16:9 COTS feeds */
+      }
+      /* none-0 / none-1 no-signal placeholders (moved here by video.js) */
+      #video-0 > .no-signal,
+      #video-1 > .no-signal {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: #000;
+      }
+      .no-signal svg {
+        opacity: 0.1;
+      }
+      .no-signal span {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-lo);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      /* charts moved into video-0 in telemetry-only */
+      #video-0 > #charts,
+      #video-1 > #charts {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+        gap: 8px;
+        overflow: hidden;
+        color: var(--text-mid);
+        font-family: var(--cond);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+      }
+      #video-0 > #charts .chart-wrapper,
+      #video-0 > #charts #alt-wrapper,
+      #video-0 > #charts #spd-wrapper {
+        flex: 1;
+        min-height: 0;
+      }
 
-  /* corner brackets decoration */
-  #video-0::before, #video-0::after,
-  #video-1::before, #video-1::after {
-    content: '';
-    position: absolute;
-    width: 16px; height: 16px;
-    z-index: 5; pointer-events: none;
-  }
-  #video-0::before { top: 7px; left: 7px;
-    border-top: 1.5px solid var(--accent); border-left: 1.5px solid var(--accent); }
-  #video-0::after  { bottom: var(--stage-h); right: 0;
-    /* handled by .video-slot-br */ }
-  /* bottom-right corners via child divs (added in HTML) */
+      /* corner brackets decoration */
+      #video-0::before,
+      #video-0::after,
+      #video-1::before,
+      #video-1::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #video-0::before {
+        top: 7px;
+        left: 7px;
+        border-top: 1.5px solid var(--accent);
+        border-left: 1.5px solid var(--accent);
+      }
+      #video-0::after {
+        bottom: var(--stage-h);
+        right: 0;
+        /* handled by .video-slot-br */
+      }
+      /* bottom-right corners via child divs (added in HTML) */
 
-  /* HUD overlay — pointer-events: none so video interaction passes through */
-  .video-hud {
-    position: absolute; inset: 0; z-index: 10;
-    pointer-events: none;
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .hud-top {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 10px 12px;
-  }
-  .hud-bot {
-    padding: 8px 12px 10px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.65));
-  }
-  .hud-badge {
-    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
-    color: var(--text-mid);
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
-    border: 1px solid rgba(255,255,255,0.07);
-    padding: 3px 8px; border-radius: 2px;
-  }
-  .hud-badge.rec {
-    color: var(--accent); border-color: rgba(224,58,62,0.35);
-    display: flex; align-items: center; gap: 5px;
-  }
-  .hud-badge.rec::before {
-    content: '';
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent); animation: blink 1s infinite;
-    flex-shrink: 0;
-  }
-  .hud-ribbon {
-    display: flex; gap: 18px;
-  }
-  .hud-metric { display: flex; flex-direction: column; }
-  .hud-metric .hm-lbl {
-    font-family: var(--cond); font-size: 8px; font-weight: 600;
-    color: var(--text-lo); letter-spacing: 0.15em; text-transform: uppercase;
-  }
-  .hud-metric .hm-val {
-    font-family: var(--mono); font-size: 17px; color: var(--text-hi); line-height: 1.1;
-  }
-  .hud-metric .hm-unit {
-    font-family: var(--mono); font-size: 9px; color: var(--text-mid);
-  }
+      /* HUD overlay — pointer-events: none so video interaction passes through */
+      .video-hud {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hud-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 10px 12px;
+      }
+      .hud-bot {
+        padding: 8px 12px 10px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+      }
+      .hud-badge {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        color: var(--text-mid);
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(3px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        padding: 3px 8px;
+        border-radius: 2px;
+      }
+      .hud-badge.rec {
+        color: var(--accent);
+        border-color: rgba(224, 58, 62, 0.35);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .hud-badge.rec::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: blink 1s infinite;
+        flex-shrink: 0;
+      }
+      .hud-ribbon {
+        display: flex;
+        gap: 18px;
+      }
+      .hud-metric {
+        display: flex;
+        flex-direction: column;
+      }
+      .hud-metric .hm-lbl {
+        font-family: var(--cond);
+        font-size: 8px;
+        font-weight: 600;
+        color: var(--text-lo);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+      .hud-metric .hm-val {
+        font-family: var(--mono);
+        font-size: 17px;
+        color: var(--text-hi);
+        line-height: 1.1;
+      }
+      .hud-metric .hm-unit {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--text-mid);
+      }
 
-  /* corner bracket decorations on video slots */
-  .vbr { /* bottom-right bracket */
-    position: absolute; bottom: 8px; right: 8px;
-    width: 16px; height: 16px; z-index: 5; pointer-events: none;
-    border-bottom: 1.5px solid var(--accent); border-right: 1.5px solid var(--accent);
-  }
-  .vtl {
-    position: absolute; top: 8px; left: 8px;
-    width: 16px; height: 16px; z-index: 5; pointer-events: none;
-    border-top: 1.5px solid var(--accent); border-left: 1.5px solid var(--accent);
-  }
-  .vtr {
-    position: absolute; top: 8px; right: 8px;
-    width: 16px; height: 16px; z-index: 5; pointer-events: none;
-    border-top: 1.5px solid var(--accent); border-right: 1.5px solid var(--accent);
-  }
-  .vbl {
-    position: absolute; bottom: 8px; left: 8px;
-    width: 16px; height: 16px; z-index: 5; pointer-events: none;
-    border-bottom: 1.5px solid var(--accent); border-left: 1.5px solid var(--accent);
-  }
+      /* corner bracket decorations on video slots */
+      .vbr {
+        /* bottom-right bracket */
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        width: 16px;
+        height: 16px;
+        z-index: 5;
+        pointer-events: none;
+        border-bottom: 1.5px solid var(--accent);
+        border-right: 1.5px solid var(--accent);
+      }
+      .vtl {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        z-index: 5;
+        pointer-events: none;
+        border-top: 1.5px solid var(--accent);
+        border-left: 1.5px solid var(--accent);
+      }
+      .vtr {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 16px;
+        height: 16px;
+        z-index: 5;
+        pointer-events: none;
+        border-top: 1.5px solid var(--accent);
+        border-right: 1.5px solid var(--accent);
+      }
+      .vbl {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        z-index: 5;
+        pointer-events: none;
+        border-bottom: 1.5px solid var(--accent);
+        border-left: 1.5px solid var(--accent);
+      }
 
-  /* ─── TELEMETRY PANEL ────────────────────────────────────────────────────── */
-  #telemetry {
-    grid-area: telem;
-    background: var(--bg-panel);
-    border-left: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
+      /* ─── TELEMETRY PANEL ────────────────────────────────────────────────────── */
+      #telemetry {
+        grid-area: telem;
+        background: var(--bg-panel);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-  /* team name header */
-  #team-name-container {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  #trt-logo { height: 22px; }
-  #team-name {
-    font-family: var(--cond); font-weight: 700;
-    font-size: 12px; letter-spacing: 0.1em;
-    color: var(--text-mid); text-transform: uppercase;
-  }
+      /* team name header */
+      #team-name-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      #trt-logo {
+        height: 22px;
+      }
+      #team-name {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        color: var(--text-mid);
+        text-transform: uppercase;
+      }
 
-  /* fun facts */
-  #fun-facts-container {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(224,58,62,0.06);
-    flex-shrink: 0;
-    transition: opacity 0.4s, max-height 0.4s;
-    max-height: 80px; overflow: hidden;
-  }
-  #fun-facts-container.hide {
-    opacity: 0; max-height: 0; padding: 0 12px; border-bottom: none;
-  }
-  #fun-fact-title {
-    display: block;
-    font-family: var(--cond); font-weight: 700; font-size: 10px;
-    letter-spacing: 0.15em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 3px;
-  }
-  #fun-fact-text {
-    font-family: var(--sans); font-size: 10px;
-    color: var(--text-mid); line-height: 1.45;
-  }
+      /* fun facts */
+      #fun-facts-container {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(224, 58, 62, 0.06);
+        flex-shrink: 0;
+        transition:
+          opacity 0.4s,
+          max-height 0.4s;
+        max-height: 80px;
+        overflow: hidden;
+      }
+      #fun-facts-container.hide {
+        opacity: 0;
+        max-height: 0;
+        padding: 0 12px;
+        border-bottom: none;
+      }
+      #fun-fact-title {
+        display: block;
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 3px;
+      }
+      #fun-fact-text {
+        font-family: var(--sans);
+        font-size: 10px;
+        color: var(--text-mid);
+        line-height: 1.45;
+      }
 
-  /* scrollable inner */
-  #telem-inner {
-    flex: 1; overflow-y: auto; overflow-x: hidden;
-  }
-  #telem-inner::-webkit-scrollbar { width: 3px; }
-  #telem-inner::-webkit-scrollbar-track { background: var(--bg-panel); }
-  #telem-inner::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+      /* scrollable inner */
+      #telem-inner {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      #telem-inner::-webkit-scrollbar {
+        width: 3px;
+      }
+      #telem-inner::-webkit-scrollbar-track {
+        background: var(--bg-panel);
+      }
+      #telem-inner::-webkit-scrollbar-thumb {
+        background: var(--border-hi);
+        border-radius: 2px;
+      }
 
-  /* ── gauge containers ─── */
-  /* video.js moves spd-gauge-container in/out of telemetry depending on layout */
-  #alt-gauge-container,
-  #spd-gauge-container {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 10px 8px 4px;
-    border-bottom: 1px solid var(--border);
-    position: relative;
-  }
+      /* ── gauge containers ─── */
+      /* video.js moves spd-gauge-container in/out of telemetry depending on layout */
+      #alt-gauge-container,
+      #spd-gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 8px 4px;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+      }
 
-  /* gauge canvas — let gauge.js handle sizing via sizeGauges() */
-  #altitude, #speed {
-    display: block;
-  }
+      /* gauge canvas — let gauge.js handle sizing via sizeGauges() */
+      #altitude,
+      #speed {
+        display: block;
+      }
 
-  /* custom text overlay that video.js updates (alt/spd value) */
-  #alt-text, #spd-text {
-    font-family: var(--mono);
-    font-size: clamp(14px, 2.5vw, 22px);
-    color: var(--text-hi);
-    margin-top: -8px; margin-bottom: 4px;
-    letter-spacing: -0.02em;
-    text-align: center;
-  }
-  /* responsive sizing based on digit length (set by video.js) */
-  #alt-text[data-length="5"], #spd-text[data-length="5"] { font-size: clamp(12px,2vw,18px); }
-  #alt-text[data-length="6"], #spd-text[data-length="6"] { font-size: clamp(10px,1.8vw,16px); }
+      /* custom text overlay that video.js updates (alt/spd value) */
+      #alt-text,
+      #spd-text {
+        font-family: var(--mono);
+        font-size: clamp(14px, 2.5vw, 22px);
+        color: var(--text-hi);
+        margin-top: -8px;
+        margin-bottom: 4px;
+        letter-spacing: -0.02em;
+        text-align: center;
+      }
+      /* responsive sizing based on digit length (set by video.js) */
+      #alt-text[data-length="5"],
+      #spd-text[data-length="5"] {
+        font-size: clamp(12px, 2vw, 18px);
+      }
+      #alt-text[data-length="6"],
+      #spd-text[data-length="6"] {
+        font-size: clamp(10px, 1.8vw, 16px);
+      }
 
-  /* small text (max alt / max spd) — video.js moves this around */
-  #small-text-container {
-    display: flex; justify-content: space-around;
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  #max-alt, #max-spd {
-    font-family: var(--mono); font-size: 11px; color: var(--text-mid);
-  }
-  #max-alt::before { content: 'MAX ALT  '; color: var(--text-lo); font-size: 9px; }
-  #max-spd::before { content: 'MAX SPD  '; color: var(--text-lo); font-size: 9px; }
+      /* small text (max alt / max spd) — video.js moves this around */
+      #small-text-container {
+        display: flex;
+        justify-content: space-around;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      #max-alt,
+      #max-spd {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-mid);
+      }
+      #max-alt::before {
+        content: "MAX ALT  ";
+        color: var(--text-lo);
+        font-size: 9px;
+      }
+      #max-spd::before {
+        content: "MAX SPD  ";
+        color: var(--text-lo);
+        font-size: 9px;
+      }
 
-  /* ── telemetry data rows ─── */
-  .telem-section {
-    padding: 7px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .ts-title {
-    font-family: var(--cond); font-size: 9px; font-weight: 600;
-    color: var(--text-lo); letter-spacing: 0.2em; text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .tr {
-    display: flex; align-items: baseline; justify-content: space-between;
-    padding: 2.5px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-  }
-  .tr:last-child { border-bottom: none; }
-  .tr-lbl {
-    font-family: var(--cond); font-size: 10px; font-weight: 500;
-    color: var(--text-mid); letter-spacing: 0.04em; text-transform: uppercase;
-    min-width: 68px;
-  }
-  .tr-val {
-    font-family: var(--mono); font-size: 12px; color: var(--text-hi);
-    text-align: right;
-  }
-  .tr-val .u { font-size: 9px; color: var(--text-lo); margin-left: 2px; }
+      /* ── telemetry data rows ─── */
+      .telem-section {
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .ts-title {
+        font-family: var(--cond);
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--text-lo);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+      .tr {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 2.5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+      .tr:last-child {
+        border-bottom: none;
+      }
+      .tr-lbl {
+        font-family: var(--cond);
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-mid);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        min-width: 68px;
+      }
+      .tr-val {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-hi);
+        text-align: right;
+      }
+      .tr-val .u {
+        font-size: 9px;
+        color: var(--text-lo);
+        margin-left: 2px;
+      }
 
-  /* RF link rows */
-  .rf-row {
-    display: flex; align-items: center; gap: 0;
-    padding: 3.5px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-  }
-  .rf-row:last-child { border-bottom: none; }
-  .rf-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    flex-shrink: 0; margin-right: 7px;
-  }
-  .rf-name {
-    font-family: var(--mono); font-size: 10px; color: var(--text-mid);
-    flex: 1;
-  }
-  .rf-rssi {
-    font-family: var(--mono); font-size: 10px; color: var(--text-lo);
-    margin-right: 7px;
-  }
-  .sig-bars {
-    display: flex; align-items: flex-end; gap: 2px; height: 13px;
-  }
-  .sig-bar {
-    width: 4px; border-radius: 1px; background: var(--text-lo);
-    transition: background 0.3s;
-  }
-  .sig-bar.lit      { background: var(--green); }
-  .sig-bar.lit.warn { background: var(--gold); }
-  .sig-bar.lit.low  { background: var(--accent); }
+      /* RF link rows */
+      .rf-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 3.5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+      .rf-row:last-child {
+        border-bottom: none;
+      }
+      .rf-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-right: 7px;
+      }
+      .rf-name {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-mid);
+        flex: 1;
+      }
+      .rf-rssi {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-lo);
+        margin-right: 7px;
+      }
+      .sig-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 13px;
+      }
+      .sig-bar {
+        width: 4px;
+        border-radius: 1px;
+        background: var(--text-lo);
+        transition: background 0.3s;
+      }
+      .sig-bar.lit {
+        background: var(--green);
+      }
+      .sig-bar.lit.warn {
+        background: var(--gold);
+      }
+      .sig-bar.lit.low {
+        background: var(--accent);
+      }
 
-  /* ─── STAGE BAR ──────────────────────────────────────────────────────────── */
-  #stage-container {
-    grid-area: stage;
-    display: flex; align-items: stretch;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--border);
-    position: relative;
-    overflow: hidden;
-  }
+      /* ─── STAGE BAR ──────────────────────────────────────────────────────────── */
+      #stage-container {
+        grid-area: stage;
+        display: flex;
+        align-items: stretch;
+        background: var(--bg-panel);
+        border-top: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+      }
 
-  /* hide the original progress element — we'll use the step divs visually */
-  #stage-container > progress#stage {
-    position: absolute; opacity: 0; pointer-events: none;
-    width: 1px; height: 1px;
-  }
+      /* hide the original progress element — we'll use the step divs visually */
+      #stage-container > progress#stage {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        width: 1px;
+        height: 1px;
+      }
 
-  /* Each stage step — video.js sets className "stage" / "stage active" */
-  span.stage {
-    flex: 1;
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    padding: 0 6px;
-    border-right: 1px solid var(--border);
-    font-family: var(--cond); font-size: 10px; font-weight: 600;
-    letter-spacing: 0.09em; text-transform: uppercase;
-    color: var(--text-lo);
-    position: relative;
-    cursor: default;
-    transition: background 0.35s, color 0.35s;
-  }
-  span.stage:last-of-type { border-right: none; }
+      /* Each stage step — video.js sets className "stage" / "stage active" */
+      span.stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 0 6px;
+        border-right: 1px solid var(--border);
+        font-family: var(--cond);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--text-lo);
+        position: relative;
+        cursor: default;
+        transition:
+          background 0.35s,
+          color 0.35s;
+      }
+      span.stage:last-of-type {
+        border-right: none;
+      }
 
-  /* pip before each label */
-  span.stage::before {
-    content: '';
-    width: 6px; height: 6px; border-radius: 50%;
-    border: 1.5px solid var(--text-lo);
-    flex-shrink: 0;
-    transition: all 0.35s;
-  }
-  /* fill underline */
-  span.stage::after {
-    content: '';
-    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-    background: transparent;
-    transition: background 0.4s;
-  }
+      /* pip before each label */
+      span.stage::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-lo);
+        flex-shrink: 0;
+        transition: all 0.35s;
+      }
+      /* fill underline */
+      span.stage::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: transparent;
+        transition: background 0.4s;
+      }
 
-  span.stage.active {
-    color: var(--accent);
-    background: rgba(224,58,62,0.07);
-  }
-  span.stage.active::before {
-    background: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 7px var(--accent);
-    animation: blink 1.5s infinite;
-  }
-  span.stage.active::after { background: var(--accent); }
+      span.stage.active {
+        color: var(--accent);
+        background: rgba(224, 58, 62, 0.07);
+      }
+      span.stage.active::before {
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 0 7px var(--accent);
+        animation: blink 1.5s infinite;
+      }
+      span.stage.active::after {
+        background: var(--accent);
+      }
 
-  /* stages before active — video.js adds active class cumulatively */
-  /* They'll naturally inherit the active styling when JS adds the class */
+      /* stages before active — video.js adds active class cumulatively */
+      /* They'll naturally inherit the active styling when JS adds the class */
 
-  /* ─── HIDDEN VIDEO SOURCE POOL ───────────────────────────────────────────── */
-  /* video.js uses this as a staging area — never visible to user */
-  #video-sources {
-    display: none !important;
-  }
+      /* ─── HIDDEN VIDEO SOURCE POOL ───────────────────────────────────────────── */
+      /* video.js uses this as a staging area — never visible to user */
+      #video-sources {
+        display: none !important;
+      }
 
-  /* charts (moved into video-0 for telemetry-only layout by video.js) */
-  #charts {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column;
-    padding: 12px 10px; gap: 6px;
-    color: var(--text-mid); font-family: var(--cond);
-    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-  }
-  #charts #alt-wrapper,
-  #charts #spd-wrapper { flex: 1; min-height: 0; }
-  #charts .chart { width: 100% !important; height: 100% !important; }
+      /* charts (moved into video-0 for telemetry-only layout by video.js) */
+      #charts {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 12px 10px;
+        gap: 6px;
+        color: var(--text-mid);
+        font-family: var(--cond);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      #charts #alt-wrapper,
+      #charts #spd-wrapper {
+        flex: 1;
+        min-height: 0;
+      }
+      #charts .chart {
+        width: 100% !important;
+        height: 100% !important;
+      }
 
-  /* ── one-video: enforce 16:9 so COTS camera fills without cropping ── */
-  .one-video #video-0 {
-    aspect-ratio: 16 / 9;
-    align-self: center;   /* center vertically in the grid row  */
-    justify-self: center; /* center horizontally in the column  */
-    width: 100%;
-    height: auto;
-    max-height: 100%;
-  }
+      /* ── one-video: enforce 16:9 so COTS camera fills without cropping ── */
+      .one-video #video-0 {
+        aspect-ratio: 16 / 9;
+        align-self: center; /* center vertically in the grid row  */
+        justify-self: center; /* center horizontally in the column  */
+        width: 100%;
+        height: auto;
+        max-height: 100%;
+      }
 
-  /* no-signal divs */
-  .no-signal {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 8px;
-    width: 100%; height: 100%;
-    background: var(--bg-void);
-  }
-  .no-signal span {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--text-lo); letter-spacing: 0.18em; text-transform: uppercase;
-  }
+      /* no-signal divs */
+      .no-signal {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        height: 100%;
+        background: var(--bg-void);
+      }
+      .no-signal span {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-lo);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
 
-  /* 3d viz canvas */
-  .viz-3d {
-    width: 100%; height: 100%;
-    background: transparent;
-  }
+      /* 3d viz canvas */
+      .viz-3d {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+      }
 
-  /* live video canvases */
-  .live-video {
-    width: 100%; height: 100%;
-    object-fit: contain;
-  }
+      /* live video canvases */
+      .live-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
 
-  /* ─── ANIMATIONS ─────────────────────────────────────────────────────────── */
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.15; }
-  }
-  </style>
-</head>
-<body>
-
-  <!-- ── TOP BAR ─────────────────────────────────────────────────────────────── -->
-  <div id="top-bar">
-    <div id="top-left">
-      <img src="../images/logo.svg" alt="Logo" />
-      <span>TRGS · Video Stream</span>
+      /* ─── ANIMATIONS ─────────────────────────────────────────────────────────── */
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.15;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── TOP BAR ─────────────────────────────────────────────────────────────── -->
+    <div id="top-bar">
+      <div id="top-left">
+        <img src="../images/logo.svg" alt="Logo" />
+        <span>TRGS · Video Stream</span>
+      </div>
+      <div id="top-right">
+        <button id="fullscreen" class="top-button" title="Fullscreen">
+          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+        </button>
+        <button id="reload" class="top-button" title="Reload">
+          <img src="../images/reload.svg" alt="Reload" />
+        </button>
+        <button id="minimize" class="top-button" title="Minimize">
+          <img src="../images/minimize.svg" alt="Minimize" />
+        </button>
+        <button id="close" class="top-button" title="Close">
+          <img src="../images/close.svg" alt="Close" />
+        </button>
+      </div>
     </div>
-    <div id="top-right">
-      <button id="fullscreen" class="top-button" title="Fullscreen">
-        <img src="../images/fullscreen.svg" alt="Fullscreen" />
-      </button>
-      <button id="reload" class="top-button" title="Reload">
-        <img src="../images/reload.svg" alt="Reload" />
-      </button>
-      <button id="minimize" class="top-button" title="Minimize">
-        <img src="../images/minimize.svg" alt="Minimize" />
-      </button>
-      <button id="close" class="top-button" title="Close">
-        <img src="../images/close.svg" alt="Close" />
-      </button>
-    </div>
-  </div>
 
-  <!-- ── MAIN GRID ────────────────────────────────────────────────────────────── -->
-  <div id="main" class="two-video">
-
-    <!-- ── VIDEO SLOT 0 ──────────────────────────────────────────────────────── -->
-    <!-- video.js appends live-video-0 canvas / camera video / none-0 / charts here -->
-    <div id="video-0">
-      <!-- corner bracket decorations -->
-      <div class="vtl"></div>
-      <div class="vtr"></div>
-      <div class="vbl"></div>
-      <div class="vbr"></div>
-      <!-- HUD overlay — always visible, pointer-events:none -->
-      <div class="video-hud">
-        <div class="hud-top">
-          <div class="hud-badge">INPUT 0</div>
-          <div class="hud-badge rec" id="rec-badge-0">REC</div>
-        </div>
-        <div class="hud-bot">
-          <div class="hud-ribbon">
-            <div class="hud-metric">
-              <span class="hm-lbl">Altitude</span>
-              <span class="hm-val" id="hud-alt">—</span>
-              <span class="hm-unit">ft</span>
+    <!-- ── MAIN GRID ────────────────────────────────────────────────────────────── -->
+    <div id="main" class="two-video">
+      <!-- ── VIDEO SLOT 0 ──────────────────────────────────────────────────────── -->
+      <!-- video.js appends live-video-0 canvas / camera video / none-0 / charts here -->
+      <div id="video-0">
+        <!-- corner bracket decorations -->
+        <div class="vtl"></div>
+        <div class="vtr"></div>
+        <div class="vbl"></div>
+        <div class="vbr"></div>
+        <!-- HUD overlay — always visible, pointer-events:none -->
+        <div class="video-hud">
+          <div class="hud-top">
+            <div class="hud-badge">INPUT 0</div>
+            <div class="hud-badge rec" id="rec-badge-0">REC</div>
+          </div>
+          <div class="hud-bot">
+            <div class="hud-ribbon">
+              <div class="hud-metric">
+                <span class="hm-lbl">Altitude</span>
+                <span class="hm-val" id="hud-alt">—</span>
+                <span class="hm-unit">ft</span>
+              </div>
+              <div class="hud-metric">
+                <span class="hm-lbl">Speed</span>
+                <span class="hm-val" id="hud-spd">—</span>
+                <span class="hm-unit">ft/s</span>
+              </div>
             </div>
-            <div class="hud-metric">
-              <span class="hm-lbl">Speed</span>
-              <span class="hm-val" id="hud-spd">—</span>
-              <span class="hm-unit">ft/s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIDEO SLOT 1 ──────────────────────────────────────────────────────── -->
+      <!-- video.js appends live-video-1 canvas / camera video / none-1 here -->
+      <div id="video-1">
+        <div class="vtl"></div>
+        <div class="vtr"></div>
+        <div class="vbl"></div>
+        <div class="vbr"></div>
+        <div class="video-hud">
+          <div class="hud-top">
+            <div class="hud-badge">INPUT 1</div>
+          </div>
+          <div class="hud-bot">
+            <div class="hud-ribbon">
+              <div class="hud-metric">
+                <span class="hm-lbl">Altitude</span>
+                <span class="hm-val" id="hud-alt-1">—</span>
+                <span class="hm-unit">ft</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── VIDEO SLOT 1 ──────────────────────────────────────────────────────── -->
-    <!-- video.js appends live-video-1 canvas / camera video / none-1 here -->
-    <div id="video-1">
-      <div class="vtl"></div>
-      <div class="vtr"></div>
-      <div class="vbl"></div>
-      <div class="vbr"></div>
-      <div class="video-hud">
-        <div class="hud-top">
-          <div class="hud-badge">INPUT 1</div>
+      <!-- ── TELEMETRY PANEL ───────────────────────────────────────────────────── -->
+      <div id="telemetry">
+        <!-- team name — video.js reads #trt-logo and #team-name -->
+        <div id="team-name-container">
+          <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" />
+          <span id="team-name">Terrapin Rocket Team</span>
         </div>
-        <div class="hud-bot">
-          <div class="hud-ribbon">
-            <div class="hud-metric">
-              <span class="hm-lbl">Altitude</span>
-              <span class="hm-val" id="hud-alt-1">—</span>
-              <span class="hm-unit">ft</span>
+
+        <!-- fun facts — video.js toggles .hide and sets title/text -->
+        <div id="fun-facts-container" class="hide">
+          <span id="fun-fact-title">Powered Flight</span>
+          <span id="fun-fact-text"></span>
+        </div>
+
+        <!-- scrollable telemetry area -->
+        <div id="telem-inner">
+          <!-- ALTITUDE GAUGE — video.js calls alt.setAttribute('data-value', ...) -->
+          <!-- and updates #alt-text -->
+          <div id="alt-gauge-container">
+            <canvas
+              id="altitude"
+              data-type="radial-gauge"
+              data-width="220"
+              data-height="220"
+              data-units="ft × 1000"
+              data-title="Altitude"
+              data-value="0"
+              data-value-text="—"
+              data-min-value="0"
+              data-max-value="36"
+              data-major-ticks="0,6,12,18,24,30,36"
+              data-minor-ticks="2"
+              data-stroke-ticks="true"
+              data-highlights='[{"from":30,"to":36,"color":"rgba(224,58,62,0.7)"}]'
+              data-color-plate="transparent"
+              data-color-major-ticks="#334155"
+              data-color-minor-ticks="#1e2d42"
+              data-color-title="#94a3b8"
+              data-color-units="#334155"
+              data-color-numbers="#64748b"
+              data-color-value-text="transparent"
+              data-borders="false"
+              data-needle="false"
+              data-animation-duration="800"
+              data-animation-rule="linear"
+              data-value-box="false"
+              data-value-text-shadow="false"
+              data-border-shadow-width="0"
+              data-bar-width="10"
+              data-color-bar-progress="#E03A3E"
+              data-color-bar="#1a2535"
+              data-font-title="Barlow Condensed"
+              data-font-units="Barlow Condensed"
+              data-font-numbers="Share Tech Mono"
+              data-font-title-size="20"
+              data-font-units-size="14"
+              data-font-numbers-size="11"
+            ></canvas>
+            <span id="alt-text">—</span>
+          </div>
+
+          <!-- MAX values — video.js updates these; also moved by updateLayout() -->
+          <div id="small-text-container">
+            <span id="max-alt">0 ft</span>
+            <span id="max-spd">0 ft/s</span>
+          </div>
+
+          <!-- SPEED GAUGE — video.js calls spd.setAttribute('data-value', ...) -->
+          <!-- and updates #spd-text -->
+          <!-- video.js also moves this entire div into telemetry for two-video layout -->
+          <div id="spd-gauge-container">
+            <canvas
+              id="speed"
+              data-type="radial-gauge"
+              data-width="220"
+              data-height="220"
+              data-units="ft/s × 100"
+              data-title="Speed"
+              data-value="0"
+              data-value-text="—"
+              data-min-value="0"
+              data-max-value="25"
+              data-major-ticks="0,5,10,15,20,25"
+              data-minor-ticks="2"
+              data-stroke-ticks="true"
+              data-highlights='[{"from":20,"to":25,"color":"rgba(224,58,62,0.7)"}]'
+              data-color-plate="transparent"
+              data-color-major-ticks="#334155"
+              data-color-minor-ticks="#1e2d42"
+              data-color-title="#94a3b8"
+              data-color-units="#334155"
+              data-color-numbers="#64748b"
+              data-color-value-text="transparent"
+              data-borders="false"
+              data-needle="false"
+              data-animation-duration="800"
+              data-animation-rule="linear"
+              data-value-box="false"
+              data-value-text-shadow="false"
+              data-border-shadow-width="0"
+              data-bar-width="10"
+              data-color-bar-progress="#FFD200"
+              data-color-bar="#1a2535"
+              data-font-title="Barlow Condensed"
+              data-font-units="Barlow Condensed"
+              data-font-numbers="Share Tech Mono"
+              data-font-title-size="20"
+              data-font-units-size="14"
+              data-font-numbers-size="11"
+            ></canvas>
+            <span id="spd-text">—</span>
+          </div>
+
+          <!-- Extra telemetry rows — populated if video.js is extended -->
+          <!-- These do not break anything in the existing code -->
+          <div class="telem-section">
+            <div class="ts-title">Orientation</div>
+            <div class="tr">
+              <span class="tr-lbl">Pitch</span>
+              <span class="tr-val"><span class="u" id="v-pitch">—</span>°</span>
+            </div>
+            <div class="tr">
+              <span class="tr-lbl">Roll</span>
+              <span class="tr-val"><span class="u" id="v-roll">—</span>°</span>
+            </div>
+            <div class="tr">
+              <span class="tr-lbl">Yaw</span>
+              <span class="tr-val"><span class="u" id="v-yaw">—</span>°</span>
+            </div>
+          </div>
+
+          <div class="telem-section">
+            <div class="ts-title">Airbrake</div>
+            <div class="tr">
+              <span class="tr-lbl">Flap Angle</span>
+              <span class="tr-val"><span class="u" id="v-flap">—</span>°</span>
+            </div>
+            <div class="tr">
+              <span class="tr-lbl">Pred Apogee</span>
+              <span class="tr-val"
+                ><span class="u" id="v-papogee">—</span>ft</span
+              >
+            </div>
+          </div>
+
+          <div class="telem-section">
+            <div class="ts-title">RF Links</div>
+            <div class="rf-row">
+              <div
+                class="rf-dot"
+                style="background: var(--t1); box-shadow: 0 0 4px var(--t1)"
+              ></div>
+              <span class="rf-name">Avionics</span>
+              <span class="rf-rssi" id="rf-t1-rssi">— dBm</span>
+              <div class="sig-bars" id="rf-t1-bars"></div>
+            </div>
+            <div class="rf-row">
+              <div
+                class="rf-dot"
+                style="background: var(--t2); box-shadow: 0 0 4px var(--t2)"
+              ></div>
+              <span class="rf-name">Airbrake</span>
+              <span class="rf-rssi" id="rf-t2-rssi">— dBm</span>
+              <div class="sig-bars" id="rf-t2-bars"></div>
+            </div>
+            <div class="rf-row">
+              <div
+                class="rf-dot"
+                style="background: var(--t3); box-shadow: 0 0 4px var(--t3)"
+              ></div>
+              <span class="rf-name">Payload</span>
+              <span class="rf-rssi" id="rf-t3-rssi">— dBm</span>
+              <div class="sig-bars" id="rf-t3-bars"></div>
+            </div>
+            <div class="rf-row">
+              <div class="rf-dot" style="background: var(--text-mid)"></div>
+              <span class="rf-name">Video 0</span>
+              <span class="rf-rssi" id="rf-v0-rssi">— dBm</span>
+              <div class="sig-bars" id="rf-v0-bars"></div>
+            </div>
+            <div class="rf-row">
+              <div class="rf-dot" style="background: var(--text-mid)"></div>
+              <span class="rf-name">Video 1</span>
+              <span class="rf-rssi" id="rf-v1-rssi">— dBm</span>
+              <div class="sig-bars" id="rf-v1-bars"></div>
             </div>
           </div>
         </div>
+        <!-- end telem-inner -->
+      </div>
+      <!-- end telemetry -->
+
+      <!-- ── STAGE BAR ──────────────────────────────────────────────────────────── -->
+      <!-- video.js sets className "stage" / "stage active" on each span -->
+      <!-- and updates the progress value — progress is hidden, spans are styled -->
+      <div id="stage-container">
+        <span id="s0" class="stage">On the Pad</span>
+        <span id="s1" class="stage">Powered Flight</span>
+        <span id="s2" class="stage">Coast</span>
+        <span id="s3" class="stage">Drogue Deploy</span>
+        <span id="s4" class="stage">Main Parachute</span>
+        <span id="s5" class="stage">Landed</span>
+        <!-- progress kept for video.js compatibility, visually hidden via CSS -->
+        <progress id="stage" value="0" max="100">0%</progress>
+      </div>
+
+      <!-- ── HIDDEN SOURCE POOL ─────────────────────────────────────────────────── -->
+      <!-- video.js moves elements between here and #video-0 / #video-1 -->
+      <div id="video-sources">
+        <canvas id="3d-visualization" class="viz-3d"></canvas>
+        <canvas id="live-video-0" class="live-video"></canvas>
+        <canvas id="live-video-1" class="live-video"></canvas>
+        <div id="charts">
+          Altitude
+          <div id="alt-wrapper">
+            <canvas id="alt-graph" class="chart"></canvas>
+          </div>
+          Speed
+          <div id="spd-wrapper">
+            <canvas id="spd-graph" class="chart"></canvas>
+          </div>
+        </div>
+        <div id="none-0" class="no-signal">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+            <rect
+              x="2"
+              y="8"
+              width="40"
+              height="27"
+              rx="2"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="15"
+              y1="35"
+              x2="13"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="29"
+              y1="35"
+              x2="31"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="10"
+              y1="42"
+              x2="34"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="6"
+              y1="12"
+              x2="38"
+              y2="32"
+              stroke="white"
+              stroke-width="1.5"
+            />
+          </svg>
+          <span>No Signal — Input 0</span>
+        </div>
+        <div id="none-1" class="no-signal">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+            <rect
+              x="2"
+              y="8"
+              width="40"
+              height="27"
+              rx="2"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="15"
+              y1="35"
+              x2="13"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="29"
+              y1="35"
+              x2="31"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="10"
+              y1="42"
+              x2="34"
+              y2="42"
+              stroke="white"
+              stroke-width="1.5"
+            />
+            <line
+              x1="6"
+              y1="12"
+              x2="38"
+              y2="32"
+              stroke="white"
+              stroke-width="1.5"
+            />
+          </svg>
+          <span>No Signal — Input 1</span>
+        </div>
       </div>
     </div>
+    <!-- end main -->
 
-    <!-- ── TELEMETRY PANEL ───────────────────────────────────────────────────── -->
-    <div id="telemetry">
+    <!-- ── SCRIPTS — same order as original ─────────────────────────────────────── -->
+    <script src="../libraries/charts/dist/chart.umd.js"></script>
+    <script src="../libraries/charts.js"></script>
+    <script src="../libraries/babylon.js"></script>
+    <script src="../libraries/babylonjs.min.loaders.js"></script>
+    <script src="video.js"></script>
 
-      <!-- team name — video.js reads #trt-logo and #team-name -->
-      <div id="team-name-container">
-        <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" />
-        <span id="team-name">Terrapin Rocket Team</span>
-      </div>
+    <!-- ── HUD MIRROR — keeps hud-alt / hud-spd in sync with gauge updates ──────── -->
+    <!-- Thin bridge: observes #alt-text / #spd-text DOM changes and mirrors to HUD -->
+    <script>
+      const mirrorToHud = () => {
+        const altSrc = document.getElementById("alt-text");
+        const spdSrc = document.getElementById("spd-text");
+        const hudAlt = document.getElementById("hud-alt");
+        const hudSpd = document.getElementById("hud-spd");
+        const hudAlt1 = document.getElementById("hud-alt-1");
 
-      <!-- fun facts — video.js toggles .hide and sets title/text -->
-      <div id="fun-facts-container" class="hide">
-        <span id="fun-fact-title">Powered Flight</span>
-        <span id="fun-fact-text"></span>
-      </div>
+        if (!altSrc || !hudAlt) return;
 
-      <!-- scrollable telemetry area -->
-      <div id="telem-inner">
+        const obs = new MutationObserver(() => {
+          if (hudAlt)
+            hudAlt.textContent = altSrc.textContent.replace(/\s*ft\s*/i, "");
+          if (hudAlt1)
+            hudAlt1.textContent = altSrc.textContent.replace(/\s*ft\s*/i, "");
+          if (hudSpd && spdSrc)
+            hudSpd.textContent = spdSrc.textContent.replace(/\s*ft\/s\s*/i, "");
+        });
 
-        <!-- ALTITUDE GAUGE — video.js calls alt.setAttribute('data-value', ...) -->
-        <!-- and updates #alt-text -->
-        <div id="alt-gauge-container">
-          <canvas
-            id="altitude"
-            data-type="radial-gauge"
-            data-width="220"
-            data-height="220"
-            data-units="ft × 1000"
-            data-title="Altitude"
-            data-value="0"
-            data-value-text="—"
-            data-min-value="0"
-            data-max-value="36"
-            data-major-ticks="0,6,12,18,24,30,36"
-            data-minor-ticks="2"
-            data-stroke-ticks="true"
-            data-highlights='[{"from":30,"to":36,"color":"rgba(224,58,62,0.7)"}]'
-            data-color-plate="transparent"
-            data-color-major-ticks="#334155"
-            data-color-minor-ticks="#1e2d42"
-            data-color-title="#94a3b8"
-            data-color-units="#334155"
-            data-color-numbers="#64748b"
-            data-color-value-text="transparent"
-            data-borders="false"
-            data-needle="false"
-            data-animation-duration="800"
-            data-animation-rule="linear"
-            data-value-box="false"
-            data-value-text-shadow="false"
-            data-border-shadow-width="0"
-            data-bar-width="10"
-            data-color-bar-progress="#E03A3E"
-            data-color-bar="#1a2535"
-            data-font-title="Barlow Condensed"
-            data-font-units="Barlow Condensed"
-            data-font-numbers="Share Tech Mono"
-            data-font-title-size="20"
-            data-font-units-size="14"
-            data-font-numbers-size="11"
-          ></canvas>
-          <span id="alt-text">—</span>
-        </div>
+        obs.observe(altSrc, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
+        if (spdSrc)
+          obs.observe(spdSrc, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
+      };
 
-        <!-- MAX values — video.js updates these; also moved by updateLayout() -->
-        <div id="small-text-container">
-          <span id="max-alt">0 ft</span>
-          <span id="max-spd">0 ft/s</span>
-        </div>
-
-        <!-- SPEED GAUGE — video.js calls spd.setAttribute('data-value', ...) -->
-        <!-- and updates #spd-text -->
-        <!-- video.js also moves this entire div into telemetry for two-video layout -->
-        <div id="spd-gauge-container">
-          <canvas
-            id="speed"
-            data-type="radial-gauge"
-            data-width="220"
-            data-height="220"
-            data-units="ft/s × 100"
-            data-title="Speed"
-            data-value="0"
-            data-value-text="—"
-            data-min-value="0"
-            data-max-value="25"
-            data-major-ticks="0,5,10,15,20,25"
-            data-minor-ticks="2"
-            data-stroke-ticks="true"
-            data-highlights='[{"from":20,"to":25,"color":"rgba(224,58,62,0.7)"}]'
-            data-color-plate="transparent"
-            data-color-major-ticks="#334155"
-            data-color-minor-ticks="#1e2d42"
-            data-color-title="#94a3b8"
-            data-color-units="#334155"
-            data-color-numbers="#64748b"
-            data-color-value-text="transparent"
-            data-borders="false"
-            data-needle="false"
-            data-animation-duration="800"
-            data-animation-rule="linear"
-            data-value-box="false"
-            data-value-text-shadow="false"
-            data-border-shadow-width="0"
-            data-bar-width="10"
-            data-color-bar-progress="#FFD200"
-            data-color-bar="#1a2535"
-            data-font-title="Barlow Condensed"
-            data-font-units="Barlow Condensed"
-            data-font-numbers="Share Tech Mono"
-            data-font-title-size="20"
-            data-font-units-size="14"
-            data-font-numbers-size="11"
-          ></canvas>
-          <span id="spd-text">—</span>
-        </div>
-
-        <!-- Extra telemetry rows — populated if video.js is extended -->
-        <!-- These do not break anything in the existing code -->
-        <div class="telem-section">
-          <div class="ts-title">Orientation</div>
-          <div class="tr">
-            <span class="tr-lbl">Pitch</span>
-            <span class="tr-val" id="v-pitch">—<span class="u">°</span></span>
-          </div>
-          <div class="tr">
-            <span class="tr-lbl">Roll</span>
-            <span class="tr-val" id="v-roll">—<span class="u">°</span></span>
-          </div>
-          <div class="tr">
-            <span class="tr-lbl">Yaw</span>
-            <span class="tr-val" id="v-yaw">—<span class="u">°</span></span>
-          </div>
-        </div>
-
-        <div class="telem-section">
-          <div class="ts-title">Airbrake</div>
-          <div class="tr">
-            <span class="tr-lbl">Flap Angle</span>
-            <span class="tr-val" id="v-flap">—<span class="u">°</span></span>
-          </div>
-          <div class="tr">
-            <span class="tr-lbl">Pred Apogee</span>
-            <span class="tr-val" id="v-papogee">—<span class="u">ft</span></span>
-          </div>
-        </div>
-
-        <div class="telem-section">
-          <div class="ts-title">RF Links</div>
-          <div class="rf-row">
-            <div class="rf-dot" style="background:var(--t1);box-shadow:0 0 4px var(--t1)"></div>
-            <span class="rf-name">Avionics</span>
-            <span class="rf-rssi" id="rf-t1-rssi">— dBm</span>
-            <div class="sig-bars" id="rf-t1-bars"></div>
-          </div>
-          <div class="rf-row">
-            <div class="rf-dot" style="background:var(--t2);box-shadow:0 0 4px var(--t2)"></div>
-            <span class="rf-name">Airbrake</span>
-            <span class="rf-rssi" id="rf-t2-rssi">— dBm</span>
-            <div class="sig-bars" id="rf-t2-bars"></div>
-          </div>
-          <div class="rf-row">
-            <div class="rf-dot" style="background:var(--t3);box-shadow:0 0 4px var(--t3)"></div>
-            <span class="rf-name">Payload</span>
-            <span class="rf-rssi" id="rf-t3-rssi">— dBm</span>
-            <div class="sig-bars" id="rf-t3-bars"></div>
-          </div>
-          <div class="rf-row">
-            <div class="rf-dot" style="background:var(--text-mid)"></div>
-            <span class="rf-name">Video 0</span>
-            <span class="rf-rssi" id="rf-v0-rssi">— dBm</span>
-            <div class="sig-bars" id="rf-v0-bars"></div>
-          </div>
-          <div class="rf-row">
-            <div class="rf-dot" style="background:var(--text-mid)"></div>
-            <span class="rf-name">Video 1</span>
-            <span class="rf-rssi" id="rf-v1-rssi">— dBm</span>
-            <div class="sig-bars" id="rf-v1-bars"></div>
-          </div>
-        </div>
-
-      </div><!-- end telem-inner -->
-    </div><!-- end telemetry -->
-
-    <!-- ── STAGE BAR ──────────────────────────────────────────────────────────── -->
-    <!-- video.js sets className "stage" / "stage active" on each span -->
-    <!-- and updates the progress value — progress is hidden, spans are styled -->
-    <div id="stage-container">
-      <span id="s0" class="stage">On the Pad</span>
-      <span id="s1" class="stage">Powered Flight</span>
-      <span id="s2" class="stage">Coast</span>
-      <span id="s3" class="stage">Drogue Deploy</span>
-      <span id="s4" class="stage">Main Parachute</span>
-      <span id="s5" class="stage">Landed</span>
-      <!-- progress kept for video.js compatibility, visually hidden via CSS -->
-      <progress id="stage" value="0" max="100">0%</progress>
-    </div>
-
-    <!-- ── HIDDEN SOURCE POOL ─────────────────────────────────────────────────── -->
-    <!-- video.js moves elements between here and #video-0 / #video-1 -->
-    <div id="video-sources">
-      <canvas id="3d-visualization" class="viz-3d"></canvas>
-      <canvas id="live-video-0" class="live-video"></canvas>
-      <canvas id="live-video-1" class="live-video"></canvas>
-      <div id="charts">
-        Altitude
-        <div id="alt-wrapper">
-          <canvas id="alt-graph" class="chart"></canvas>
-        </div>
-        Speed
-        <div id="spd-wrapper">
-          <canvas id="spd-graph" class="chart"></canvas>
-        </div>
-      </div>
-      <div id="none-0" class="no-signal">
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-          <rect x="2" y="8" width="40" height="27" rx="2" stroke="white" stroke-width="1.5"/>
-          <line x1="15" y1="35" x2="13" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="29" y1="35" x2="31" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="10" y1="42" x2="34" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="6" y1="12" x2="38" y2="32" stroke="white" stroke-width="1.5"/>
-        </svg>
-        <span>No Signal — Input 0</span>
-      </div>
-      <div id="none-1" class="no-signal">
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-          <rect x="2" y="8" width="40" height="27" rx="2" stroke="white" stroke-width="1.5"/>
-          <line x1="15" y1="35" x2="13" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="29" y1="35" x2="31" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="10" y1="42" x2="34" y2="42" stroke="white" stroke-width="1.5"/>
-          <line x1="6" y1="12" x2="38" y2="32" stroke="white" stroke-width="1.5"/>
-        </svg>
-        <span>No Signal — Input 1</span>
-      </div>
-    </div>
-
-  </div><!-- end main -->
-
-  <!-- ── SCRIPTS — same order as original ─────────────────────────────────────── -->
-  <script src="../libraries/charts/dist/chart.umd.js"></script>
-  <script src="../libraries/charts.js"></script>
-  <script src="../libraries/babylon.js"></script>
-  <script src="../libraries/babylonjs.min.loaders.js"></script>
-  <script src="video.js"></script>
-
-  <!-- ── HUD MIRROR — keeps hud-alt / hud-spd in sync with gauge updates ──────── -->
-  <!-- Thin bridge: observes #alt-text / #spd-text DOM changes and mirrors to HUD -->
-  <script>
-    const mirrorToHud = () => {
-      const altSrc = document.getElementById('alt-text');
-      const spdSrc = document.getElementById('spd-text');
-      const hudAlt = document.getElementById('hud-alt');
-      const hudSpd = document.getElementById('hud-spd');
-      const hudAlt1 = document.getElementById('hud-alt-1');
-
-      if (!altSrc || !hudAlt) return;
-
-      const obs = new MutationObserver(() => {
-        if (hudAlt)  hudAlt.textContent  = altSrc.textContent.replace(/\s*ft\s*/i, '');
-        if (hudAlt1) hudAlt1.textContent = altSrc.textContent.replace(/\s*ft\s*/i, '');
-        if (hudSpd && spdSrc)
-          hudSpd.textContent = spdSrc.textContent.replace(/\s*ft\/s\s*/i, '');
-      });
-
-      obs.observe(altSrc, { childList: true, characterData: true, subtree: true });
-      if (spdSrc) obs.observe(spdSrc, { childList: true, characterData: true, subtree: true });
-    };
-
-    // run after video.js has loaded
-    window.addEventListener('load', mirrorToHud, { once: true });
-  </script>
-
-</body>
+      // run after video.js has loaded
+      window.addEventListener("load", mirrorToHud, { once: true });
+    </script>
+  </body>
 </html>
