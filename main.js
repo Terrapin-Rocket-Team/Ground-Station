@@ -21,6 +21,13 @@ const GSControl = require("./coders/GSControl");
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
 const logPath = "./log";
+const dataDebugDirs = [__dirname, path.join(__dirname, "docs", "data")];
+
+const getDataDebugFile = (fileName) => {
+  return dataDebugDirs
+    .map((dir) => path.join(dir, fileName))
+    .find((filePath) => fs.existsSync(filePath));
+};
 
 let windows = { main: null, video: null },
   telemSources = [],
@@ -37,6 +44,13 @@ let windows = { main: null, video: null },
     video0: "none-0",
     video1: "none-1",
   };
+
+const getEffectiveVideoControls = () => {
+  const controls = { ...videoControls };
+  if (config?.webcamTest?.value) controls.video0 = "camera:default";
+  controls.webcam480p = !!config?.webcam480p?.value;
+  return controls;
+};
 
 /*
 See default-config.json for default settings
@@ -94,6 +108,25 @@ try {
   } catch (err) {
     log.err("Failed to load default config: " + err.message);
   }
+}
+
+if (config && !config.webcamTest) {
+  config.webcamTest = {
+    name: "Test Webcam Input",
+    description:
+      "Temporarily stream the default webcam into video Input 0 for testing.",
+    value: false,
+    type: "toggle",
+  };
+}
+if (config && !config.webcam480p) {
+  config.webcam480p = {
+    name: "Test Webcam 480p",
+    description:
+      "Request 480p from the temporary webcam input and scale it to fit the video display.",
+    value: false,
+    type: "toggle",
+  };
 }
 
 // need to setup after loading config
@@ -361,7 +394,7 @@ const createMain = () => {
 
   // send video controls whether or not we need them so the inputs load properly
   windows.main.webContents.once("dom-ready", () => {
-    windows.main.webContents.send("video-controls", videoControls);
+    windows.main.webContents.send("video-controls", getEffectiveVideoControls());
   });
 
   // only create serial streams if reading debug data from local files
@@ -500,7 +533,10 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       //if in video mode send the video controls for the control panel
       if (config.video.value && videoControls) {
         windows.main.webContents.once("dom-ready", () => {
-          windows.main.webContents.send("video-controls", videoControls);
+          windows.main.webContents.send(
+            "video-controls",
+            getEffectiveVideoControls(),
+          );
         });
       }
     }
@@ -519,11 +555,17 @@ ipcMain.on("reload", (event, win, keepSettings) => {
       };
       //send defaults to update mainWin
       if (videoControls)
-        windows.main.webContents.send("video-controls", videoControls);
+        windows.main.webContents.send(
+          "video-controls",
+          getEffectiveVideoControls(),
+        );
     } else {
       //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
       windows.video.webContents.once("dom-ready", () => {
-        windows.video.webContents.send("video-controls", videoControls);
+        windows.video.webContents.send(
+          "video-controls",
+          getEffectiveVideoControls(),
+        );
       });
     }
   }
@@ -703,7 +745,10 @@ ipcMain.on("video-controls", (event, controls) => {
 
     //if so, pass it on to videoWin, if it exists
     if (windows.video)
-      windows.video.webContents.send("video-controls", videoControls);
+      windows.video.webContents.send(
+        "video-controls",
+        getEffectiveVideoControls(),
+      );
     else log.warn("Failed setting video controls, video window missing.");
   } else log.warn("Failed setting video controls, new controls missing.");
 });
@@ -855,6 +900,9 @@ ipcMain.handle("set-port", (event, portConfig) => {
 ipcMain.on("update-settings", (event, settings) => {
   // make sure we were actually given a settings object
   if (settings) {
+    const webcamTestChanged =
+      config?.webcamTest?.value !== settings.webcamTest?.value ||
+      config?.webcam480p?.value !== settings.webcam480p?.value;
     config = settings;
     try {
       // write the new settings to the file
@@ -862,6 +910,13 @@ ipcMain.on("update-settings", (event, settings) => {
       log.debug("Successfully updated settings");
     } catch (err) {
       log.err('Failed to update settings: "' + err.message + '"');
+    }
+    if (webcamTestChanged) {
+      const effectiveControls = getEffectiveVideoControls();
+      if (windows.main)
+        windows.main.webContents.send("video-controls", effectiveControls);
+      if (windows.video)
+        windows.video.webContents.send("video-controls", effectiveControls);
     }
   }
 });
@@ -934,9 +989,10 @@ if (config.dataDebug.value) {
   setTimeout(() => {
     // set up telemetry sources
     // test to see whether the first telemetry stream data file exists
-    if (fs.existsSync("./test-0.csv")) {
+    const test0Path = getDataDebugFile("test-0.csv");
+    if (test0Path) {
       try {
-        const ts1D = new FileTelemSource("./test-0.csv", 2, {
+        const ts1D = new FileTelemSource(test0Path, 2, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -966,9 +1022,10 @@ if (config.dataDebug.value) {
     }
 
     // test to see whether the second telemetry stream data file exists
-    if (fs.existsSync("./test-1.csv")) {
+    const test1Path = getDataDebugFile("test-1.csv");
+    if (test1Path) {
       try {
-        const ts2D = new FileTelemSource("./test-1.csv", 3, {
+        const ts2D = new FileTelemSource(test1Path, 3, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -989,9 +1046,10 @@ if (config.dataDebug.value) {
     }
 
     // test to see whether the third telemetry stream data file exists
-    if (fs.existsSync("./test-2.csv")) {
+    const test2Path = getDataDebugFile("test-2.csv");
+    if (test2Path) {
       try {
-        const ts3D = new FileTelemSource("./test-2.csv", 4, {
+        const ts3D = new FileTelemSource(test2Path, 4, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
@@ -1012,9 +1070,10 @@ if (config.dataDebug.value) {
     }
 
     // test to see whether the telmetry stream metrics data file exists
-    if (fs.existsSync("./metrics.csv")) {
+    const metricsPath = getDataDebugFile("metrics.csv");
+    if (metricsPath) {
       try {
-        const metrics = new FileTelemSource("./metrics.csv", 1, {
+        const metrics = new FileTelemSource(metricsPath, 1, {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line

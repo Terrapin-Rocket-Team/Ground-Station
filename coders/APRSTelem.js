@@ -48,6 +48,16 @@ class APRSTelem {
         parseFloat(message.data.orient[2]),
       ];
       this.rawStateflags = parseInt(message.data.stateFlags);
+      this.cameraAngle = message.data.cameraAngle;
+      this.flapAngle =
+        message.data.flapAngle !== undefined && message.data.flapAngle !== ""
+          ? parseFloat(message.data.flapAngle)
+          : undefined;
+      this.predictedApogee =
+        message.data.predictedApogee !== undefined &&
+        message.data.predictedApogee !== ""
+          ? Math.round(parseFloat(message.data.predictedApogee))
+          : undefined;
 
       // must find stateflags
       if (stateflagsFormat) {
@@ -75,6 +85,9 @@ class APRSTelem {
       this.rawStateflags = parseInt(message.rawStateflags);
       this.stateflags = message.stateflags;
       this.stateflagsFormat = message.stateflagsFormat;
+      this.cameraAngle = message.cameraAngle;
+      this.flapAngle = message.flapAngle;
+      this.predictedApogee = message.predictedApogee;
     }
   }
 
@@ -134,6 +147,9 @@ class APRSTelem {
           hdg: csvArr[7],
           orient: [csvArr[8], csvArr[9], csvArr[10]],
           stateFlags: csvArr[11],
+          cameraAngle: csvArr[12],
+          flapAngle: csvArr[13],
+          predictedApogee: csvArr[14],
         },
       },
       csvArr[1],

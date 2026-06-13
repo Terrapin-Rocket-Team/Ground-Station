@@ -39,6 +39,18 @@
 		"value": false,
 		"type": "toggle"
 	},
+	"webcamTest": {
+		"name": "Test Webcam Input",
+		"description": "Temporarily stream the default webcam into video Input 0 for testing.",
+		"value": false,
+		"type": "toggle"
+	},
+	"webcam480p": {
+		"name": "Test Webcam 480p",
+		"description": "Request 480p from the temporary webcam input and scale it to fit the video display.",
+		"value": false,
+		"type": "toggle"
+	},
 	"tileCache": {
 		"name": "Toggle Tile Caching",
 		"description": "Turn off caching of map tiles to the disk. If disabled, the map may not work when offline.",

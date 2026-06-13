@@ -14,8 +14,8 @@ window.onload = () => {
 
   // Camera support
   const cameraState = {
-    video0: { stream: null, deviceId: null, el: null },
-    video1: { stream: null, deviceId: null, el: null },
+    video0: { stream: null, deviceId: null, use480p: null, el: null },
+    video1: { stream: null, deviceId: null, use480p: null, el: null },
   };
 
   const stopCamera = (slot) => {
@@ -23,10 +23,12 @@ window.onload = () => {
     if (!s) return;
 
     if (s.stream) {
-      s.stream.getTracks().forEach((t) => t.stop());
+      const stream = s.stream;
       s.stream = null;
+      stream.getTracks().forEach((t) => t.stop());
     }
     s.deviceId = null;
+    s.use480p = null;
 
     // remove element from pool
     if (s.el && s.el.parentNode) s.el.parentNode.removeChild(s.el);
@@ -58,24 +60,51 @@ window.onload = () => {
     return v;
   };
 
-  const setCamera = async (slot, deviceId) => {
+  const setCamera = async (slot, deviceId, use480p = false) => {
     const s = cameraState[slot];
 
-    if (s.stream && s.deviceId === deviceId) return ensureCameraElement(slot);
+    if (s.stream && s.deviceId === deviceId && s.use480p === use480p)
+      return ensureCameraElement(slot);
 
     stopCamera(slot);
 
     const v = ensureCameraElement(slot);
+    let videoConstraints =
+      deviceId === "default" ? {} : { deviceId: { exact: deviceId } };
+    if (use480p) {
+      videoConstraints = {
+        ...videoConstraints,
+        width: { ideal: 854 },
+        height: { ideal: 480 },
+      };
+    }
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
+      video: Object.keys(videoConstraints).length ? videoConstraints : true,
       audio: false,
     });
 
     s.stream = stream;
     s.deviceId = deviceId;
+    s.use480p = use480p;
 
     v.srcObject = stream;
+    stream.getVideoTracks().forEach((track) => {
+      track.addEventListener(
+        "ended",
+        () => {
+          if (cameraState[slot]?.stream === stream) showCameraFallback(slot);
+        },
+        { once: true },
+      );
+    });
+    v.addEventListener(
+      "error",
+      () => {
+        if (cameraState[slot]?.stream === stream) showCameraFallback(slot);
+      },
+      { once: true },
+    );
 
     try {
       await v.play();
@@ -103,6 +132,16 @@ window.onload = () => {
     );
     if (child) videoSources.appendChild(child);
   };
+
+  function showCameraFallback(slot) {
+    const slotEl = slot === "video0" ? video0 : video1;
+    const fallback = slot === "video0" ? none0 : none1;
+    if (!slotEl || !fallback) return;
+
+    moveSlotChildBackToPool(slotEl);
+    stopCamera(slot);
+    slotEl.appendChild(fallback);
+  }
 
   // ── Video orientation ────────────────────────────────────────────────────────
   // Maps the orient value from videoControls to a CSS transform string.
@@ -156,10 +195,10 @@ window.onload = () => {
 
   // get colors from css
   const t1Color = getComputedStyle(document.body).getPropertyValue(
-      "--t1-color",
+      "--t1",
     ),
-    t2Color = getComputedStyle(document.body).getPropertyValue("--t2-color"),
-    t3Color = getComputedStyle(document.body).getPropertyValue("--t3-color");
+    t2Color = getComputedStyle(document.body).getPropertyValue("--t2"),
+    t3Color = getComputedStyle(document.body).getPropertyValue("--t3");
 
   const chartsConfig = [
     { name: "Avionics", color: t1Color },
@@ -214,9 +253,17 @@ window.onload = () => {
     viz3d = document.getElementById("3d-visualization");
 
   let altG = createChart("alt-graph", "min", "ft", 1, 1, chartsConfig),
-    spdG = createChart("spd-graph", "min", "ft/s", 1, 1, chartsConfig),
+    spdG = createChart("spd-graph", "min", "Mach", 1, 1, chartsConfig),
+    flapG = createChart("flap-graph", "s", "deg", 1, 1, [
+      { name: "Flap Angle", color: t2Color },
+    ]),
     altwr = document.getElementById("alt-wrapper"),
     spdwr = document.getElementById("spd-wrapper");
+
+  const MACH_1_FTPS = 1125.33;
+  const toMach = (speedFtPerSec) =>
+    Math.max(speedFtPerSec || 0, 0) / MACH_1_FTPS;
+  const formatMach = (speedFtPerSec) => "Mach " + toMach(speedFtPerSec).toFixed(2);
 
   //refresh canvases at ~50hz
   setInterval(() => {
@@ -256,18 +303,43 @@ window.onload = () => {
   // gauges
   let alt = document.getElementById("altitude");
   let spd = document.getElementById("speed");
+  const predApogeeNotch = document.getElementById("pred-apogee-notch");
+  const ALT_GAUGE_MAX_KFT = 36;
+  let predApogeeRadius = 86;
+  let lastPredApogeeFt = null;
+
+  const positionPredictedApogeeNotch = (apogeeFt) => {
+    if (!predApogeeNotch) return;
+    const ratio = Math.min(
+      Math.max(apogeeFt / 1000 / ALT_GAUGE_MAX_KFT, 0),
+      1,
+    );
+    const angle = -135 + ratio * 270;
+    const angleRad = (angle * Math.PI) / 180;
+    const x = Math.sin(angleRad) * predApogeeRadius;
+    const y = -Math.cos(angleRad) * predApogeeRadius;
+    predApogeeNotch.style.setProperty("--pred-apogee-x", x + "px");
+    predApogeeNotch.style.setProperty("--pred-apogee-y", y + "px");
+    predApogeeNotch.style.setProperty(
+      "--pred-apogee-angle",
+      angle + "deg",
+    );
+  };
 
   // set the gauges to the correct size (this needs to be done manually)
   const sizeGauges = () => {
     let size =
       telemetry.offsetWidth *
-      0.85 *
+      0.9 *
       (!main.classList.contains("two-video") ? 0.5 : 1);
 
     alt.setAttribute("data-width", size);
     alt.setAttribute("data-height", size);
     spd.setAttribute("data-width", size);
     spd.setAttribute("data-height", size);
+    predApogeeRadius = size * 0.34;
+    if (lastPredApogeeFt !== null)
+      positionPredictedApogeeNotch(lastPredApogeeFt);
   };
 
   sizeGauges();
@@ -287,7 +359,6 @@ window.onload = () => {
       // need to move speed gauge to the bottom of the telemetry div for this layout
       telemetry.appendChild(document.getElementById("spd-gauge-container"));
       video0.appendChild(none0);
-      video1.appendChild(none1);
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
       videoSources.appendChild(charts);
@@ -324,13 +395,52 @@ window.onload = () => {
   updateLayout();
 
   const maxAltEl = document.getElementById("max-alt"),
-    maxSpdEl = document.getElementById("max-spd");
+    maxSpdEl = document.getElementById("max-spd"),
+    tPlusEl = document.getElementById("t-plus");
 
   let maxAlt = 0,
     maxSpd = 0,
     lastStage = 0,
+    stageOverlayRevealTimeout = null,
+    stageOverlayTimeout = null,
+    stageFillStage = null,
+    t0 = null,
+    tPlusInterval = null,
     t0Set = false,
     chartState = "seconds";
+
+  const stageDurations = [45000, 5000, 43000, 165000, 50000, 10000];
+  const stageCount = 6;
+  const stageFill = document.getElementById("stage-fill");
+
+  const setStageFillWidth = (percent, duration = 0) => {
+    if (!stageFill) return;
+    stageFill.style.transitionDuration = duration + "ms";
+    stageFill.style.width = percent + "%";
+  };
+
+  const animateStageFill = (stageNum) => {
+    const startPercent = (stageNum / stageCount) * 100;
+    const endPercent = ((stageNum + 1) / stageCount) * 100;
+    const duration = stageDurations[stageNum] || 10000;
+
+    setStageFillWidth(startPercent, 0);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setStageFillWidth(endPercent, duration);
+      });
+    });
+  };
+
+  const updateStageClasses = (stageNum) => {
+    for (let i = 0; i < stageCount; i++) {
+      const stageEl = document.getElementById("s" + i);
+      if (!stageEl) continue;
+      if (i < stageNum) stageEl.className = "stage complete";
+      else if (i === stageNum) stageEl.className = "stage current";
+      else stageEl.className = "stage";
+    }
+  };
 
   // load previous data if it exists
   {
@@ -345,9 +455,9 @@ window.onload = () => {
         ? JSON.parse(sessionStorage.getItem(idPrefix + "-altData"))
         : [];
       spdG.data.datasets[index].data = sessionStorage.getItem(
-        idPrefix + "-spdData",
+        idPrefix + "-machData",
       )
-        ? JSON.parse(sessionStorage.getItem(idPrefix + "-spdData"))
+        ? JSON.parse(sessionStorage.getItem(idPrefix + "-machData"))
         : [];
     });
 
@@ -357,16 +467,35 @@ window.onload = () => {
     if (
       sessionStorage.getItem("max-alt") &&
       parseInt(sessionStorage.getItem("max-alt"))
-    )
+    ) {
+      maxAlt = parseInt(sessionStorage.getItem("max-alt"));
       maxAltEl.textContent =
-        parseInt(sessionStorage.getItem("max-alt")) + " ft";
+        maxAlt + " ft";
+    }
 
     if (
       sessionStorage.getItem("max-spd") &&
       parseInt(sessionStorage.getItem("max-spd"))
-    )
-      maxSpdEl.textContent =
-        parseInt(sessionStorage.getItem("max-spd")) + " ft/s";
+    ) {
+      maxSpd = parseInt(sessionStorage.getItem("max-spd"));
+      maxSpdEl.textContent = formatMach(maxSpd);
+    }
+
+    if (sessionStorage.getItem("t0")) {
+      t0 = parseInt(sessionStorage.getItem("t0"));
+      t0Set = true;
+      startTPlusCounter();
+    }
+  }
+
+  function startTPlusCounter() {
+    if (!tPlusEl || !t0) return;
+    const update = () => {
+      tPlusEl.textContent = Math.floor((Date.now() - t0) / 1000) + "s";
+    };
+    update();
+    if (tPlusInterval) clearInterval(tPlusInterval);
+    tPlusInterval = setInterval(update, 250);
   }
 
   const updateT0 = (idPrefix, msg) => {
@@ -377,6 +506,7 @@ window.onload = () => {
       // save the t0 for later
       sessionStorage.setItem("t0", t0);
       t0Set = true;
+      startTPlusCounter();
       // need to add empty element so the chart scale doesn't look weird
       // hardcoded for 3 streams for now
       for (let i = 0; i < 3; i++) {
@@ -408,7 +538,7 @@ window.onload = () => {
         spdwr.innerHTML = '<canvas id="spd-graph" class="chart"></canvas>';
 
         altG = createChart("alt-graph", "min", "ft", 1 / 60, 1, chartsConfig);
-        spdG = createChart("spd-graph", "min", "ft/s", 1 / 60, 1, chartsConfig);
+        spdG = createChart("spd-graph", "min", "Mach", 1 / 60, 1, chartsConfig);
         altG.data.datasets[index].data = altData;
         spdG.data.datasets[index].data = spdData;
         altG.data.labels = altLabels;
@@ -429,7 +559,7 @@ window.onload = () => {
         spdG = createChart(
           "spd-graph",
           "hr",
-          "ft/s",
+          "Mach",
           1 / 3600,
           1,
           chartsConfig,
@@ -474,7 +604,7 @@ window.onload = () => {
       });
       spdG.data.datasets[index].data.push({
         x: ts,
-        y: msg.getSpeed() ? msg.getSpeed() : 0,
+        y: toMach(msg.getSpeed()),
       });
 
       // store new data to be retreived later
@@ -483,7 +613,7 @@ window.onload = () => {
         JSON.stringify(altG.data.datasets[index].data),
       );
       sessionStorage.setItem(
-        idPrefix + "-spdData",
+        idPrefix + "-machData",
         JSON.stringify(spdG.data.datasets[index].data),
       );
 
@@ -493,8 +623,54 @@ window.onload = () => {
     }
   };
 
+  const updateFlapChart = (flapAngle) => {
+    if (!t0Set || !Number.isFinite(flapAngle)) return;
+    let ts = (Date.now() - t0) / 1000;
+    flapG.data.datasets[0].data.push({ x: ts, y: flapAngle });
+    flapG.options.scales.x.min = Math.max(0, ts - 60);
+    flapG.options.scales.x.suggestedMax = ts + 5;
+    flapG.data.labels = [0, 15, 30, 45, 60].map((offset) =>
+      Math.max(0, ts - 60 + offset),
+    );
+    sessionStorage.setItem(
+      "flap-angle-data",
+      JSON.stringify(flapG.data.datasets[0].data),
+    );
+    flapG.update();
+  };
+
+  const updatePredictedApogeeNotch = (predApogeeFt) => {
+    if (!predApogeeNotch) return;
+    if (
+      predApogeeFt === undefined ||
+      predApogeeFt === null ||
+      predApogeeFt === ""
+    ) {
+      lastPredApogeeFt = null;
+      predApogeeNotch.classList.remove("visible");
+      return;
+    }
+    const apogeeFt = Number(predApogeeFt);
+    if (!Number.isFinite(apogeeFt)) {
+      lastPredApogeeFt = null;
+      predApogeeNotch.classList.remove("visible");
+      return;
+    }
+
+    lastPredApogeeFt = apogeeFt;
+    positionPredictedApogeeNotch(apogeeFt);
+    predApogeeNotch.title =
+      "Predicted apogee: " + Math.round(apogeeFt) + " ft";
+    predApogeeNotch.classList.add("visible");
+  };
+
   api.on("data", (data) => {
     let msg = new APRSTelem(data);
+
+    if (msg.cameraAngle) {
+      document.getElementById("camera-angle-value").textContent =
+        msg.cameraAngle;
+    }
 
     if (msg.stream === "telem-avionics") {
       //set T+
@@ -521,15 +697,17 @@ window.onload = () => {
 
       if (msg.getSpeed() || msg.getSpeed() === 0) {
         const spdValue = Math.max(msg.getSpeed() || 0, 0);
-        spd.setAttribute("data-value-text", spdValue);
-        spd.setAttribute("data-value", spdValue / 100);
+        const machValue = toMach(spdValue);
+        const machText = formatMach(spdValue);
+        spd.setAttribute("data-value-text", machText);
+        spd.setAttribute("data-value", machValue);
 
         // Set the speed text and track digit length for responsive font sizing
         const spdText = document.getElementById("spd-text");
-        spdText.textContent = spdValue + " ft/s";
+        spdText.textContent = machText;
 
         // Add a data attribute to track the number of digits for CSS responsive font sizing
-        const digitLength = spdValue.toString().length;
+        const digitLength = machText.length;
         spdText.setAttribute("data-length", digitLength);
       } else {
         spd.setAttribute("data-value-text", "\u2014");
@@ -544,7 +722,7 @@ window.onload = () => {
 
       if (msg.getSpeed() > maxSpd) {
         maxSpd = Math.max(msg.getSpeed() || 0, 0);
-        maxSpdEl.textContent = maxSpd + " ft/s";
+        maxSpdEl.textContent = formatMach(maxSpd);
         sessionStorage.setItem("max-spd", maxSpd);
       }
 
@@ -555,12 +733,11 @@ window.onload = () => {
       let ffText = document.getElementById("fun-fact-text");
       // Try to get stage number using the updated getStateflag method that handles both "Stage" and "State Flags"
       let sn = msg.getStateflag("Stage");
-      let percents = [5.5, 17, 31, 49, 76, 100]; // think these percents work better for 1080p, but may need to be checked
       let stageNames = [
         "On the Pad",
         "Powered Flight",
         "Coast",
-        "Drogue Deploy",
+        "Drogue Descent",
         "Main Parachute",
         "Landed",
       ];
@@ -575,15 +752,14 @@ window.onload = () => {
       // Check if we have a valid stage number and it's within our array bounds
       if (sn !== null && sn >= 0 && sn < stageNames.length) {
         // Update progress bar
-        prog.textContent = percents[sn] + "%";
-        prog.setAttribute("value", percents[sn]);
+        const stagePercent = ((sn + 1) / stageNames.length) * 100;
+        prog.textContent = stagePercent + "%";
+        prog.setAttribute("value", stagePercent);
 
-        // Mark current stage as active
-        document.getElementById("s" + sn).className = "stage active";
-
-        // Make sure all previous stages are also marked as active
-        for (let i = 0; i <= sn; i++) {
-          document.getElementById("s" + i).className = "stage active";
+        updateStageClasses(sn);
+        if (sn !== stageFillStage) {
+          animateStageFill(sn);
+          stageFillStage = sn;
         }
 
         // Show fun facts if we've moved to a new stage
@@ -591,8 +767,16 @@ window.onload = () => {
           ff.className = "hide";
           ffTitle.textContent = stageNames[sn];
           ffText.textContent = stageFunFacts[sn];
-          setTimeout(() => {
+          if (stageOverlayRevealTimeout)
+            clearTimeout(stageOverlayRevealTimeout);
+          if (stageOverlayTimeout) clearTimeout(stageOverlayTimeout);
+          stageOverlayRevealTimeout = setTimeout(() => {
             ff.className = "";
+            stageOverlayRevealTimeout = null;
+            stageOverlayTimeout = setTimeout(() => {
+              ff.className = "hide";
+              stageOverlayTimeout = null;
+            }, 10000);
           }, 500);
           lastStage = sn;
         }
@@ -609,11 +793,19 @@ window.onload = () => {
     if (msg.stream === "telem-airbrake") {
       updateCharts("t2", msg);
 
-      let predApogee = msg.getStateflag("Predicted Apogee");
-      if (predApogee)
-        document.getElementById("v-papogee").textContent = predApogee;
-      let flapAngle = msg.getStateflag("Flap Angle");
-      if (flapAngle) document.getElementById("v-flap").textContent = flapAngle;
+      let predApogee =
+        msg.predictedApogee !== undefined
+          ? msg.predictedApogee
+          : msg.getStateflag("Predicted Apogee");
+      updatePredictedApogeeNotch(predApogee);
+      let flapAngle =
+        msg.flapAngle !== undefined ? msg.flapAngle : msg.getStateflag("Flap Angle");
+      const flapAngleValue = Number(flapAngle);
+      if (Number.isFinite(flapAngleValue)) {
+        document.getElementById("v-flap").textContent =
+          flapAngleValue.toFixed(1);
+        updateFlapChart(flapAngleValue);
+      }
     }
     if (msg.stream === "telem-payload") {
       updateCharts("t3", msg);
@@ -639,7 +831,11 @@ window.onload = () => {
     if (isCameraControl(controls.video0)) {
       const deviceId = getCameraDeviceId(controls.video0);
       try {
-        const camEl = await setCamera("video0", deviceId);
+        const camEl = await setCamera(
+          "video0",
+          deviceId,
+          !!controls.webcam480p,
+        );
         video0.appendChild(camEl);
       } catch (e) {
         console.error("Failed to start camera for video0:", e);
@@ -654,34 +850,12 @@ window.onload = () => {
       video0.appendChild(el0 ? el0 : none0);
     }
 
-    // VIDEO 1 (only if two-video layout)
-    if (controls.layout === "two-video") {
-      if (isCameraControl(controls.video1)) {
-        const deviceId = getCameraDeviceId(controls.video1);
-        try {
-          const camEl = await setCamera("video1", deviceId);
-          video1.appendChild(camEl);
-        } catch (e) {
-          console.error("Failed to start camera for video1:", e);
-          stopCamera("video1");
-          video1.appendChild(none1);
-        }
-      } else {
-        stopCamera("video1");
-
-        const el1 = document.getElementById(controls.video1);
-        video1.appendChild(el1 ? el1 : none1);
-      }
-    } else {
-      // if not in two-video layout, ensure cam1 isn't left running
-      stopCamera("video1");
-    }
+    stopCamera("video1");
 
     // ── Apply orientation transforms ─────────────────────────────────────────
     // Must run after the source elements have been appended above so the child
     // element exists when applyOrientation searches for it.
     if (controls.orient0) applyOrientation(video0, controls.orient0);
-    if (controls.orient1) applyOrientation(video1, controls.orient1);
     // ── /orientation ─────────────────────────────────────────────────────────
   });
 

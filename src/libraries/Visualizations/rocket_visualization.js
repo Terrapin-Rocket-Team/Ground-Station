@@ -111,7 +111,7 @@ async function mountRocketScene() {
       });
 
       rocketModel.add(camera);
-      camera.position.set(0, 3, 10);
+      camera.position.set(0, 6, 10);
       camera.lookAt(rocketModel.position);
     },
     undefined,
