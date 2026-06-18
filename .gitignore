@@ -22,3 +22,4 @@ stateflags.json
 src/libraries/Visualizations/farm.glb
 src/libraries/Visualizations/farm_3d+2d.glb
 src/libraries/Visualizations/farm_big.glb
+out/
