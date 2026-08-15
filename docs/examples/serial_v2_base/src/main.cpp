@@ -7,14 +7,14 @@
 
 // Command handling
 Message commandMsg;
-APRSConfig commandConfig = {"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
+APRSConfig commandConfig = {"KD3BBD", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'};
 
 // create Ground Station Interface
 GSInterface gsi(115200);
 
 // create streams
 GSStream telemAvionics = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
-GSStream telemPayload = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
+// GSStream telemPayload = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 
 // define user callbacks if needed
 bool dataCB(GSMessage *m);
@@ -26,17 +26,19 @@ bool dataCB(GSMessage *m);
 uint32_t timer = millis();
 uint32_t timer2 = millis();
 
-APRSTelem telem1((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
-                 39.336896667, -77.337067833, 480.0, 0.0, 31.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
+Message inMessage;
 
-APRSTelem telem2((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
-                 39.336896667, -77.337067833, 400.0, 0.0, 3.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
+APRSTelem telem1;
+
+// APRSTelem telem2((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
+//                  39.336896667, -77.337067833, 400.0, 0.0, 3.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
 
 APRSCmd cmd;
 // ==========================================================
 
 void setup()
 {
+  Serial1.begin(115200);
   // ==========================================================
   // Set up Ground Station Interface
   // ==========================================================
@@ -47,8 +49,12 @@ void setup()
 
   // commenting out this line will switch to handling APRSCmd in the manual handler under gsi.run()
   // otherwise APRSCmd will be handled in dataCB()
-  gsi.setUserDataHandler(dataCB);
-  gsi.clearUserDataHandler();
+  // gsi.setUserDataHandler(dataCB);
+  // gsi.clearUserDataHandler();
+
+  // KC3UTM>ALL,WIDE1-1:!M:XNe:w7P\ !f!!$R$!8<j1H&<LHZ
+  // inMessage.encode(&telem2);
+  // inMessage.print(Serial);
 
   if (CrashReport)
     Serial.println(CrashReport);
@@ -82,19 +88,23 @@ void loop()
 
   // ==========================================================
   // Read data from radio and send to ground station
-  // Note: the timers take the place of actually getting data
   // ==========================================================
-  if (millis() - timer > 40)
+  if (Serial1.available())
   {
-    timer = millis();
-    if (gsi.isReady())
-      gsi.writeStream(&telemAvionics, &telem1, -50);
-  }
-  if (millis() - timer2 > 40)
-  {
-    timer2 = millis();
-    if (gsi.isReady())
-      gsi.writeStream(&telemPayload, &telem2, -50);
+    char c = Serial1.read();
+    if (c != 0)
+    {
+      inMessage.append(c);
+      Serial1.println(c);
+    }
+    else
+    {
+      inMessage.decode(&telem1);
+      telem1.config.callsign[6] = 0;
+      Serial.println(telem1.config.callsign);
+      if (gsi.isReady() && strcmp(telem1.config.callsign, "KC3ZEO") == 0)
+        gsi.writeStream(&telemAvionics, (char *)inMessage.buf, inMessage.size, -50);
+    }
   }
   // ==========================================================
 }

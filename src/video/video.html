@@ -326,6 +326,7 @@
       }
       .hud-bot {
         padding: 8px 12px 10px;
+        padding-left: 20px;
         background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
       }
       .hud-badge {
@@ -367,19 +368,20 @@
         font-family: var(--cond);
         font-size: 8px;
         font-weight: 600;
-        color: var(--text-lo);
+        color: var(--accent);
         letter-spacing: 0.15em;
         text-transform: uppercase;
       }
       .hud-metric .hm-val {
         font-family: var(--mono);
-        font-size: 17px;
+        font-size: 34px;
         color: var(--text-hi);
         line-height: 1.1;
       }
       .hud-metric .hm-unit {
+        padding-left: 0.5vw;
         font-family: var(--mono);
-        font-size: 9px;
+        font-size: 12px;
         color: var(--text-mid);
       }
 
@@ -464,10 +466,10 @@
       /* stage callout */
       #fun-facts-container {
         position: absolute;
-        top: 42px;
+        top: 38px;
         left: 14px;
         z-index: 25;
-        width: min(360px, calc(100% - 28px));
+        width: min(500px, calc(100% - 28px));
         padding: 8px 12px;
         border: 1px solid rgba(224, 58, 62, 0.38);
         background: rgba(6, 10, 16, 0.78);
@@ -477,7 +479,7 @@
         transition:
           opacity 0.4s,
           transform 0.4s;
-        max-height: 80px;
+        max-height: 100px;
         overflow: hidden;
       }
       #fun-facts-container.hide {
@@ -488,7 +490,7 @@
         display: block;
         font-family: var(--cond);
         font-weight: 700;
-        font-size: 10px;
+        font-size: 15px;
         letter-spacing: 0.15em;
         text-transform: uppercase;
         color: var(--accent);
@@ -496,14 +498,14 @@
       }
       #fun-fact-text {
         font-family: var(--sans);
-        font-size: 10px;
+        font-size: 15px;
         color: var(--text-mid);
         line-height: 1.45;
       }
 
       /* scrollable inner */
       #telem-inner {
-        flex: 1;
+        /* flex: 1; */
         overflow-y: auto;
         overflow-x: hidden;
       }
@@ -605,9 +607,7 @@
         background: var(--text-hi);
         box-shadow: 0 0 5px rgba(255, 255, 255, 0.65);
         transform-origin: 50% 50%;
-        transform:
-          translate(-50%, -50%)
-          rotate(var(--pred-apogee-angle, 0deg));
+        transform: translate(-50%, -50%) rotate(var(--pred-apogee-angle, 0deg));
         opacity: 0;
         pointer-events: none;
         transition:
@@ -725,9 +725,11 @@
       }
       .orientation-row .tr-lbl {
         font-size: 11px;
+        padding-top: 3px;
       }
       .orientation-row .tr-val {
-        font-size: 13px;
+        font-size: 20px;
+        padding-top: 5px;
       }
       .orientation-row .tr-val .u {
         color: var(--text-hi);
@@ -737,7 +739,7 @@
       }
       .flap-chart-wrapper {
         position: relative;
-        height: 96px;
+        height: 150px;
         margin-top: 7px;
       }
       #flap-angle-readout {
@@ -901,7 +903,7 @@
 
       /* ── one-video: enforce 16:9 so COTS camera fills without cropping ── */
       .one-video #video-0 {
-        aspect-ratio: 16 / 9;
+        aspect-ratio: 4 / 3;
         align-self: center; /* center vertically in the grid row  */
         justify-self: center; /* center horizontally in the column  */
         width: 100%;
@@ -997,13 +999,15 @@
             <div class="hud-ribbon">
               <div class="hud-metric">
                 <span class="hm-lbl">Altitude</span>
-                <span class="hm-val" id="hud-alt">—</span>
-                <span class="hm-unit">ft</span>
+                <span class="hm-val" id="hud-alt"
+                  >—<span class="hm-unit">ft</span></span
+                >
               </div>
               <div class="hud-metric">
                 <span class="hm-lbl">Mach</span>
-                <span class="hm-val" id="hud-spd">—</span>
-                <span class="hm-unit"></span>
+                <span class="hm-val" id="hud-spd"
+                  >—<span class="hm-unit"></span
+                ></span>
               </div>
             </div>
           </div>
@@ -1020,10 +1024,10 @@
           <span id="t-plus">0s</span>
         </div>
 
-        <div id="camera-angle-overlay">
+        <!-- <div id="camera-angle-overlay">
           <span id="camera-angle-label">Camera</span>
           <span id="camera-angle-value">—</span>
-        </div>
+        </div> -->
       </div>
 
       <div id="video-1"></div>
@@ -1073,9 +1077,9 @@
               data-bar-width="10"
               data-color-bar-progress="#E03A3E"
               data-color-bar="#1a2535"
-              data-font-title="Barlow Condensed"
-              data-font-units="Barlow Condensed"
-              data-font-numbers="Share Tech Mono"
+              data-font-title="Courier"
+              data-font-units="Courier"
+              data-font-numbers="Courier"
               data-font-title-size="30"
               data-font-units-size="22"
               data-font-numbers-size="18"
@@ -1099,7 +1103,6 @@
               data-type="radial-gauge"
               data-width="220"
               data-height="220"
-              data-units=""
               data-title="Speed"
               data-value="0"
               data-value-text="—"
@@ -1126,9 +1129,9 @@
               data-bar-width="10"
               data-color-bar-progress="#FFD200"
               data-color-bar="#1a2535"
-              data-font-title="Barlow Condensed"
-              data-font-units="Barlow Condensed"
-              data-font-numbers="Share Tech Mono"
+              data-font-title="Courier"
+              data-font-units="Courier"
+              data-font-numbers="Courier"
               data-font-title-size="30"
               data-font-units-size="22"
               data-font-numbers-size="18"
@@ -1143,7 +1146,9 @@
             <div class="orientation-row">
               <div class="tr">
                 <span class="tr-lbl">Roll</span>
-                <span class="tr-val"><span class="u" id="v-roll">—</span>°</span>
+                <span class="tr-val"
+                  ><span class="u" id="v-roll">—</span>°</span
+                >
               </div>
               <div class="tr">
                 <span class="tr-lbl">Pitch</span>
@@ -1168,7 +1173,6 @@
               <canvas id="flap-graph"></canvas>
             </div>
           </div>
-
         </div>
         <!-- end telem-inner -->
       </div>
