@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
 format from the RadioMessage library
-=======
-format from the Message library
->>>>>>> main
 {
     "type": "APRSCmd",
     "deviceId": 3
@@ -15,11 +11,7 @@ format from the Message library
 */
 
 /**
-<<<<<<< HEAD
  * A class to handle encoding and decoding of APRS command messages
-=======
- * A class to handling encoding and decoding of APRS messages
->>>>>>> main
  */
 class APRSCmd {
   /**
@@ -215,18 +207,11 @@ class APRSCmd {
   }
 
   /**
-<<<<<<< HEAD
    * @returns {Object} the command object in the RadioMessage library format
    */
   toJSON() {
     return {
       type: "APRSCmd",
-=======
-   * @returns {Object} the command object in the Message library format
-   */
-  toJSON() {
-    return {
->>>>>>> main
       deviceId: this.deviceId,
       data: {
         cmd: this.cmd.toString(16),
@@ -252,11 +237,7 @@ class APRSCmd {
   toCSV(firstLine) {
     let csv = "";
     if (firstLine) {
-<<<<<<< HEAD
       csv = "Time,Device ID,Command,Args\n";
-=======
-      csv = "Time,Device ID,Cmd,Args\n";
->>>>>>> main
     }
     csv += `${this.time.toISOString().split("T")[1]},${this.deviceId},${
       this.cmd

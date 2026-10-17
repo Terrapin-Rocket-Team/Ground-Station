@@ -12,11 +12,6 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
 {
   // open as read/write, no controlling terminal, nonblocking during setup
   portHandle = open(portName, O_RDWR | O_NOCTTY | O_NONBLOCK);
-=======
-LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
-{
-  portHandle = open(portName, O_RDWR);
->>>>>>> main
   if (portHandle < 0)
   {
     std::cout << "ERROR: Failed to open serial port at " << portName << "\n";
@@ -141,11 +136,11 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
   }
 
   // If baud isn't a standard enum, try IOSSIOSPEED (some devices/drivers support it)
-  if (spd == 0)
-  {
-    speed_t iosSpeed = (speed_t)baud;
-    ioctl(portHandle, IOSSIOSPEED, &iosSpeed);
-  }
+  // if (spd == 0)
+  // {
+  //   speed_t iosSpeed = (speed_t)baud;
+  //   ioctl(portHandle, IOSSIOSPEED, &iosSpeed);
+  // }
 #endif
 
   // clear nonblocking after configuration

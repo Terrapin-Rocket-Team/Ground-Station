@@ -1,9 +1,5 @@
 /**
-<<<<<<< HEAD
  * A class to handle encoding and decoding of Ground Station radio metrics
-=======
- * A class to handling encoding and decoding of Ground Station radio metrics
->>>>>>> main
  */
 class Metrics {
   /**
@@ -66,17 +62,10 @@ class Metrics {
     return this.rssi > -60
       ? "High"
       : this.rssi <= -90 && this.rssi > -120
-<<<<<<< HEAD
         ? "Low"
         : this.rssi <= -60 && this.rssi > -90
           ? "Med"
           : "None";
-=======
-      ? "Low"
-      : this.rssi <= -60 && this.rssi > -90
-      ? "Med"
-      : "None";
->>>>>>> main
   }
 
   /**
@@ -91,11 +80,7 @@ class Metrics {
    */
   toString() {
     return `Device ${this.deviceId} | ${this.rssi} dBm @ ${this.getBitrate(
-<<<<<<< HEAD
       "k",
-=======
-      "k"
->>>>>>> main
     )} kbps`;
   }
 
