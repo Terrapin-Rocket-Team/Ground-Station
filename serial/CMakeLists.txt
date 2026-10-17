@@ -41,8 +41,9 @@ elseif ("${BUILD_ENV}" STREQUAL "LINUX")
 
 elseif ("${BUILD_ENV}" STREQUAL "APPLE")
 
-    target_compile_definitions(SerialDriver PUBLIC APPLE=1)
-    target_compile_definitions(DriverShell PUBLIC APPLE=1)
+    target_compile_definitions(SerialDriver PUBLIC OS_APPLE=1)
+    target_compile_definitions(DriverShell PUBLIC OS_APPLE=1)
+    add_compile_definitions(OS_APPLE=1)
 
 endif()
 

@@ -2,9 +2,9 @@
 
 #include "SerialPort.h"
 
-#ifdef APPLE
+#ifdef __linux__
 #include <linux/termios.h>
-#elif
+#elif OS_APPLE
 #include <termios.h>
 #endif
 
@@ -14,9 +14,9 @@ private:
   int portHandle;
   bool connected;
 
-#ifdef LINUX
+#ifdef __linux__
   termios2 backup;
-#elif APPLE
+#elif OS_APPLE
   termios backup;
 #endif
 

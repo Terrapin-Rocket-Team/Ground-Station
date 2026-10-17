@@ -7,7 +7,7 @@
 #include <WinSerialPort.h>
 #include <WinNamedPipe.h>
 #include <windows.h>
-#elif LINUX
+#elif LINUX || OS_APPLE
 #include <LinuxNamedPipe.h>
 #include <LinuxSerialPort.h>
 #include <unistd.h>

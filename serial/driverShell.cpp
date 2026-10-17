@@ -6,7 +6,7 @@
 #ifdef WINDOWS
 #include <WinNamedPipe.h>
 #include <windows.h>
-#elif LINUX
+#elif LINUX || OS_APPLE
 #include <LinuxNamedPipe.h>
 #include <unistd.h>
 #endif
