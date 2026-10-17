@@ -18,6 +18,10 @@ const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
 const GSControl = require("./coders/GSControl");
 
+const plugin = require("./plugins/video/test");
+
+plugin.init();
+
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
 const logPath = "./log";
@@ -394,7 +398,10 @@ const createMain = () => {
 
   // send video controls whether or not we need them so the inputs load properly
   windows.main.webContents.once("dom-ready", () => {
-    windows.main.webContents.send("video-controls", getEffectiveVideoControls());
+    windows.main.webContents.send(
+      "video-controls",
+      getEffectiveVideoControls(),
+    );
   });
 
   // only create serial streams if reading debug data from local files
@@ -473,6 +480,8 @@ app.commandLine.appendSwitch("force-device-scale-factor", 1);
 app.whenReady().then(() => {
   createMain();
   if (config.video.value) createVideo();
+
+  log.debug("test");
 
   // open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {

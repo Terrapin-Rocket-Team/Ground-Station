@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { BrowserWindow } = require("electron");
 
+const basePathLen = __dirname.split(path.sep).length;
+
 /**
  *
  * @param {string} level the log level of the log
@@ -10,7 +12,10 @@ const { BrowserWindow } = require("electron");
 const getLogPrefix = (level) => {
   const e = new Error();
   let stackArr = e.stack.split("\n")[4].split(path.sep);
-  let info = stackArr[stackArr.length - 1].split(":");
+  let info = stackArr
+    .splice(basePathLen, stackArr.length)
+    .join(path.sep)
+    .split(":");
   return (
     // (level == "error" ? e.stack + "\n" : "") +
     "[" +

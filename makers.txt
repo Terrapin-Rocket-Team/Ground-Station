@@ -26,3 +26,63 @@
 {
   "name": "@electron-forge/maker-zip"
 }
+
+
+// plugins
+Plugin capabilities:
+- can extend application functionality
+  - define new coders -> will not be automatically integrated
+    - how to use new coders on main frontend? (need script tag)
+  - define new IO Classes -> automatically integrated via creation of a new internal stream type (may use new coders)
+    - need to give new stream type to frontend
+    - need to connect new IO class to stream type
+    - reorganize IO to have parent Sink and Source classes to define a common interface
+  - define new windows -> automatically integrated by creating window during plugin init
+    - window handles defining its own preload, but default preload can be included
+    - separate out frontend EventEmitter to be used by plugins
+  - define new top bar tabs -> dynamically load top bar buttons (just links to html pages)
+    - need to define image for button
+    - wrap in obj/func to generate proper HTML?
+  - define new side bar tabs -> dynamically load two sections: sidebar buttons and sidebar div containers
+- cannot override backend functionality
+  - core application cannot be overwritten (e.g. APRSTelem cannot change, SerialTelemSource will always use APRSTelem, etc)
+  - handling plugin settings -> define plugin-specific config.json, default-config.json
+    - plugin settings loaded with config by plugin loader
+- can override aspects of main window
+  - override frontend telemetry displays -> will need to dynamically load some displays
+    - need to redefine what is core GS and what will be in plugins
+    - *** make sure plugins changing things will not cause fatal errors in main application ***
+    - need to define what can be changed
+      - Not modifiable
+        - T+
+        - Apogee
+        - Command panel
+        - Serial dropdown
+        - Streams, Settings, Fullscreen, Reload, Minimize, Close buttons
+        - Streams and Settings pages
+        - Map (can hide?)
+        - Charts (can hide?)
+      - Modifiable
+        - Choose # of radios (limit 1-3)
+        - Content of 3 main sections
+          - cannot change section size except through cheesing it
+          - cannot change # of sections
+          - how to define which stream goes where -> need dropdown for stream name + able to add from plugins
+        - May define stream settings, e.g. stateflags?
+
+Plugin interface requirements:
+- must work nicely with core
+- easy to understand
+- high readability (for plugin implementation code)
+- documentation!
+
+Classes:
+Loader
+- traverse plugin directory, discover plugins, and locate Plugin subclass
+- handle plugin settings
+  - maintain list of enabled plugins
+  - send to frontend
+- initialize enabled plugins
+
+Plugin (subclasses)
+- entry point for plugin code
