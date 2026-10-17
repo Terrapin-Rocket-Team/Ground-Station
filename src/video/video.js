@@ -517,7 +517,6 @@ window.onload = () => {
       }
     }
   };
-
   const updateCharts = (idPrefix, msg) => {
     // get the index in the charts dataset
     let index = parseInt(idPrefix.split("t")[1]) - 1;

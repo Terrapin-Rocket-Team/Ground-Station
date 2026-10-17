@@ -8,17 +8,15 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
-#ifdef LINUX
-#include <linux/termios.h> // termios2, TCGETS/TCSETSW, BOTHER, etc.
-#elif APPLE
-#include <termios.h>           // macOS / POSIX
-#include <IOKit/serial/ioss.h> // IOSSIOSPEED (macOS)
-#endif
-
 LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
 {
   // open as read/write, no controlling terminal, nonblocking during setup
   portHandle = open(portName, O_RDWR | O_NOCTTY | O_NONBLOCK);
+=======
+LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
+{
+  portHandle = open(portName, O_RDWR);
+>>>>>>> main
   if (portHandle < 0)
   {
     std::cout << "ERROR: Failed to open serial port at " << portName << "\n";
@@ -72,7 +70,7 @@ LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(po
     return;
   }
 
-#elif APPLE
+#elif OS_APPLE
   struct termios tty;
 
   if (tcgetattr(portHandle, &tty) != 0)

@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
 format from the RadioMessage library
+=======
+format from the Message library
+>>>>>>> main
 {
     "type": "APRSTelem",
     "deviceId": 3,
@@ -16,7 +20,11 @@ format from the RadioMessage library
 */
 
 /**
+<<<<<<< HEAD
  * A class to handle encoding and decoding of APRS telemetry messages
+=======
+ * A class to handling encoding and decoding of APRS messages
+>>>>>>> main
  */
 class APRSTelem {
   /**
@@ -47,6 +55,7 @@ class APRSTelem {
         parseFloat(message.data.orient[1]),
         parseFloat(message.data.orient[2]),
       ];
+<<<<<<< HEAD
       this.rawStateflags = parseInt(message.data.stateFlags);
       this.cameraAngle = message.data.cameraAngle;
       this.flapAngle =
@@ -60,6 +69,11 @@ class APRSTelem {
           : undefined;
 
       // must find stateflags
+=======
+      this.rawStateflags = parseInt(message.data.stateFlags);
+
+      // must find stateflags
+>>>>>>> main
       if (stateflagsFormat) {
         this.findStateflags(stateflagsFormat);
       } else {
@@ -82,12 +96,18 @@ class APRSTelem {
         parseFloat(message.orientation[1]),
         parseFloat(message.orientation[2]),
       ];
+<<<<<<< HEAD
       this.rawStateflags = parseInt(message.rawStateflags);
       this.stateflags = message.stateflags;
       this.stateflagsFormat = message.stateflagsFormat;
       this.cameraAngle = message.cameraAngle;
       this.flapAngle = message.flapAngle;
       this.predictedApogee = message.predictedApogee;
+=======
+      this.rawStateflags = parseInt(message.rawStateflags);
+      this.stateflags = message.stateflags;
+      this.stateflagsFormat = message.stateflagsFormat;
+>>>>>>> main
     }
   }
 
@@ -120,7 +140,11 @@ class APRSTelem {
       if (encoding[i]) {
         this.stateflags.push(
           (this.rawStateflags >>> (totalLength - lengthAdded - encoding[i])) &
+<<<<<<< HEAD
             ((1 << encoding[i]) - 1),
+=======
+            ((1 << encoding[i]) - 1)
+>>>>>>> main
         );
         lengthAdded += encoding[i];
       } else {
@@ -145,6 +169,7 @@ class APRSTelem {
           alt: csvArr[5],
           spd: csvArr[6],
           hdg: csvArr[7],
+<<<<<<< HEAD
           orient: [csvArr[8], csvArr[9], csvArr[10]],
           stateFlags: csvArr[11],
           cameraAngle: csvArr[12],
@@ -153,6 +178,13 @@ class APRSTelem {
         },
       },
       csvArr[1],
+=======
+          orient: [csvArr[8], csvArr[9], csvArr[10]],
+          stateFlags: csvArr[11],
+        },
+      },
+      csvArr[1]
+>>>>>>> main
     );
   }
 
@@ -217,13 +249,21 @@ class APRSTelem {
     let latDegrees = Math.floor(this.latitude),
       latMinutes = Math.floor(60 * (this.latitude - latDegrees)),
       latSeconds = Math.floor(
+<<<<<<< HEAD
         60 * (60 * (this.latitude - latDegrees) - latMinutes),
+=======
+        60 * (60 * (this.latitude - latDegrees) - latMinutes)
+>>>>>>> main
       );
     // convert longitude to DMS
     let longDegrees = Math.floor(this.longitude),
       longMinutes = Math.floor(60 * (this.longitude - longDegrees)),
       longSeconds = Math.floor(
+<<<<<<< HEAD
         60 * (60 * (this.longitude - longDegrees) - longMinutes),
+=======
+        60 * (60 * (this.longitude - longDegrees) - longMinutes)
+>>>>>>> main
       );
     // put it together
     return (
@@ -278,6 +318,7 @@ class APRSTelem {
     let index = this.stateflagsFormat.findIndex((name) => {
       return name === flagName;
     });
+<<<<<<< HEAD
 
     if (index >= 0) return this.stateflags[index];
 
@@ -292,24 +333,46 @@ class APRSTelem {
         return this.rawStateflags;
       }
 
+=======
+    
+    if (index >= 0) return this.stateflags[index];
+    
+    // If not found and we're looking for "Stage", check for "State Flags" instead
+    if (flagName === "Stage" && !this.stateflagsFormat.includes("Stage")) {
+      // If there are no state flags defined but we have a raw value, use it directly
+      if (this.stateflagsFormat.length === 0 && this.rawStateflags !== undefined) {
+        return this.rawStateflags;
+      }
+      
+>>>>>>> main
       // Check for alternate name "State Flags"
       let altIndex = this.stateflagsFormat.findIndex((name) => {
         return name === "State Flags";
       });
       if (altIndex >= 0) return this.stateflags[altIndex];
     }
+<<<<<<< HEAD
 
     // If not found and we're looking for "State Flags", check for "Stage" instead
     if (
       flagName === "State Flags" &&
       !this.stateflagsFormat.includes("State Flags")
     ) {
+=======
+    
+    // If not found and we're looking for "State Flags", check for "Stage" instead
+    if (flagName === "State Flags" && !this.stateflagsFormat.includes("State Flags")) {
+>>>>>>> main
       let altIndex = this.stateflagsFormat.findIndex((name) => {
         return name === "Stage";
       });
       if (altIndex >= 0) return this.stateflags[altIndex];
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> main
     return null;
   }
 
@@ -336,10 +399,14 @@ class APRSTelem {
     let csv = "";
     if (firstLine) {
       csv =
+<<<<<<< HEAD
         "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,Stateflags";
       if (this.stateflagsFormat.length > 0)
         csv += "," + this.stateflagsFormat.join(",") + "\n";
       else csv += "\n";
+=======
+        "Time,Stream,Device ID,Latitude,Longitude,Altitude,Speed,Heading,OrientationX,OrientationY,OrientationZ,State Flags\n";
+>>>>>>> main
     }
     csv += `${this.time.toISOString().split("T")[1]},${this.stream},${
       this.deviceId
@@ -347,10 +414,14 @@ class APRSTelem {
       this.heading
     },${this.orientation[0]},${this.orientation[1]},${this.orientation[2]},${
       this.rawStateflags
+<<<<<<< HEAD
     }`;
     if (this.stateflagsFormat.length > 0)
       csv += "," + this.stateflags.join(",") + "\n";
     else csv += "\n";
+=======
+    }\n`;
+>>>>>>> main
     return csv;
   }
 }
