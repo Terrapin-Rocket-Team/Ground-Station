@@ -47,7 +47,7 @@ window.onload = () => {
 
     v.style.width = "100%";
     v.style.height = "100%";
-    v.style.objectFit = "cover";
+    // v.style.objectFit = "cover";
 
     // stable ids
     v.id = slot === "video0" ? "camera-video-0" : "camera-video-1";
@@ -194,9 +194,7 @@ window.onload = () => {
   // ── /Video orientation ───────────────────────────────────────────────────────
 
   // get colors from css
-  const t1Color = getComputedStyle(document.body).getPropertyValue(
-      "--t1",
-    ),
+  const t1Color = getComputedStyle(document.body).getPropertyValue("--t1"),
     t2Color = getComputedStyle(document.body).getPropertyValue("--t2"),
     t3Color = getComputedStyle(document.body).getPropertyValue("--t3");
 
@@ -263,7 +261,8 @@ window.onload = () => {
   const MACH_1_FTPS = 1125.33;
   const toMach = (speedFtPerSec) =>
     Math.max(speedFtPerSec || 0, 0) / MACH_1_FTPS;
-  const formatMach = (speedFtPerSec) => "Mach " + toMach(speedFtPerSec).toFixed(2);
+  const formatMach = (speedFtPerSec) =>
+    "Mach " + toMach(speedFtPerSec).toFixed(2);
 
   //refresh canvases at ~50hz
   setInterval(() => {
@@ -310,20 +309,14 @@ window.onload = () => {
 
   const positionPredictedApogeeNotch = (apogeeFt) => {
     if (!predApogeeNotch) return;
-    const ratio = Math.min(
-      Math.max(apogeeFt / 1000 / ALT_GAUGE_MAX_KFT, 0),
-      1,
-    );
+    const ratio = Math.min(Math.max(apogeeFt / 1000 / ALT_GAUGE_MAX_KFT, 0), 1);
     const angle = -135 + ratio * 270;
     const angleRad = (angle * Math.PI) / 180;
     const x = Math.sin(angleRad) * predApogeeRadius;
     const y = -Math.cos(angleRad) * predApogeeRadius;
     predApogeeNotch.style.setProperty("--pred-apogee-x", x + "px");
     predApogeeNotch.style.setProperty("--pred-apogee-y", y + "px");
-    predApogeeNotch.style.setProperty(
-      "--pred-apogee-angle",
-      angle + "deg",
-    );
+    predApogeeNotch.style.setProperty("--pred-apogee-angle", angle + "deg");
   };
 
   // set the gauges to the correct size (this needs to be done manually)
@@ -331,7 +324,12 @@ window.onload = () => {
     let size =
       telemetry.offsetWidth *
       0.9 *
-      (!main.classList.contains("two-video") ? 0.5 : 1);
+      (!(
+        main.classList.contains("two-video") ||
+        main.classList.contains("one-video")
+      )
+        ? 0.5
+        : 1);
 
     alt.setAttribute("data-width", size);
     alt.setAttribute("data-height", size);
@@ -366,7 +364,10 @@ window.onload = () => {
     }
     if (layout === "one-video") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
-      telemetry.appendChild(document.getElementById("small-text-container"));
+      document
+        .getElementById("telem-inner")
+        .appendChild(document.getElementById("small-text-container"));
+      // telemetry.appendChild(document.getElementById("small-text-container"));
       video0.appendChild(none0);
       videoSources.appendChild(LV0.canvas);
       videoSources.appendChild(LV1.canvas);
@@ -469,8 +470,7 @@ window.onload = () => {
       parseInt(sessionStorage.getItem("max-alt"))
     ) {
       maxAlt = parseInt(sessionStorage.getItem("max-alt"));
-      maxAltEl.textContent =
-        maxAlt + " ft";
+      maxAltEl.textContent = maxAlt + " ft";
     }
 
     if (
@@ -659,8 +659,7 @@ window.onload = () => {
 
     lastPredApogeeFt = apogeeFt;
     positionPredictedApogeeNotch(apogeeFt);
-    predApogeeNotch.title =
-      "Predicted apogee: " + Math.round(apogeeFt) + " ft";
+    predApogeeNotch.title = "Predicted apogee: " + Math.round(apogeeFt) + " ft";
     predApogeeNotch.classList.add("visible");
   };
 
@@ -799,7 +798,9 @@ window.onload = () => {
           : msg.getStateflag("Predicted Apogee");
       updatePredictedApogeeNotch(predApogee);
       let flapAngle =
-        msg.flapAngle !== undefined ? msg.flapAngle : msg.getStateflag("Flap Angle");
+        msg.flapAngle !== undefined
+          ? msg.flapAngle
+          : msg.getStateflag("Flap Angle");
       const flapAngleValue = Number(flapAngle);
       if (Number.isFinite(flapAngleValue)) {
         document.getElementById("v-flap").textContent =

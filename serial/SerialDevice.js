@@ -176,7 +176,7 @@ class SerialDevice extends EventEmitter {
   }
 
   /**
-   * @returns {Promise<[]|Error>} array of available ports, rejects with the error if one occurs
+   * @returns {Promise<String[]|Error>} array of available ports, rejects with the error if one occurs
    */
   getAvailablePorts() {
     // TODO: remove SerialPort dependency
