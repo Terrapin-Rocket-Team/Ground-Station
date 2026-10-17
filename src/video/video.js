@@ -382,6 +382,14 @@ window.onload = () => {
       videoSources.appendChild(charts);
       videoSources.appendChild(viz3d);
     }
+    if (layout === "wide-video") {
+      telemetry.appendChild(document.getElementById("small-text-container"));
+      video0.appendChild(none0);
+      videoSources.appendChild(LV0.canvas);
+      videoSources.appendChild(LV1.canvas);
+      videoSources.appendChild(charts);
+      videoSources.appendChild(viz3d);
+    }
     if (layout === "telemetry-only") {
       // need to move max alt and speed text to bottom of telemetry div for this layout
       telemetry.appendChild(document.getElementById("small-text-container"));
@@ -517,6 +525,7 @@ window.onload = () => {
       }
     }
   };
+
   const updateCharts = (idPrefix, msg) => {
     // get the index in the charts dataset
     let index = parseInt(idPrefix.split("t")[1]) - 1;

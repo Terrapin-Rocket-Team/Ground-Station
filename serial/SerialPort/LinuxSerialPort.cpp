@@ -8,6 +8,13 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
+#ifdef LINUX
+#include <linux/termios.h> // termios2, TCGETS/TCSETSW, BOTHER, etc.
+#elif APPLE
+#include <termios.h>           // macOS / POSIX
+#include <IOKit/serial/ioss.h> // IOSSIOSPEED (macOS)
+#endif
+
 LinuxSerialPort::LinuxSerialPort(const char *portName, int baud) : SerialPort(portName)
 {
   // open as read/write, no controlling terminal, nonblocking during setup

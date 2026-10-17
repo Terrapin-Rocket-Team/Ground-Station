@@ -500,8 +500,8 @@ window.onload = () => {
   api.on("video-controls", (controls) => {
     videoControls = controls;
     let option = "";
+
     // set each video control dropdown based on controls
-    // there's probably a better way to write this
     if (videoControls.layout === "two-video") option = "Full";
     if (videoControls.layout === "one-video") option = "Partial";
     if (videoControls.layout === "telemetry-only") option = "Telemetry Only";
@@ -1158,6 +1158,7 @@ window.onload = () => {
       spdG.update();
     }
   };
+
   const updateMap = (idPrefix, msg) => {
     // update map
     let coords = msg.getLatLong();
@@ -1200,6 +1201,7 @@ window.onload = () => {
       }, 10);
     }
   };
+
   const updateApogee = (idPrefix, msg) => {
     // apogee check
     // don't need to find apogee if it was loaded

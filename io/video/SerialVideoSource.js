@@ -1,7 +1,7 @@
 const VideoSource = require("./VideoSource");
 const { serial, SerialDevice } = require("../../serial/SerialDevice");
 const { log } = require("../../debug");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const { Readable } = require("stream");
 const fs = require("fs");
 const path = require("path");

@@ -19,6 +19,9 @@ GSStream telemAvionics = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 // define user callbacks if needed
 bool dataCB(GSMessage *m);
 
+// define user callbacks if needed
+bool dataCB(GSMessage *m);
+
 // ==========================================================
 // Assemble sample data
 // Note: not needed for real implementation
