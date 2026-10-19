@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 #ifdef WINDOWS
     pipeControl = new WinNamedPipe("\\\\.\\pipe\\control", true);
     pipeStatus = new WinNamedPipe("\\\\.\\pipe\\status", true);
-#elif LINUX
+#elif LINUX || OS_APPLE
     // need to be updated when switching to abstract sockets
     pipeControl = new LinuxNamedPipe("./build/serial/pipes/control", true);
     pipeStatus = new LinuxNamedPipe("./build/serial/pipes/status", true);
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
                 // create a new serial connection
 #ifdef WINDOWS
                 device = new WinSerialPort(portBuf, atoi(baudRate));
-#elif LINUX
+#elif LINUX || OS_APPLE
                 device = new LinuxSerialPort(portBuf, atoi(baudRate));
 #endif
                 // reset state control vars
@@ -927,7 +927,7 @@ void createPipe(NamedPipe **arr, int &index, const char *name)
     char pipePath[60] = "\\\\.\\pipe\\";
     strcat(pipePath, name);
     arr[index++] = new WinNamedPipe(pipePath, true);
-#elif LINUX
+#elif LINUX || OS_APPLE
     // need to update these paths for abstract sockets
     char pipePath[60] = "./build/serial/pipes/";
     strcat(pipePath, name);

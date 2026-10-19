@@ -10,6 +10,10 @@ const { log } = require("../debug.js");
 const serialDriverPath = path.join(__dirname, "..", "build", "serial");
 const logPath = "./log";
 
+// seg fault traceback
+const SegfaultHandler = require('segfault-handler');
+SegfaultHandler.registerHandler('crash.log');
+
 /**
  * A class to communicate with the radio module using Serial
  */
