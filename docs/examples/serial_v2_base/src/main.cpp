@@ -19,9 +19,6 @@ GSStream telemAvionics = gsi.createStream(APRSTelem::type, TELEM_DEVICE_ID);
 // define user callbacks if needed
 bool dataCB(GSMessage *m);
 
-// define user callbacks if needed
-bool dataCB(GSMessage *m);
-
 // ==========================================================
 // Assemble sample data
 // Note: not needed for real implementation
@@ -31,7 +28,9 @@ uint32_t timer2 = millis();
 
 Message inMessage;
 
-APRSTelem telem1;
+double testOrientation[3] = {1.0, 110.0, 65.0};
+
+APRSTelem telem1(commandConfig, 39.0, -77.0, 480.0, 0.0, 31.0, testOrientation, (uint32_t)0x15abcdef);
 
 // APRSTelem telem2((APRSConfig){"KC3UTM", "ALL", "WIDE1-1", PositionWithoutTimestampWithoutAPRS, '\\', 'M'},
 //                  39.336896667, -77.337067833, 400.0, 0.0, 3.0, (double[]){1.0, 110.0, 65.0}, (uint32_t)0x15abcdef);
@@ -88,6 +87,14 @@ void loop()
     // add more handlers here
   }
   // ==========================================================
+
+  // adding some timer logic that was present in earlier versions but not in this test script. this will be removed later 
+  if (millis() - timer > 40)
+  {
+    timer = millis();
+    if (gsi.isReady())
+      gsi.writeStream(&telemAvionics, &telem1, -50);
+  }
 
   // ==========================================================
   // Read data from radio and send to ground station
