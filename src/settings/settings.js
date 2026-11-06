@@ -15,7 +15,7 @@ window.onload = () => {
       api.setSettings(newConfig);
       if (showAlert)
         alert(
-          "Application settings have changed. Please restart for changes to take affect!"
+          "Application settings have changed. Please restart for changes to take affect!",
         );
     }
   };
@@ -229,14 +229,14 @@ window.onload = () => {
           key,
           newConfig[key].name,
           newConfig[key].description,
-          newConfig[key].value
+          newConfig[key].value,
         );
       }
       if (config[key].type === "toggle") {
         inputs[key] = createToggle(
           key,
           newConfig[key].name,
-          newConfig[key].description
+          newConfig[key].description,
         );
       }
       if (config[key].type === "number") {
@@ -244,7 +244,7 @@ window.onload = () => {
           key,
           newConfig[key].name,
           newConfig[key].description,
-          newConfig[key].range
+          newConfig[key].range,
         );
       }
     });
@@ -265,7 +265,7 @@ window.onload = () => {
         // callback for saving settings
         saveCallbacks.push(() => {
           newConfig[key].value = parseFloat(
-            document.getElementById(`${key}-selected`).textContent
+            document.getElementById(`${key}-selected`).textContent,
           );
         });
       }
@@ -305,6 +305,8 @@ window.onload = () => {
 
     loadSettingsInputs();
   });
+
+  api.getPluginSettings().then((c) => {});
 
   // click listener for the reset settings button
   document.getElementById("reset-settings").addEventListener("click", () => {

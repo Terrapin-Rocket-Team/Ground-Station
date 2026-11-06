@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-if (require("electron-squirrel-startup")) app.quit(); //for app maker
+if (require("electron-squirrel-startup")) app.quit(); // for app maker
 const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
@@ -12,20 +12,17 @@ const {
   SerialControlSink,
   FileControlSink,
 } = require("./io/text-io");
-const { FileVideoSource, SerialVideoSource } = require("./io/video-io");
 const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
 const GSControl = require("./coders/GSControl");
 
-const plugin = require("./plugins/video/test");
-
-plugin.init();
+const { pLoader } = require("./loader/PluginLoader");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
 const logPath = "./log";
-const dataDebugDirs = [__dirname, path.join(__dirname, "docs", "data")];
+const dataDebugDirs = [__dirname, path.join(__dirname, "docs", "data")]; // TODO: remove
 
 const getDataDebugFile = (fileName) => {
   return dataDebugDirs
@@ -33,28 +30,15 @@ const getDataDebugFile = (fileName) => {
     .find((filePath) => fs.existsSync(filePath));
 };
 
-let windows = { main: null, video: null },
+let windows = { main: null },
   telemSources = [],
-  videoSources = [],
   commandSinks = [],
   config,
   cmdList,
   stateflags,
   ctrlList,
   cacheMeta,
-  closed,
-  videoControls = {
-    layout: "two-video",
-    video0: "none-0",
-    video1: "none-1",
-  };
-
-const getEffectiveVideoControls = () => {
-  const controls = { ...videoControls };
-  if (config?.webcamTest?.value) controls.video0 = "camera:default";
-  controls.webcam480p = !!config?.webcam480p?.value;
-  return controls;
-};
+  closed;
 
 /*
 See default-config.json for default settings
@@ -114,24 +98,7 @@ try {
   }
 }
 
-if (config && !config.webcamTest) {
-  config.webcamTest = {
-    name: "Test Webcam Input",
-    description:
-      "Temporarily stream the default webcam into video Input 0 for testing.",
-    value: false,
-    type: "toggle",
-  };
-}
-if (config && !config.webcam480p) {
-  config.webcam480p = {
-    name: "Test Webcam 480p",
-    description:
-      "Request 480p from the temporary webcam input and scale it to fit the video display.",
-    value: false,
-    type: "toggle",
-  };
-}
+pLoader.init(config);
 
 // need to setup after loading config
 serial.setupDriver();
@@ -254,8 +221,8 @@ try {
 const loadStreams = () => {
   // reset everything
   telemSources = [];
-  videoSources = [];
   commandSinks = [];
+  pLoader.emit("reload-streams");
   serial.clearStreams();
 
   commandSinks.push(
@@ -289,15 +256,13 @@ const loadStreams = () => {
             createLog: true,
           }),
         );
-      }
-      if (stream.type === "APRSCmd") {
+      } else if (stream.type === "APRSCmd") {
         commandSinks.push(
           new SerialCommandSink(stream.name, stream.id, {
             createLog: true,
           }),
         );
-      }
-      if (stream.type === "Metrics") {
+      } else if (stream.type === "Metrics") {
         telemSources.push(
           new SerialTelemSource(stream.name, stream.id, {
             parser: (data) => {
@@ -313,25 +278,15 @@ const loadStreams = () => {
             createLog: true,
           }),
         );
-      }
-      if (stream.type === "video" && config.video.value) {
-        videoSources.push(
-          new SerialVideoSource(stream.name, stream.id, {
-            resolution: { width: 640, height: 832 },
-            framerate: 30,
-            rotation: "cw",
-            createLog: true,
-            createDecoderLog: config.debug.value,
-          }),
-        );
-      } else if (stream.type === "video" && !config.video.value) {
-        log.warn(
-          "Not in video mode. Skipping video stream source for: " +
-            `${stream.name}-${stream.id}`,
-        );
+      } else {
+        // attempt to initialize stream via a plugin
+        if (!pLoader.loadStream(stream))
+          log.err(
+            `Failed to initalize stream: ${stream.name}-${stream.id}, no valid handler found for type ${stream.type}`,
+          );
       }
     } else {
-      log.debug("Ignoring disabled stream: " + `${stream.name}-${stream.id}`);
+      log.debug(`Ignoring disabled stream: ${stream.name}-${stream.id}`);
     }
   });
 };
@@ -389,86 +344,19 @@ const createMain = () => {
     closed = true;
     serial.close();
     windows.main.webContents.send("close"); // unused
-    if (windows.video) windows.video.close();
+    // close all other open windows
+    Object.keys(windows).forEach((name) => {
+      if (name != "main") windows[name].close();
+    });
   });
 
   windows.main.once("closed", () => {
     windows.main = null;
   });
 
-  // send video controls whether or not we need them so the inputs load properly
-  windows.main.webContents.once("dom-ready", () => {
-    windows.main.webContents.send(
-      "video-controls",
-      getEffectiveVideoControls(),
-    );
-  });
-
-  // only create serial streams if reading debug data from local files
-  if (!config.dataDebug.value) {
-    loadStreams();
-  }
+  pLoader.emit("main-window-loaded", windows.main);
 
   log.debug("Main window created");
-};
-
-// creates the video electron window
-const createVideo = () => {
-  const width = 1280,
-    height = 720;
-
-  // get the correct icon
-  const iconSuffix =
-    process.platform === "win32"
-      ? ".ico"
-      : process.platform === "darwin"
-        ? ".icns"
-        : ".png";
-
-  windows.video = new BrowserWindow({
-    width: width * config.scale.value,
-    height: height * config.scale.value,
-    frame: false,
-    autoHideMenuBar: true,
-    icon: path.join(iconPath, "logo" + iconSuffix),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-
-  windows.video.loadFile(path.join(__dirname, "src/video/video.html"));
-
-  // only auto-open the devtools in debug mode
-  if (config.debug.value)
-    windows.video.webContents.openDevTools({ mode: "detach" });
-
-  // reset when the window is closed
-  windows.video.once("close", () => {
-    windows.video.webContents.send("close"); // unused
-  });
-
-  windows.video.once("closed", () => {
-    windows.video = null;
-  });
-
-  // handle fullscreen changes
-  windows.video.on("enter-full-screen", () => {
-    log.debug("Enter video fullscreen");
-    windows.video.webContents.send("fullscreen-change", {
-      win: "video",
-      isFullscreen: true,
-    });
-  });
-
-  windows.video.on("leave-full-screen", () => {
-    log.debug("Leave video fullscreen");
-    windows.video.webContents.send("fullscreen-change", {
-      win: "video",
-      isFullscreen: false,
-    });
-  });
-
-  log.debug("Live stream window created");
 };
 
 // tells electron to ignore OS level display scaling
@@ -476,19 +364,35 @@ app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
+const openWindows = () => {
+  createMain();
+
+  pLoader.on("plugins-loaded", (windowList) => {
+    // add all plugin windows to global window obj
+    Object.keys(windowList).forEach((key) => {
+      windows[key] = windowList[key];
+    });
+  });
+
+  pLoader.emit("app-ready");
+};
+
 // when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
-  createMain();
-  if (config.video.value) createVideo();
+  openWindows();
 
-  log.debug("test");
+  // only create serial streams if reading debug data from local files
+  if (!config.dataDebug.value) {
+    loadStreams();
+  }
 
   // open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMain();
-      if (config.video.value) createVideo();
+      openWindows();
     }
+
+    // if the app is still open we shouldn't need to reload streams
   });
 });
 
@@ -499,90 +403,96 @@ app.on("window-all-closed", () => {
 
 // app control
 ipcMain.on("close", (event, name) => {
-  windows[name].close();
+  if (windows[name]) windows[name].close();
+  else log.warn("Tried to close non-existant window: " + name);
 });
 
 ipcMain.on("minimize", (event, name) => {
-  windows[name].minimize();
+  if (windows[name]) windows[name].minimize();
+  else log.warn("Tried to minimize non-existant window: " + name);
 });
 
 ipcMain.on("fullscreen", (event, name, isFullscreen) => {
-  windows[name].setFullScreen(isFullscreen);
+  if (windows[name]) windows[name].setFullScreen(isFullscreen);
+  else log.warn("Tried to fullscreen non-existant window: " + name);
 });
 
 ipcMain.on("reload", (event, win, keepSettings) => {
   log.debug("Reloading window");
-  // handle reloading main window
-  if (win === "main") {
-    try {
-      // load command list and stateflags
-      cmdList = JSON.parse(fs.readFileSync("./commands.json"));
+  // check that window exists
+  if (windows[win]) {
+    // handle reloading main window
+    if (win === "main") {
+      try {
+        // load command list and stateflags
+        cmdList = JSON.parse(fs.readFileSync("./commands.json"));
 
-      APRSCmd.createCommandList(cmdList);
+        APRSCmd.createCommandList(cmdList);
 
-      stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
+        stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
 
-      APRSTelem.createStateflagList(stateflags);
+        APRSTelem.createStateflagList(stateflags);
 
-      ctrlList = JSON.parse(fs.readFileSync("./control.json"));
+        ctrlList = JSON.parse(fs.readFileSync("./control.json"));
 
-      GSControl.createControlList(ctrlList);
+        GSControl.createControlList(ctrlList);
 
-      log.debug("Reloaded commands and stateflags");
-    } catch (err) {
-      log.warn("Failed to load commands or stateflags file: " + err.message);
-    }
-    // reload all sources and sinks
-    loadStreams();
-    // close serial connection, but keep pipes and the driver running
-    serial.reset();
-    //if mainWin exists reload it
-    if (windows.main) {
-      windows.main.webContents.reloadIgnoringCache();
-      //if in video mode send the video controls for the control panel
-      if (config.video.value && videoControls) {
-        windows.main.webContents.once("dom-ready", () => {
-          windows.main.webContents.send(
-            "video-controls",
-            getEffectiveVideoControls(),
-          );
-        });
+        log.debug("Reloaded commands and stateflags");
+      } catch (err) {
+        log.warn("Failed to load commands or stateflags file: " + err.message);
       }
-    }
-  }
+      // reload all sources and sinks
+      loadStreams();
+      // close serial connection, but keep pipes and the driver running
+      serial.reset();
+      //if mainWin exists reload it
+      if (windows.main) {
+        windows.main.webContents.reloadIgnoringCache();
 
-  //handle reloading the video window separately
-  if (win === "video") {
-    if (windows.video) windows.video.webContents.reloadIgnoringCache();
-
-    //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
-    if (!keepSettings) {
-      videoControls = {
-        layout: "two-video",
-        video0: "live-video-0",
-        video1: "live-video-1",
-      };
-      //send defaults to update mainWin
-      if (videoControls)
-        windows.main.webContents.send(
-          "video-controls",
-          getEffectiveVideoControls(),
-        );
+        // let plugins know main window was reloaded
+        pLoader.emit("main-window-loaded", windows.main);
+      }
     } else {
-      //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
-      windows.video.webContents.once("dom-ready", () => {
-        windows.video.webContents.send(
-          "video-controls",
-          getEffectiveVideoControls(),
-        );
-      });
+      // this must be a plugin window
+
+      //PLUGIN TODO: move to plugin
+      //handle reloading the video window separately
+      if (win === "video") {
+        if (windows.video) windows.video.webContents.reloadIgnoringCache();
+
+        //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
+        if (!keepSettings) {
+          videoControls = {
+            layout: "two-video",
+            video0: "live-video-0",
+            video1: "live-video-1",
+          };
+          //send defaults to update mainWin
+          if (videoControls)
+            windows.main.webContents.send(
+              "video-controls",
+              getEffectiveVideoControls(),
+            );
+        } else {
+          //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
+          windows.video.webContents.once("dom-ready", () => {
+            windows.video.webContents.send(
+              "video-controls",
+              getEffectiveVideoControls(),
+            );
+          });
+        }
+      }
     }
   }
 });
 
 ipcMain.on("dev-tools", (event, args) => {
-  if (windows.main) windows.main.webContents.openDevTools({ mode: "detach" });
-  if (windows.video) windows.video.webContents.openDevTools({ mode: "detach" });
+  // open dev tools for all windows
+  Object.keys(windows).forEach((name) => {
+    if (windows[name])
+      windows[name].webContents.openDevTools({ mode: "detach" });
+  });
 });
 
 // backend interfaces
@@ -745,23 +655,6 @@ ipcMain.on("clear-tile-cache", (event, args) => {
   }
 });
 
-ipcMain.on("video-controls", (event, controls) => {
-  log.debug("Updating video controls: " + JSON.stringify(controls));
-
-  //make sure we actually got a controls object
-  if (controls) {
-    videoControls = controls;
-
-    //if so, pass it on to videoWin, if it exists
-    if (windows.video)
-      windows.video.webContents.send(
-        "video-controls",
-        getEffectiveVideoControls(),
-      );
-    else log.warn("Failed setting video controls, video window missing.");
-  } else log.warn("Failed setting video controls, new controls missing.");
-});
-
 ipcMain.on("export-stream-config", (event, args) => {
   let exportedCommandConfig = [];
   cmdList.forEach((cmd) => {
@@ -829,14 +722,32 @@ ipcMain.handle("get-settings", (event, args) => {
   return config;
 });
 
+ipcMain.handle("get-plugin-settings", (event, pluginName) => {
+  if (pluginName) {
+    return pLoader.getPluginConfig(pluginName);
+  }
+  return pLoader.getPluginConfigs();
+});
+
 ipcMain.handle("reset-settings", (event) => {
   try {
     // don't want to actually reset settings on the backend, just send them to the settings page
     // which will send the final state of the settings page back to us later
-    return JSON.parse(fs.readFileSync("./default-config.json"));
+    const defaultSettings = JSON.parse(
+      fs.readFileSync("./default-config.json"),
+    );
+    // send to plugins
+    pLoader.emit("config", defaultSettings);
+    return defaultSettings;
   } catch (err) {
     log.err("Failed getting default settings: " + err.message);
   }
+});
+
+ipcMain.handle("reset-plugin-settings", (event, args) => {
+  // TODO: synchonize between plugins and main
+  // these are stored in mem, so no need for try/catch
+  return pLoader.getDefaultPluginConfigs();
 });
 
 ipcMain.handle("get-streams", (event, args) => {
@@ -855,18 +766,6 @@ ipcMain.handle("get-controls-list", (event, args) => {
   return ctrlList;
 });
 
-ipcMain.handle("get-video", (event, args) => {
-  let videoData = [];
-  videoSources.forEach((stream) => {
-    if (stream.hasFrame()) {
-      let streamName = stream.name;
-      // must use readFrame() to get rid of old frame
-      videoData.push({ name: streamName, data: stream.readFrame() });
-    } else videoData.push(null); // TODO: this seems a bit odd
-  });
-  return videoData;
-});
-
 // setters
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
@@ -879,11 +778,7 @@ ipcMain.handle("set-port", (event, portConfig) => {
       serial
         .connect(portConfig.path, config.baudRate.value)
         .then((result) => {
-          // TODO: maybe put this in a better spot
-          // needs to be after the pipes are created
-          videoSources.forEach((source) => {
-            source.startOutput();
-          });
+          pLoader.emit("serial-connected", portConfig);
           log.info("Successfully connected to port " + portConfig.path);
           res(1);
         })
@@ -909,10 +804,8 @@ ipcMain.handle("set-port", (event, portConfig) => {
 ipcMain.on("update-settings", (event, settings) => {
   // make sure we were actually given a settings object
   if (settings) {
-    const webcamTestChanged =
-      config?.webcamTest?.value !== settings.webcamTest?.value ||
-      config?.webcam480p?.value !== settings.webcam480p?.value;
     config = settings;
+    pLoader.emit("config", config);
     try {
       // write the new settings to the file
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
@@ -920,13 +813,22 @@ ipcMain.on("update-settings", (event, settings) => {
     } catch (err) {
       log.err('Failed to update settings: "' + err.message + '"');
     }
-    if (webcamTestChanged) {
-      const effectiveControls = getEffectiveVideoControls();
-      if (windows.main)
-        windows.main.webContents.send("video-controls", effectiveControls);
-      if (windows.video)
-        windows.video.webContents.send("video-controls", effectiveControls);
+  } else {
+    log.err("New settings missing");
+  }
+});
+
+ipcMain.on("set-plugin-settings", (event, configs) => {
+  if (configs && configs.forEach) {
+    try {
+      configs.forEach((config) => {
+        pLoader.setPluginConfig(config);
+      });
+    } catch (err) {
+      log.err('Failed to update plugin settings: "' + err.message + '"');
     }
+  } else {
+    log.err("New plugin settings missing");
   }
 });
 
@@ -984,6 +886,7 @@ serial.on("error", (message) => {
 
 serial.on("close", (path) => {
   log.info("Serial disconnected");
+  pLoader.emit("serial-closed", path);
   if (!closed && windows.main)
     windows.main.webContents.send("serial-close", path);
 });
@@ -1113,44 +1016,6 @@ if (config.dataDebug.value) {
       }),
     );
 
-    if (config.video.value) {
-      // test to see if first video exists
-      if (fs.existsSync("./video0.av1")) {
-        // create new video source from file
-        let vs1 = new FileVideoSource(
-          "video0.av1",
-          0,
-          {
-            resolution: { width: 640, height: 832 },
-            framerate: 30,
-            rotation: "cw",
-            createDecoderLog: config.debug.value,
-          },
-          "video0",
-        );
-        videoSources.push(vs1);
-        // start the video
-        vs1.startOutput();
-      }
-
-      // test to see if second video exists
-      if (fs.existsSync("./video1.av1")) {
-        // create new video source from file
-        let vs2 = new FileVideoSource(
-          "video1.av1",
-          1,
-          {
-            resolution: { width: 640, height: 832 },
-            framerate: 30,
-            rotation: "cw",
-            createDecoderLog: config.debug.value,
-          },
-          "video1",
-        );
-        videoSources.push(vs2);
-        // start the video
-        vs2.startOutput();
-      }
-    }
+    pLoader.loadDebugStreams();
   }, 1000);
 }

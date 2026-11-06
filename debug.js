@@ -45,6 +45,24 @@ class Debug {
     this.useDebug = false;
     if (!logPath) logPath = "./debug.log";
     this.ws = fs.createWriteStream(logPath);
+
+    process.on("unhandledRejection", (reason) => {
+      let message =
+        getLogPrefix("error") +
+        "An unhandled Promise rejection occured in the main process:\n ";
+      if (reason instanceof Error) this.ws.write(message + reason.stack);
+      if (typeof reason == "string" || reason instanceof String)
+        this.ws.write(message + reason);
+      console.error(message, reason);
+    });
+
+    process.on("uncaughtException", (err) => {
+      let message =
+        getLogPrefix("error") +
+        "An uncaught execption occured in the main process:\n ";
+      this.ws.write(message + err.stack);
+      console.error(message, err);
+    });
   }
 
   /**

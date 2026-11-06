@@ -32,7 +32,7 @@
 Plugin capabilities:
 - can extend application functionality
   - define new coders -> will not be automatically integrated
-    - how to use new coders on main frontend? (need script tag)
+    - how to use new coders on main frontend? (need script tag) (autogen script tags???)
   - define new IO Classes -> automatically integrated via creation of a new internal stream type (may use new coders)
     - need to give new stream type to frontend
     - need to connect new IO class to stream type
@@ -75,6 +75,9 @@ Plugin interface requirements:
 - easy to understand
 - high readability (for plugin implementation code)
 - documentation!
+- plugins will need access to:
+  - callbacks at specific points in main.js (maybe other places)
+  - ipcMain
 
 Classes:
 Loader

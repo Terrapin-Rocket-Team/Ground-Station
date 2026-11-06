@@ -13,9 +13,9 @@
       href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap"
       rel="stylesheet"
     />
-    <script src="../libraries/video/yuv-canvas.js"></script>
-    <script src="../../coders/APRSTelem.js"></script>
-    <script src="../libraries/gauge.js"></script>
+    <script src="../../../../src/libraries/video/yuv-canvas.js"></script>
+    <script src="../../../../coders/APRSTelem.js"></script>
+    <script src="../../../../src/libraries/gauge.js"></script>
     <title>TRGS · Video</title>
     <style>
       /* ─── TOKENS ─────────────────────────────────────────────────────────────── */
@@ -960,21 +960,21 @@
     <!-- ── TOP BAR ─────────────────────────────────────────────────────────────── -->
     <div id="top-bar">
       <div id="top-left">
-        <img src="../images/logo.svg" alt="Logo" />
+        <img src="../../../../src/images/logo.svg" alt="Logo" />
         <span>TRGS · Video Stream</span>
       </div>
       <div id="top-right">
         <button id="fullscreen" class="top-button" title="Fullscreen">
-          <img src="../images/fullscreen.svg" alt="Fullscreen" />
+          <img src="../../../../src/images/fullscreen.svg" alt="Fullscreen" />
         </button>
         <button id="reload" class="top-button" title="Reload">
-          <img src="../images/reload.svg" alt="Reload" />
+          <img src="../../../../src/images/reload.svg" alt="Reload" />
         </button>
         <button id="minimize" class="top-button" title="Minimize">
-          <img src="../images/minimize.svg" alt="Minimize" />
+          <img src="../../../../src/images/minimize.svg" alt="Minimize" />
         </button>
         <button id="close" class="top-button" title="Close">
-          <img src="../images/close.svg" alt="Close" />
+          <img src="../../../../src/images/close.svg" alt="Close" />
         </button>
       </div>
     </div>
@@ -1036,7 +1036,11 @@
       <div id="telemetry">
         <!-- team name — video.js reads #trt-logo and #team-name -->
         <div id="team-name-container">
-          <img src="../images/trt-logo.png" alt="TRT Logo" id="trt-logo" />
+          <img
+            src="../../../../src/images/trt-logo.png"
+            alt="TRT Logo"
+            id="trt-logo"
+          />
           <span id="team-name">Terrapin Rocket Team</span>
         </div>
 
@@ -1306,10 +1310,10 @@
     <!-- end main -->
 
     <!-- ── SCRIPTS — same order as original ─────────────────────────────────────── -->
-    <script src="../libraries/charts/dist/chart.umd.js"></script>
-    <script src="../libraries/charts.js"></script>
-    <script src="../libraries/babylon.js"></script>
-    <script src="../libraries/babylonjs.min.loaders.js"></script>
+    <script src="../../../../src/libraries/charts/dist/chart.umd.js"></script>
+    <script src="../../../../src/libraries/charts.js"></script>
+    <script src="../../../../src/libraries/babylon.js"></script>
+    <script src="../../../../src/libraries/babylonjs.min.loaders.js"></script>
     <script src="video.js"></script>
 
     <!-- ── HUD MIRROR — keeps hud-alt / hud-spd in sync with gauge updates ──────── -->

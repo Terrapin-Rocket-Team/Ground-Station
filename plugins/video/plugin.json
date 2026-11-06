@@ -1,4 +1,24 @@
 {
     "name": "video",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "defaultConfig": {
+        "video": {
+            "name": "Video Mode",
+            "description": "Turn on to switch the ground station to video streaming mode.",
+            "value": false,
+            "type": "toggle"
+	    },
+        "webcamTest": {
+            "name": "Test Webcam Input",
+            "description": "Temporarily stream the default webcam into video Input 0 for testing.",
+            "value": false,
+            "type": "toggle"
+        },
+        "webcam480p": {
+            "name": "Test Webcam 480p",
+            "description": "Request 480p from the temporary webcam input and scale it to fit the video display.",
+            "value": false,
+            "type": "toggle"
+        }
+    }
 }

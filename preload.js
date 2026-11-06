@@ -101,7 +101,11 @@ class API extends EventEmitter {
     this.getPorts = () => ipcRenderer.invoke("get-ports");
     this.getPortStatus = () => ipcRenderer.invoke("get-port-status");
     this.getSettings = () => ipcRenderer.invoke("get-settings");
+    this.getPluginSettings = (pluginName) =>
+      ipcRenderer.invoke("get-plugin-settings", pluginName);
     this.resetSettings = () => ipcRenderer.invoke("reset-settings");
+    this.resetPluginSettings = () =>
+      ipcRenderer.invoke("reset-plugin-settings");
     this.getStreams = () => ipcRenderer.invoke("get-streams");
     this.getCommandList = () => ipcRenderer.invoke("get-command-list");
     this.getStateflagList = () => ipcRenderer.invoke("get-stateflag-list");
@@ -111,6 +115,8 @@ class API extends EventEmitter {
     // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
+    this.setPluginSettings = (configs) =>
+      ipcRenderer.send("set-plugin-settings", configs);
     this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
     this.setCommandList = (list) => ipcRenderer.send("set-command-list", list);
     this.setStateflagList = (list) =>
