@@ -146,6 +146,8 @@ class VideoPlugin extends Plugin {
     this.pluginConfig = pluginConfig;
   }
 
+  createWindow = this.createVideo;
+
   // creates the video electron window
   createVideo(loader) {
     const width = 1280,
@@ -204,7 +206,14 @@ class VideoPlugin extends Plugin {
       });
     });
 
+    this.window.webContents.on("dom-ready", () => {
+      // this.window.webContents.send("renderer-event", "test");
+
+      this.window.webContents.send("test", "Hello Video!");
+    });
+
     log.debug("Live stream window created");
+    return this.window;
   }
 
   getEffectiveVideoControls() {

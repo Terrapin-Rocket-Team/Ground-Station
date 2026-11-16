@@ -4,6 +4,10 @@ window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
 
+  api.on("test", (message) => {
+    console.log(message);
+  });
+
   //get a bunch of DOM elements here that will be used alot
   const main = document.getElementById("main"),
     telemetry = document.getElementById("telemetry"),

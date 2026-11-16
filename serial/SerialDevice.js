@@ -87,7 +87,8 @@ class SerialDevice extends EventEmitter {
   /**
    * Internal method for setting up the driver program
    */
-  setupDriver() {
+  setupDriver(debug) {
+    this.useDebug = debug;
     // logic for starting the driver program
     if (os.platform() === "win32") {
       if (!this.useDebug)

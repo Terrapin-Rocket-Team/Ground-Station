@@ -6,17 +6,54 @@ const { EventEmitter } = require("stream");
 
 class PluginLoader extends EventEmitter {
   static defaultPluginPath = path.join(__dirname, "..", "plugins");
-  constructor(pluginDir = PluginLoader.defaultPluginPath) {
+  constructor(iconPath) {
     super();
     // global settings
-    this.pluginPath = pluginDir;
+    this.pluginPath = PluginLoader.defaultPluginPath;
     this.sockets = [];
     this.loaded = false;
 
     // arrays of assets registered by plugins
     this.windows = {};
     this.streamTypes = {};
+  }
 
+  init(appConfig) {
+    // get plugin config
+    this.loadConfig();
+
+    // load plugins
+    let initialized = 0;
+    let disabled = 0;
+    try {
+      this.sockets.forEach((sock) => {
+        // initialize plugin
+        try {
+          if (sock.enabled) {
+            log.debug('Initializing plugin "' + sock.name + '"');
+            sock.initializePlugin();
+            sock.plugin.init(this, appConfig, sock.config);
+            initialized++;
+          } else {
+            disabled++;
+            log.debug('Skipping disabled plugin "' + sock.name + '"');
+          }
+        } catch (error) {
+          log.err("Error initializing plugin: " + error.message);
+        }
+      });
+
+      log.info("Initialized " + initialized + " plugins");
+      if (initialized + disabled < this.sockets.length)
+        log.warn(
+          "Some plugins failed to load! Their functionality will be unavailable.",
+        );
+    } catch (e) {
+      log.err("Failed loading plugins " + e.message);
+    }
+  }
+
+  loadConfig() {
     // read all plugins
     try {
       const pluginConfigs = JSON.parse(
@@ -52,35 +89,18 @@ class PluginLoader extends EventEmitter {
     log.info("Loaded " + this.sockets.length + " plugins");
   }
 
-  init(config) {
-    let initialized = 0;
-    let disabled = 0;
-    try {
-      this.sockets.forEach((sock) => {
-        // initialize plugin
-        try {
-          if (sock.enabled) {
-            log.debug('Initializing plugin "' + sock.name + '"');
-            sock.initializePlugin();
-            sock.plugin.init(this, config, sock.config);
-            initialized++;
-          } else {
-            disabled++;
-            log.debug('Skipping disabled plugin "' + sock.name + '"');
-          }
-        } catch (error) {
-          log.err("Error initializing plugin: " + error.message);
-        }
-      });
+  createWindows() {
+    this.sockets.forEach((sock) => {
+      if (sock.plugin.createWindow) {
+        // TODO: bad
+        const win = sock.plugin.createWindow();
+        this.linkWindow(sock.name, win);
+      }
+    });
+  }
 
-      log.info("Initialized " + initialized + " plugins");
-      if (initialized + disabled < this.sockets.length)
-        log.warn(
-          "Some plugins failed to load! Their functionality will be unavailable.",
-        );
-    } catch (e) {
-      log.err("Failed loading plugins " + e.message);
-    }
+  getWindows() {
+    return this.windows;
   }
 
   getPluginConfigs() {

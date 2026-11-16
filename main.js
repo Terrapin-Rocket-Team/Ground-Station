@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 if (require("electron-squirrel-startup")) app.quit(); // for app maker
 const fs = require("fs");
 const path = require("path");
@@ -17,7 +17,9 @@ const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
 const GSControl = require("./coders/GSControl");
 
-const { pLoader } = require("./loader/PluginLoader");
+const AppCore = require("./loader/AppCore");
+const MainLoader = require("./loader/MainLoader");
+const { PluginLoader } = require("./loader/PluginLoader");
 
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
@@ -40,175 +42,17 @@ let windows = { main: null },
   cacheMeta,
   closed;
 
-/*
-See default-config.json for default settings
-*/
-try {
-  // load config
-  config = JSON.parse(fs.readFileSync("./config.json"));
-  // temporary check for property values being defined
-  // will eventually just check config version
-  if (
-    config.debugScale !== undefined ||
-    config.noGUI !== undefined ||
-    config.version !== app.getVersion()
-  ) {
-    log.warn(
-      "Older config version (likely v1.5) detected, save your settings to remove this warning",
-    );
-    throw new Error("old config version"); // throw an error to get the default config to load
-  }
-  // setup logger
-  log.useDebug = config.debug.value;
-  serial.useDebug = config.driverDebug.value;
-  if (config.dataDebug.value && config.driverDebug.value)
-    log.warn(
-      'Configuration warning: "Debug Data Input" and "Serial Driver Debug" have both been turned on. These settings can create conflicting streams of data so it is recommended to disable one of them.',
-    );
-  log.debug("Config loaded");
-} catch (err) {
-  // load defaults if no config file
-  log.warn("Failed to load config file, using defaults: " + err.message);
-  try {
-    config = JSON.parse(
-      fs.readFileSync(path.join(__dirname, "default-config.json")),
-    );
-    if (config.version !== app.getVersion()) {
-      log.warn(
-        "Developer warning: default config version does not match app version! You can probably safely ignore this error. Updating default config version.",
-      );
-      // update config file version if app version has changed
-      config.version = app.getVersion();
-      fs.writeFileSync(
-        path.join(__dirname, "default-config.json"),
-        JSON.stringify(config, null, "\t"),
-      );
-    }
-    // create new config file
-    try {
-      if (!fs.existsSync("./config.json")) {
-        fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
-        log.info("Config file successfully created");
-      }
-    } catch (err) {
-      log.err("Failed to create config file: " + err.message);
-    }
-  } catch (err) {
-    log.err("Failed to load default config: " + err.message);
-  }
-}
+const main = new MainLoader(iconPath);
+const plugins = new PluginLoader(iconPath);
+const core = new AppCore(app.getVersion(), main, plugins);
 
-pLoader.init(config);
+core.init();
+
+// main.init(core);
+plugins.init(core.getAppConfig());
 
 // need to setup after loading config
-serial.setupDriver();
-
-if (!config.tileCache.value) {
-  // if the cache is disabled, remove cached tiles on startup
-  try {
-    // check if the metadata file exists
-    if (fs.existsSync(path.join(__dirname, "src", "cachedtiles"))) {
-      // reset the metadata and remove the metadata file
-      cacheMeta = {
-        tiles: {},
-        fileList: [],
-        runningSize: 0,
-      };
-      fs.rmSync(path.join(__dirname, "src", "cachedtiles"), {
-        recursive: true,
-        force: true,
-      });
-      log.debug("Tile cache successfully cleared");
-    }
-  } catch (err) {
-    log.err('Error clearing tile cache: "' + err.message + '"');
-  }
-}
-
-try {
-  // load command list
-  cmdList = JSON.parse(fs.readFileSync("./commands.json"));
-
-  APRSCmd.createCommandList(cmdList);
-
-  log.debug("Commands loaded");
-} catch (err) {
-  log.warn(
-    "Failed to load commands file, some features will not be available: " +
-      err.message,
-  );
-  cmdList = [];
-}
-
-try {
-  // load stateflags
-  stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
-
-  APRSTelem.createStateflagList(stateflags);
-
-  log.debug("Stateflags loaded");
-} catch (err) {
-  log.warn(
-    "Failed to load stateflags file, some features will not be available: " +
-      err.message,
-  );
-  stateflags = [];
-}
-
-try {
-  // load control list
-  ctrlList = JSON.parse(fs.readFileSync("./control.json"));
-
-  GSControl.createControlList(ctrlList);
-
-  log.debug("Control commands loaded");
-} catch (err) {
-  log.warn(
-    "Failed to load control command file, some features will not be available: " +
-      err.message,
-  );
-  ctrlList = [];
-}
-
-try {
-  // load cache metadata
-  cacheMeta = JSON.parse(
-    fs.readFileSync(
-      path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-    ),
-  );
-  log.debug("Cache metadata loaded");
-} catch (err) {
-  // load defaults if no metadata file
-  cacheMeta = {
-    tiles: {},
-    fileList: [],
-    runningSize: 0,
-  };
-  log.warn(
-    'Failed to load cache metadata file, using defaults: "' + err.message + '"',
-  );
-  // create new metadata file
-  try {
-    // make the folder if it doesn't exist
-    if (!fs.existsSync(path.join(__dirname, "src", "cachedtiles")))
-      fs.mkdirSync(path.join(__dirname, "src", "cachedtiles"));
-    // write the file if it doesn't exist
-    if (
-      !fs.existsSync(
-        path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-      )
-    ) {
-      fs.writeFileSync(
-        path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-        JSON.stringify(cacheMeta, null, "\t"),
-      );
-      log.info("Metadata file successfully created");
-    }
-  } catch (err) {
-    log.err('Failed to create metadata file: "' + err.message + '"');
-  }
-}
+serial.setupDriver(core.getAppConfig().driverDebug.value);
 
 try {
   // create output folders for log files and data files
@@ -218,182 +62,75 @@ try {
   log.err("Failed to create output folders: " + err.message);
 }
 
-const loadStreams = () => {
-  // reset everything
-  telemSources = [];
-  commandSinks = [];
-  pLoader.emit("reload-streams");
-  serial.clearStreams();
-
-  commandSinks.push(
-    new SerialControlSink("device-status", 1, {
-      createLog: true,
-    }),
-  );
-
-  // load streams from config
-  config.streams.forEach((stream) => {
-    if (stream.enabled) {
-      if (stream.type === "APRSTelem") {
-        telemSources.push(
-          new SerialTelemSource(stream.name, stream.id, {
-            parser: (data) => {
-              if (!stream.settings || !stream.settings.stateflags) {
-                log.err(
-                  "Stream does not have associated stateflags array in config.json! This was caused by an old version of the Ground Station and should now be fixed. Updating your config file should fix the issue.",
-                );
-              }
-              let telem = new APRSTelem(
-                data,
-                stream.name,
-                stream.settings.stateflags,
-              );
-              log.info(telem);
-              if (windows.main) windows.main.webContents.send("data", telem);
-              if (windows.video) windows.video.webContents.send("data", telem);
-              return telem;
-            },
-            createLog: true,
-          }),
-        );
-      } else if (stream.type === "APRSCmd") {
-        commandSinks.push(
-          new SerialCommandSink(stream.name, stream.id, {
-            createLog: true,
-          }),
-        );
-      } else if (stream.type === "Metrics") {
-        telemSources.push(
-          new SerialTelemSource(stream.name, stream.id, {
-            parser: (data) => {
-              let telem = new Metrics(data, true);
-              log.info(telem);
-              if (windows.main) windows.main.webContents.send("metrics", telem);
-              if (windows.video)
-                windows.video.webContents.send("metrics", telem);
-
-              return telem;
-            },
-            isMetrics: true,
-            createLog: true,
-          }),
-        );
-      } else {
-        // attempt to initialize stream via a plugin
-        if (!pLoader.loadStream(stream))
-          log.err(
-            `Failed to initalize stream: ${stream.name}-${stream.id}, no valid handler found for type ${stream.type}`,
-          );
-      }
-    } else {
-      log.debug(`Ignoring disabled stream: ${stream.name}-${stream.id}`);
-    }
-  });
-};
-
-// creates the main electron window
-const createMain = () => {
-  const width = 1200,
-    height = 800;
-
-  // get the correct icon
-  const iconSuffix =
-    process.platform === "win32"
-      ? ".ico"
-      : process.platform === "darwin"
-        ? ".icns"
-        : ".png";
-
-  windows.main = new BrowserWindow({
-    width: width * config.scale.value,
-    height: height * config.scale.value,
-    resizable: false,
-    frame: false,
-    autoHideMenuBar: true,
-    icon: path.join(iconPath, "logo" + iconSuffix),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-
-  windows.main.loadFile(path.join(__dirname, "src/index.html"));
-
-  // only auto-open the devtools in debug mode
-  if (config.debug.value)
-    windows.main.webContents.openDevTools({ mode: "detach" });
-
-  // handle switching between fullscreen mode
-  windows.main.on("enter-full-screen", () => {
-    log.debug("Enter main fullscreen");
-    windows.main.webContents.send("fullscreen-change", {
-      win: "main",
-      isFullscreen: true,
-    });
-  });
-
-  windows.main.on("leave-full-screen", () => {
-    log.debug("Leave main fullscreen");
-    windows.main.webContents.send("fullscreen-change", {
-      win: "main",
-      isFullscreen: false,
-    });
-  });
-
-  //make sure messages are not sent to a destroyed window
-  windows.main.once("close", () => {
-    closed = true;
-    serial.close();
-    windows.main.webContents.send("close"); // unused
-    // close all other open windows
-    Object.keys(windows).forEach((name) => {
-      if (name != "main") windows[name].close();
-    });
-  });
-
-  windows.main.once("closed", () => {
-    windows.main = null;
-  });
-
-  pLoader.emit("main-window-loaded", windows.main);
-
-  log.debug("Main window created");
-};
-
 // tells electron to ignore OS level display scaling
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
 app.commandLine.appendSwitch("high-dpi-support", 1);
 app.commandLine.appendSwitch("force-device-scale-factor", 1);
 
-const openWindows = () => {
-  createMain();
+const loadStreams = () => {
+  // only create serial streams if reading debug data from local files
+  if (!core.getAppConfig().dataDebug.value) {
+    serial.clearStreams();
+    // plugins.clearStreams(); // TODO: implement
 
-  pLoader.on("plugins-loaded", (windowList) => {
-    // add all plugin windows to global window obj
-    Object.keys(windowList).forEach((key) => {
-      windows[key] = windowList[key];
+    core.loadStreams();
+  } else {
+    const debugStreams = [
+      { name: "test-0.csv", id: 2, type: "debug-telem" },
+      { name: "test-1.csv", id: 3, type: "debug-telem" },
+      { name: "test-2.csv", id: 4, type: "debug-telem" },
+      { name: "metrics.csv", id: 1, type: "debug-metrics" },
+      { name: "commands.txt", id: 5, type: "debug-cmds" },
+    ];
+    core.loadDebugStreams(debugStreams);
+  }
+};
+
+const openWindows = () => {
+  core.loadWindows();
+  // main.createWindows();
+
+  plugins.createWindows();
+
+  // core.addWindows(main.getWindows());
+  core.addWindows(plugins.getWindows());
+
+  // make sure messages are not sent to a destroyed window
+  core.getMainWindow().once("close", () => {
+    closed = true;
+    serial.close();
+    // close all other open windows
+    core.getWindows().forEach((val, name) => {
+      if (name != "main") val.close();
     });
   });
 
-  pLoader.emit("app-ready");
+  plugins.emit("app-ready");
 };
 
 // when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
+  // register base preload script
+  session.defaultSession.registerPreloadScript({
+    type: "frame",
+    filePath: path.join(__dirname, "preload.js"),
+  });
+
   openWindows();
 
-  // only create serial streams if reading debug data from local files
-  if (!config.dataDebug.value) {
-    loadStreams();
-  }
+  loadStreams();
 
   // open a new window if there are none when the app is opened and is still running (MacOS)
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       openWindows();
+      // loadStreams();
     }
 
     // if the app is still open we shouldn't need to reload streams
   });
+
+  core.listenForData();
 });
 
 // quit the app if all windows are closed on MacOS
@@ -403,110 +140,113 @@ app.on("window-all-closed", () => {
 
 // app control
 ipcMain.on("close", (event, name) => {
-  if (windows[name]) windows[name].close();
+  if (core.getWindow(name)) core.getWindow(name).close();
   else log.warn("Tried to close non-existant window: " + name);
 });
 
 ipcMain.on("minimize", (event, name) => {
-  if (windows[name]) windows[name].minimize();
+  if (core.getWindow(name)) core.getWindow(name).minimize();
   else log.warn("Tried to minimize non-existant window: " + name);
 });
 
 ipcMain.on("fullscreen", (event, name, isFullscreen) => {
-  if (windows[name]) windows[name].setFullScreen(isFullscreen);
+  if (core.getWindow(name)) core.getWindow(name).setFullScreen(isFullscreen);
   else log.warn("Tried to fullscreen non-existant window: " + name);
-});
-
-ipcMain.on("reload", (event, win, keepSettings) => {
-  log.debug("Reloading window");
-  // check that window exists
-  if (windows[win]) {
-    // handle reloading main window
-    if (win === "main") {
-      try {
-        // load command list and stateflags
-        cmdList = JSON.parse(fs.readFileSync("./commands.json"));
-
-        APRSCmd.createCommandList(cmdList);
-
-        stateflags = JSON.parse(fs.readFileSync("./stateflags.json"));
-
-        APRSTelem.createStateflagList(stateflags);
-
-        ctrlList = JSON.parse(fs.readFileSync("./control.json"));
-
-        GSControl.createControlList(ctrlList);
-
-        log.debug("Reloaded commands and stateflags");
-      } catch (err) {
-        log.warn("Failed to load commands or stateflags file: " + err.message);
-      }
-      // reload all sources and sinks
-      loadStreams();
-      // close serial connection, but keep pipes and the driver running
-      serial.reset();
-      //if mainWin exists reload it
-      if (windows.main) {
-        windows.main.webContents.reloadIgnoringCache();
-
-        // let plugins know main window was reloaded
-        pLoader.emit("main-window-loaded", windows.main);
-      }
-    } else {
-      // this must be a plugin window
-
-      //PLUGIN TODO: move to plugin
-      //handle reloading the video window separately
-      if (win === "video") {
-        if (windows.video) windows.video.webContents.reloadIgnoringCache();
-
-        //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
-        if (!keepSettings) {
-          videoControls = {
-            layout: "two-video",
-            video0: "live-video-0",
-            video1: "live-video-1",
-          };
-          //send defaults to update mainWin
-          if (videoControls)
-            windows.main.webContents.send(
-              "video-controls",
-              getEffectiveVideoControls(),
-            );
-        } else {
-          //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
-          windows.video.webContents.once("dom-ready", () => {
-            windows.video.webContents.send(
-              "video-controls",
-              getEffectiveVideoControls(),
-            );
-          });
-        }
-      }
-    }
-  }
 });
 
 ipcMain.on("dev-tools", (event, args) => {
   // open dev tools for all windows
-  Object.keys(windows).forEach((name) => {
-    if (windows[name])
-      windows[name].webContents.openDevTools({ mode: "detach" });
+  core.getWindows().forEach((val, name) => {
+    if (val) val.webContents.openDevTools({ mode: "detach" });
   });
 });
 
-// backend interfaces
-ipcMain.on("send-command", (event, command, sinkId) => {
-  if (commandSinks[sinkId]) commandSinks[sinkId].write(command);
-  else log.warn("Could not find command sink with id: " + sinkId);
+// TODO
+ipcMain.on("reload", (event, win, keepSettings) => {
+  log.debug("Reloading window");
+  if (core.getWindow(win)) {
+    if (win === "main") {
+      // close serial connection, but keep pipes and the driver running
+      serial.reset();
+      // reload app config from relevant files
+      core.loadConfig();
+      // reload all sources and sinks
+      loadStreams();
+
+      // let plugins know main window was reloaded
+      plugins.emit("main-window-loaded", core.getMainWindow());
+    }
+
+    // reload window itself
+    core.getWindow(win).webContents.reloadIgnoringCache();
+    // check for handler for this window
+    core.reloadWindow(win); // TODO: essentially this function needs to replicate the window load environment with access to all required interfaces for plugins
+  }
+  // // check that window exists
+  // if (windows[win]) {
+  //   // handle reloading main window
+  //   if (win === "main") {
+  //     core.loadConfig();
+  //     // reload all sources and sinks
+  //     loadStreams();
+  //     // close serial connection, but keep pipes and the driver running
+  //     serial.reset();
+  //     //if mainWin exists reload it
+  //     if (core.getMainWindow()) {
+  //       core.getMainWindow().webContents.reloadIgnoringCache();
+
+  //       // let plugins know main window was reloaded
+  //       plugins.emit("main-window-loaded", core.getMainWindow());
+  //     }
+  //   } else {
+  //     // this must be a plugin window
+
+  //     //PLUGIN TODO: move to plugin
+  //     //handle reloading the video window separately
+  //     if (win === "video") {
+  //       if (windows.video) windows.video.webContents.reloadIgnoringCache();
+
+  //       //if the video settings should not be kept (usually the when videoWin calls the reload), set to defaults
+  //       if (!keepSettings) {
+  //         videoControls = {
+  //           layout: "two-video",
+  //           video0: "live-video-0",
+  //           video1: "live-video-1",
+  //         };
+  //         //send defaults to update mainWin
+  //         if (videoControls)
+  //           windows.main.webContents.send(
+  //             "video-controls",
+  //             getEffectiveVideoControls(),
+  //           );
+  //       } else {
+  //         //otherwise, mainWin probably force reloaded videoWin, so we want to keep our old settings
+  //         windows.video.webContents.once("dom-ready", () => {
+  //           windows.video.webContents.send(
+  //             "video-controls",
+  //             getEffectiveVideoControls(),
+  //           );
+  //         });
+  //       }
+  //     }
+  //   }
+  // }
 });
 
+// backend interfaces
+// TODO: move to main loader
+// ipcMain.on("send-command", (event, command, sinkId) => {
+//   if (commandSinks[sinkId]) commandSinks[sinkId].write(command);
+//   else log.warn("Could not find command sink with id: " + sinkId);
+// });
+
+// TODO: move to main loader
 ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
   try {
     tilePath = [tilePathNums[0], tilePathNums[1], tilePathNums[2]];
     while (
       cacheMeta.runningSize + tile.byteLength >
-      config.cacheMaxSize.value
+      core.getAppConfig().cacheMaxSize.value
     ) {
       // shift off the fileList and delete file and containing folders if necessary
       let oldTile = cacheMeta.fileList.shift();
@@ -627,7 +367,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
 });
 
 ipcMain.handle("get-tiles", () => {
-  return cacheMeta.tiles;
+  return core.cacheMeta.tiles;
 });
 
 ipcMain.on("close-port", (event, args) => {
@@ -708,10 +448,14 @@ ipcMain.on("export-stream-config", (event, args) => {
 
 // getters
 ipcMain.handle("get-ports", (event, args) => {
-  if (!config.dataDebug.value && !config.driverDebug.value)
+  if (
+    !core.getAppConfig().dataDebug.value &&
+    !core.getAppConfig().driverDebug.value
+  )
     return serial.getAvailablePorts();
-  else if (config.driverDebug.value) return [{ path: "Begin driver debug" }];
-  else if (config.dataDebug.value) return [];
+  else if (core.getAppConfig().driverDebug.value)
+    return [{ path: "Begin driver debug" }];
+  else if (core.getAppConfig().dataDebug.value) return [];
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
@@ -719,14 +463,14 @@ ipcMain.handle("get-port-status", (event, args) => {
 });
 
 ipcMain.handle("get-settings", (event, args) => {
-  return config;
+  return core.getAppConfig();
 });
 
 ipcMain.handle("get-plugin-settings", (event, pluginName) => {
   if (pluginName) {
-    return pLoader.getPluginConfig(pluginName);
+    return plugins.getPluginConfig(pluginName);
   }
-  return pLoader.getPluginConfigs();
+  return plugins.getPluginConfigs();
 });
 
 ipcMain.handle("reset-settings", (event) => {
@@ -737,7 +481,7 @@ ipcMain.handle("reset-settings", (event) => {
       fs.readFileSync("./default-config.json"),
     );
     // send to plugins
-    pLoader.emit("config", defaultSettings);
+    plugins.emit("config", defaultSettings);
     return defaultSettings;
   } catch (err) {
     log.err("Failed getting default settings: " + err.message);
@@ -747,38 +491,41 @@ ipcMain.handle("reset-settings", (event) => {
 ipcMain.handle("reset-plugin-settings", (event, args) => {
   // TODO: synchonize between plugins and main
   // these are stored in mem, so no need for try/catch
-  return pLoader.getDefaultPluginConfigs();
+  return plugins.getDefaultPluginConfigs();
 });
 
 ipcMain.handle("get-streams", (event, args) => {
-  return config.streams;
+  return core.getAppConfig().streams;
 });
 
 ipcMain.handle("get-command-list", (event, args) => {
-  return cmdList;
+  return core.cmdList;
 });
 
 ipcMain.handle("get-stateflag-list", (event, args) => {
-  return stateflags;
+  return core.stateflags;
 });
 
 ipcMain.handle("get-controls-list", (event, args) => {
-  return ctrlList;
+  return core.ctrlList;
 });
 
 // setters
 ipcMain.handle("set-port", (event, portConfig) => {
   return new Promise((res, rej) => {
     // convert user interface friendly string to more generic string for the serial driver
-    if (config.driverDebug.value && portConfig.path === "Begin driver debug")
+    if (
+      core.getAppConfig().driverDebug.value &&
+      portConfig.path === "Begin driver debug"
+    )
       portConfig.path = "begin debug";
 
-    if (!config.dataDebug.value) {
+    if (!core.getAppConfig().dataDebug.value) {
       // try to connect to the given port, log any errors
       serial
-        .connect(portConfig.path, config.baudRate.value)
+        .connect(portConfig.path, core.getAppConfig().baudRate.value)
         .then((result) => {
-          pLoader.emit("serial-connected", portConfig);
+          plugins.emit("serial-connected", portConfig);
           log.info("Successfully connected to port " + portConfig.path);
           res(1);
         })
@@ -805,7 +552,7 @@ ipcMain.on("update-settings", (event, settings) => {
   // make sure we were actually given a settings object
   if (settings) {
     config = settings;
-    pLoader.emit("config", config);
+    plugins.emit("config", config);
     try {
       // write the new settings to the file
       fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
@@ -822,7 +569,7 @@ ipcMain.on("set-plugin-settings", (event, configs) => {
   if (configs && configs.forEach) {
     try {
       configs.forEach((config) => {
-        pLoader.setPluginConfig(config);
+        plugins.setPluginConfig(config);
       });
     } catch (err) {
       log.err('Failed to update plugin settings: "' + err.message + '"');
@@ -835,9 +582,9 @@ ipcMain.on("set-plugin-settings", (event, configs) => {
 ipcMain.on("set-streams", (event, streams) => {
   if (streams) {
     config.streams = streams;
-    if (!config.dataDebug.value) {
+    if (!core.getAppConfig().dataDebug.value) {
       // need to reload streams and reset serial to get everything updated
-      loadStreams();
+      core.loadStreams(serial);
       serial.reset();
     }
     try {
@@ -886,7 +633,7 @@ serial.on("error", (message) => {
 
 serial.on("close", (path) => {
   log.info("Serial disconnected");
-  pLoader.emit("serial-closed", path);
+  plugins.emit("serial-closed", path);
   if (!closed && windows.main)
     windows.main.webContents.send("serial-close", path);
 });
@@ -894,128 +641,3 @@ serial.on("close", (path) => {
 serial.on("exit", () => {
   log.info("Serial driver exited");
 });
-
-// testing
-if (config.dataDebug.value) {
-  // start after 1 second to give everything time to load
-  setTimeout(() => {
-    // set up telemetry sources
-    // test to see whether the first telemetry stream data file exists
-    const test0Path = getDataDebugFile("test-0.csv");
-    if (test0Path) {
-      try {
-        const ts1D = new FileTelemSource(test0Path, 2, {
-          datarate: 1,
-          parser: (data) => {
-            // make sure we got a valid line
-            if (!closed && windows.main) {
-              let aprsMsg = APRSTelem.fromCSV(data);
-
-              // The rawStateflags should be correctly populated from CSV data
-              // but the Stage is not being properly recognized because stateflagsFormat is empty
-              // Either use the existing raw state flags directly (already in our patched getStateflag method)
-              // or explicitly set the stateflags format
-
-              // We're using an empty stateflags array but our improved getStateflag will handle this
-              aprsMsg.stateflagsFormat = []; // Clear existing format if any
-
-              windows.main.webContents.send("data", aprsMsg);
-              if (windows.video)
-                windows.video.webContents.send("data", aprsMsg);
-            }
-          },
-        });
-        telemSources.push(ts1D);
-      } catch (err) {
-        log.err('Failed to read test-0.csv: "' + err.message + '"');
-      }
-    } else {
-      log.warn("Could not find test-0.csv");
-    }
-
-    // test to see whether the second telemetry stream data file exists
-    const test1Path = getDataDebugFile("test-1.csv");
-    if (test1Path) {
-      try {
-        const ts2D = new FileTelemSource(test1Path, 3, {
-          datarate: 1,
-          parser: (data) => {
-            // make sure we got a valid line
-            if (!closed && windows.main) {
-              let aprsMsg = APRSTelem.fromCSV(data);
-              windows.main.webContents.send("data", aprsMsg);
-              if (windows.video)
-                windows.video.webContents.send("data", aprsMsg);
-            }
-          },
-        });
-        telemSources.push(ts2D);
-      } catch (err) {
-        log.err('Failed to read test-1.csv: "' + err.message + '"');
-      }
-    } else {
-      log.warn("Could not find test-1.csv");
-    }
-
-    // test to see whether the third telemetry stream data file exists
-    const test2Path = getDataDebugFile("test-2.csv");
-    if (test2Path) {
-      try {
-        const ts3D = new FileTelemSource(test2Path, 4, {
-          datarate: 1,
-          parser: (data) => {
-            // make sure we got a valid line
-            if (!closed && windows.main) {
-              let aprsMsg = APRSTelem.fromCSV(data);
-              windows.main.webContents.send("data", aprsMsg);
-              if (windows.video)
-                windows.video.webContents.send("data", aprsMsg);
-            }
-          },
-        });
-        telemSources.push(ts3D);
-      } catch (err) {
-        log.err('Failed to read test-2.csv: "' + err.message + '"');
-      }
-    } else {
-      log.warn("Could not find test-2.csv");
-    }
-
-    // test to see whether the telmetry stream metrics data file exists
-    const metricsPath = getDataDebugFile("metrics.csv");
-    if (metricsPath) {
-      try {
-        const metrics = new FileTelemSource(metricsPath, 1, {
-          datarate: 1,
-          parser: (data) => {
-            // make sure we got a valid line
-            if (!closed && windows.main) {
-              let m = Metrics.fromCSV(data);
-              windows.main.webContents.send("metrics", m);
-              if (windows.video) windows.video.webContents.send("metrics", m);
-            }
-          },
-        });
-        telemSources.push(metrics);
-      } catch (err) {
-        log.err('Failed to read metrics.csv: "' + err.message + '"');
-      }
-    } else {
-      log.warn("Could not find metrics.csv");
-    }
-
-    // create the command sink
-    commandSinks.push(
-      new FileControlSink(path.join(logPath, "control.txt"), 1, {
-        asString: true,
-      }),
-    );
-    commandSinks.push(
-      new FileCommandSink(path.join(logPath, "commands.txt"), 5, {
-        asString: true,
-      }),
-    );
-
-    pLoader.loadDebugStreams();
-  }, 1000);
-}

@@ -16,13 +16,14 @@ class FileCommandSink extends TextSink {
    * @param {String} [name] the name to use instead of the file name
    */
   constructor(file, id, options, name) {
-    super(name ? name : file, id, fs.createWriteStream(file));
+    const logPath = path.join("log", file);
+    super(name ? name : file, id, fs.createWriteStream(logPath));
 
     log.debug(
       "Creating file command sink for: " + this.name + " id: " + this.id,
     );
 
-    this.file = file;
+    this.file = logPath;
     this.options = options ? options : {};
   }
 

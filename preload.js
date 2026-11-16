@@ -40,15 +40,25 @@ class API extends EventEmitter {
   constructor() {
     super();
 
+    // generic IPC listeners/function creation for backend
+    ipcRenderer.on("renderer-event", (event, name) => {
+      ipcRenderer.on(name, (event, ...args) => {
+        this.emit(name, ...args);
+      });
+      ipcRenderer.send("interface-done");
+    });
+
+    ipcRenderer.on("renderer-send", (event, name) => {
+      this[name] = (...args) => ipcRenderer.send(name, ...args);
+      ipcRenderer.send("interface-done");
+    });
+
+    ipcRenderer.on("renderer-invoke", (event, name) => {
+      this[name] = (...args) => ipcRenderer.invoke(name, ...args);
+      ipcRenderer.send("interface-done");
+    });
+
     // Electron IPC listeners to pass events to the renderer
-    ipcRenderer.on("print", (event, message, level) => {
-      this.emit("print", { message, level });
-    });
-
-    ipcRenderer.on("previous-logs", (event, data) => {
-      this.emit("previous-logs", data);
-    });
-
     ipcRenderer.on("data", (event, data) => {
       this.emit("data", data);
     });
@@ -65,10 +75,12 @@ class API extends EventEmitter {
       this.emit("fullscreen-change", change);
     });
 
+    // TODO: move to dynamic
     ipcRenderer.on("video-controls", (event, controls) => {
       this.emit("video-controls", controls);
     });
 
+    // TODO: move to dynamic
     ipcRenderer.on("frame-ready", (event, frame) => {
       this.emit("frame-ready", frame);
     });
@@ -82,19 +94,25 @@ class API extends EventEmitter {
     this.minimize = (win) => ipcRenderer.send("minimize", win);
     this.fullscreen = (win, isFullscreen) =>
       ipcRenderer.send("fullscreen", win, isFullscreen);
+    this.devTools = () => ipcRenderer.send("dev-tools");
     this.reload = (win, keepSettings) =>
       ipcRenderer.send("reload", win, keepSettings);
-    this.devTools = () => ipcRenderer.send("dev-tools");
 
     // backend interfaces
-    this.sendCommand = (command, sinkId) =>
-      ipcRenderer.send("send-command", command, sinkId);
+    // TODO: move to dynamic
+    // this.sendCommand = (command, sinkId) =>
+    //   ipcRenderer.send("send-command", command, sinkId);
+    // TODO: move to dynamic
     this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
+    // TODO: move to dynamic
     this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
     this.closePort = () => ipcRenderer.send("close-port");
+    // TODO: move to dynamic
     this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
+    // TODO: move to dynamic
     this.updateVideoControls = (controls) =>
       ipcRenderer.send("video-controls", controls);
+    // TODO: move to dynamic
     this.exportStreamConfig = () => ipcRenderer.send("export-stream-config");
 
     // getters
@@ -103,22 +121,30 @@ class API extends EventEmitter {
     this.getSettings = () => ipcRenderer.invoke("get-settings");
     this.getPluginSettings = (pluginName) =>
       ipcRenderer.invoke("get-plugin-settings", pluginName);
+    // TODO: move to dynamic
     this.resetSettings = () => ipcRenderer.invoke("reset-settings");
+    // TODO: move to dynamic
     this.resetPluginSettings = () =>
       ipcRenderer.invoke("reset-plugin-settings");
     this.getStreams = () => ipcRenderer.invoke("get-streams");
     this.getCommandList = () => ipcRenderer.invoke("get-command-list");
     this.getStateflagList = () => ipcRenderer.invoke("get-stateflag-list");
     this.getControlsList = () => ipcRenderer.invoke("get-controls-list");
+    // TODO: move to dynamic
     this.getVideo = () => ipcRenderer.invoke("get-video");
 
     // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
+    // TODO: move to dynamic
     this.setSettings = (config) => ipcRenderer.send("update-settings", config);
+    // TODO: move to dynamic
     this.setPluginSettings = (configs) =>
       ipcRenderer.send("set-plugin-settings", configs);
+    // TODO: move to dynamic
     this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
+    // TODO: move to dynamic
     this.setCommandList = (list) => ipcRenderer.send("set-command-list", list);
+    // TODO: move to dynamic
     this.setStateflagList = (list) =>
       ipcRenderer.send("set-stateflag-list", list);
   }
@@ -126,5 +152,11 @@ class API extends EventEmitter {
 
 const api = new API();
 
-// expose the api to the renderer
+// ipcRenderer.send("get-interfaces");
+
 contextBridge.exposeInMainWorld("api", api);
+
+// .then((resp) => {
+//   console.log(resp);
+//   // expose the api to the renderer
+// });

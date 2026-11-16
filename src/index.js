@@ -388,21 +388,21 @@ window.onload = () => {
   // ── Video orientation ──────────────────────────────────────────────────────
 
   const ORIENT_OPTIONS = [
-    { label: "↑ 0° — Normal",        value: "0"     },
-    { label: "↻ 90° — Clockwise",    value: "90"    },
-    { label: "↓ 180° — Flipped",     value: "180"   },
-    { label: "↺ 270° — Counter-CW",  value: "270"   },
-    { label: "⟷ Horizontal Flip",    value: "hflip" },
-    { label: "↕ Vertical Flip",      value: "vflip" },
+    { label: "↑ 0° — Normal", value: "0" },
+    { label: "↻ 90° — Clockwise", value: "90" },
+    { label: "↓ 180° — Flipped", value: "180" },
+    { label: "↺ 270° — Counter-CW", value: "270" },
+    { label: "⟷ Horizontal Flip", value: "hflip" },
+    { label: "↕ Vertical Flip", value: "vflip" },
   ];
 
   const ORIENT_TRANSFORMS = {
-    "0":     "rotate(0deg)",
-    "90":    "rotate(90deg)",
-    "180":   "rotate(180deg)",
-    "270":   "rotate(270deg)",
-    "hflip": "scaleX(-1)",
-    "vflip": "scaleY(-1)",
+    0: "rotate(0deg)",
+    90: "rotate(90deg)",
+    180: "rotate(180deg)",
+    270: "rotate(270deg)",
+    hflip: "scaleX(-1)",
+    vflip: "scaleY(-1)",
   };
 
   const applyVideoOrientation = (videoIndex, value) => {
@@ -415,12 +415,16 @@ window.onload = () => {
     if (value === "90" || value === "270") {
       const w = wrapper.clientWidth;
       const h = wrapper.clientHeight;
-      el.style.width      = h + "px";
-      el.style.height     = w + "px";
+      el.style.width = h + "px";
+      el.style.height = w + "px";
       el.style.marginLeft = (w - h) / 2 + "px";
-      el.style.marginTop  = (h - w) / 2 + "px";
+      el.style.marginTop = (h - w) / 2 + "px";
     } else {
-      el.style.width = el.style.height = el.style.marginLeft = el.style.marginTop = "";
+      el.style.width =
+        el.style.height =
+        el.style.marginLeft =
+        el.style.marginTop =
+          "";
     }
   };
 
@@ -429,13 +433,14 @@ window.onload = () => {
   // click-to-open on the drop div so we can stop propagation on option clicks,
   // preventing the bubble-re-open bug that made selection impossible.
   const setupOrientDropdown = (idPrefix, videoIndex) => {
-    const drop     = document.getElementById(idPrefix + "-drop");
-    const options  = document.getElementById(idPrefix + "-options");
-    const arrow    = document.getElementById(idPrefix + "-arrow");
+    const drop = document.getElementById(idPrefix + "-drop");
+    const options = document.getElementById(idPrefix + "-options");
+    const arrow = document.getElementById(idPrefix + "-arrow");
     const selected = document.getElementById(idPrefix + "-selected");
 
     // Populate options
-    while (options.childElementCount > 0) options.removeChild(options.firstChild);
+    while (options.childElementCount > 0)
+      options.removeChild(options.firstChild);
     ORIENT_OPTIONS.forEach((opt) => {
       const span = document.createElement("SPAN");
       span.className = idPrefix;
@@ -537,13 +542,21 @@ window.onload = () => {
 
     // Restore orientation dropdowns from saved controls
     if (videoControls.orient0) {
-      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient0);
-      if (match) document.getElementById("video-0-orient-selected").textContent = match.label;
+      const match = ORIENT_OPTIONS.find(
+        (o) => o.value === videoControls.orient0,
+      );
+      if (match)
+        document.getElementById("video-0-orient-selected").textContent =
+          match.label;
       applyVideoOrientation(0, videoControls.orient0);
     }
     if (videoControls.orient1) {
-      const match = ORIENT_OPTIONS.find((o) => o.value === videoControls.orient1);
-      if (match) document.getElementById("video-1-orient-selected").textContent = match.label;
+      const match = ORIENT_OPTIONS.find(
+        (o) => o.value === videoControls.orient1,
+      );
+      if (match)
+        document.getElementById("video-1-orient-selected").textContent =
+          match.label;
       applyVideoOrientation(1, videoControls.orient1);
     }
   });
@@ -816,9 +829,9 @@ window.onload = () => {
     // send command to backend
     // GSControl sink (0) temporarily hardcoded until better support is needed
     if (isCommand) {
-      api.sendCommand(command, 1);
+      mainApi.sendCommand(command, 1);
     } else {
-      api.sendCommand(command, 0);
+      mainApi.sendCommand(command, 0);
     }
   });
 
