@@ -403,7 +403,7 @@ ipcMain.on("export-stream-config", (event, args) => {
     log.err("Failed to export commands: " + err.message);
   }
 
-  core.getAppConfig().streams.forEach((stream) => {
+  core.getStreams().forEach((stream) => {
     if (stream.type === "APRSTelem") {
       let exportedStateflagsConfig = [];
       core.stateflags.forEach((flag) => {
@@ -462,6 +462,10 @@ ipcMain.handle("get-plugin-settings", (event, pluginName) => {
   return plugins.getPluginConfigs();
 });
 
+ipcMain.handle("get-stream-types", (event, args) => {
+  return core.getStreamTypes();
+});
+
 ipcMain.handle("reset-settings", (event) => {
   try {
     // don't want to actually reset settings on the backend, just send them to the settings page
@@ -484,7 +488,7 @@ ipcMain.handle("reset-plugin-settings", (event, args) => {
 });
 
 ipcMain.handle("get-streams", (event, args) => {
-  return core.getAppConfig().streams;
+  return core.getStreams();
 });
 
 ipcMain.handle("get-command-list", (event, args) => {
@@ -574,7 +578,7 @@ ipcMain.on("set-plugin-settings", (event, configs) => {
 
 ipcMain.on("set-streams", (event, streams) => {
   if (streams) {
-    core.getAppConfig().streams = streams;
+    core.streams = streams; // TODO: fix (func)
     if (!core.getAppConfig().dataDebug.value) {
       // need to reload streams and reset serial to get everything updated
       serial.clearStreams();

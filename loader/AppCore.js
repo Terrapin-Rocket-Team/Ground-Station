@@ -25,6 +25,7 @@ class AppCore extends EventEmitter {
 
     // configs
     this.appConfig = null;
+    this.streams = null;
     this.cmdList = null;
     this.stateflags = null;
     this.ctrlList = null;
@@ -142,6 +143,21 @@ class AppCore extends EventEmitter {
       } catch (err) {
         log.err("Failed to load default config: " + err.message);
       }
+    }
+
+    // load command list
+    try {
+      this.streams = JSON.parse(
+        fs.readFileSync(path.join(AppCore.root, "streams.json")),
+      );
+
+      log.debug("Streams loaded");
+    } catch (err) {
+      log.warn(
+        "Failed to load streams file, previously configured streams will not be available: " +
+          err.message,
+      );
+      this.streams = [];
     }
 
     // clear tile cache if disabled
@@ -276,7 +292,7 @@ class AppCore extends EventEmitter {
       });
 
       // load streams from config
-      this.appConfig.streams.forEach((stream) => {
+      this.streams.forEach((stream) => {
         if (stream.enabled) {
           // try to find the callback for this stream
           if (this.streamCallbacks.has(stream.type)) {
@@ -316,6 +332,14 @@ class AppCore extends EventEmitter {
     });
   }
 
+  getStreamTypes() {
+    const types = [];
+    this.streamCallbacks.forEach((val, name) => {
+      if (!name.match("debug-.+")) types.push(name);
+    });
+    return types;
+  }
+
   listenForData() {
     this.main.on("data", (type, data) => {
       this.windows.forEach((val, key) => {
@@ -332,6 +356,10 @@ class AppCore extends EventEmitter {
 
   getAppConfig() {
     return this.appConfig;
+  }
+
+  getStreams() {
+    return this.streams;
   }
 
   addWindows(windows) {

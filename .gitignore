@@ -11,6 +11,7 @@
 config.json
 commands.json
 stateflags.json
+streams.json
 
 *.csv
 *.log

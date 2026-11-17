@@ -132,6 +132,7 @@ class API extends EventEmitter {
     this.getControlsList = () => ipcRenderer.invoke("get-controls-list");
     // TODO: move to dynamic
     // this.getVideo = () => ipcRenderer.invoke("get-video");
+    this.getStreamTypes = () => ipcRenderer.invoke("get-stream-types");
 
     // setters
     this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);

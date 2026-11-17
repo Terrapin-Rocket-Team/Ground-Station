@@ -121,7 +121,7 @@ window.onload = () => {
         </div>
       </div>`;
 
-    let typeVal = types[classes.indexOf(stream.type)];
+    let typeVal = stream.type;
 
     if (typeVal)
       document.getElementById(`stream-${index}-type-selected`).textContent =
@@ -139,20 +139,21 @@ window.onload = () => {
       toggleToggle(toggle);
     });
 
-    let streamType = types[classes.indexOf(stream.type)];
+    let streamType = stream.type;
     const getStreamOptions = (idPrefix) => {
-      setupStaticOptions(idPrefix, types, (option) => {
-        streamType = option;
-        console.log(option);
-        if (option === "Telemetry") {
-          // ensure fields are set up properly
-          if (!stream.settings) stream.settings = { stateflags: [] };
-          if (!stream.settings.stateflags) stream.settings.stateflags = [];
-        } else {
-          // remove fields unused fields
-          if (stream.settings) delete stream.settings;
-        }
-        return true;
+      api.getStreamTypes().then((types) => {
+        setupStaticOptions(idPrefix, types, (option) => {
+          streamType = option;
+          if (option === "Telemetry") {
+            // ensure fields are set up properly
+            if (!stream.settings) stream.settings = { stateflags: [] };
+            if (!stream.settings.stateflags) stream.settings.stateflags = [];
+          } else {
+            // remove fields unused fields
+            if (stream.settings) delete stream.settings;
+          }
+          return true;
+        });
       });
     };
 
@@ -453,7 +454,7 @@ window.onload = () => {
 
     if (idVal && parseInt(idVal)) newStreamConfig[i].id = parseInt(idVal);
 
-    typeVal = classes[types.indexOf(typeVal)];
+    // typeVal = classes[types.indexOf(typeVal)];
 
     if (nameVal) newStreamConfig[i].name = nameVal;
     if (typeVal) {

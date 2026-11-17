@@ -143,7 +143,7 @@ class VideoPlugin extends Plugin {
   initStreamTypes() {
     const streamTypes = new Map();
 
-    streamTypes.set("video", this.createVideoStream.bind(this));
+    streamTypes.set("Video", this.createVideoStream.bind(this));
     streamTypes.set("debug-video", this.createDebugVideoStream.bind(this));
 
     return streamTypes;
