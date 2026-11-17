@@ -4,14 +4,14 @@ const fs = require("fs");
 const path = require("path");
 const { log } = require("./debug");
 const { serial } = require("./serial/SerialDevice");
-const {
-  FileTelemSource,
-  SerialTelemSource,
-  SerialCommandSink,
-  FileCommandSink,
-  SerialControlSink,
-  FileControlSink,
-} = require("./io/text-io");
+// const {
+//   FileTelemSource,
+//   SerialTelemSource,
+//   SerialCommandSink,
+//   FileCommandSink,
+//   SerialControlSink,
+//   FileControlSink,
+// } = require("./io/text-io");
 const APRSTelem = require("./coders/APRSTelem");
 const Metrics = require("./coders/Metrics");
 const APRSCmd = require("./coders/APRSCmd");
@@ -24,32 +24,19 @@ const { PluginLoader } = require("./loader/PluginLoader");
 const iconPath = path.join(__dirname, "build", "icons");
 const dataPath = "./data";
 const logPath = "./log";
-const dataDebugDirs = [__dirname, path.join(__dirname, "docs", "data")]; // TODO: remove
+// const dataDebugDirs = [__dirname, path.join(__dirname, "docs", "data")]; // TODO: remove
 
-const getDataDebugFile = (fileName) => {
-  return dataDebugDirs
-    .map((dir) => path.join(dir, fileName))
-    .find((filePath) => fs.existsSync(filePath));
-};
+// const getDataDebugFile = (fileName) => {
+//   return dataDebugDirs
+//     .map((dir) => path.join(dir, fileName))
+//     .find((filePath) => fs.existsSync(filePath));
+// };
 
-let windows = { main: null },
-  telemSources = [],
-  commandSinks = [],
-  config,
-  cmdList,
-  stateflags,
-  ctrlList,
-  cacheMeta,
-  closed;
-
-const main = new MainLoader(iconPath);
-const plugins = new PluginLoader(iconPath);
-const core = new AppCore(app.getVersion(), main, plugins);
+const main = new MainLoader(iconPath),
+  plugins = new PluginLoader(iconPath),
+  core = new AppCore(app.getVersion(), main, plugins);
 
 core.init();
-
-// main.init(core);
-plugins.init(core.getAppConfig());
 
 // need to setup after loading config
 serial.setupDriver(core.getAppConfig().driverDebug.value);
@@ -71,7 +58,6 @@ const loadStreams = () => {
   // only create serial streams if reading debug data from local files
   if (!core.getAppConfig().dataDebug.value) {
     serial.clearStreams();
-    // plugins.clearStreams(); // TODO: implement
 
     core.loadStreams();
   } else {
@@ -87,17 +73,22 @@ const loadStreams = () => {
 };
 
 const openWindows = () => {
-  core.loadWindows();
-  // main.createWindows();
-
-  plugins.createWindows();
-
-  // core.addWindows(main.getWindows());
-  core.addWindows(plugins.getWindows());
+  // register base preload script
+  session.defaultSession.registerPreloadScript({
+    type: "frame",
+    filePath: path.join(__dirname, "preload.js"),
+  });
+  // separate main session allows plugins to expose new api's only in the main window
+  const mainSession = session.fromPartition("main");
+  mainSession.registerPreloadScript({
+    type: "frame",
+    filePath: path.join(__dirname, "preload.js"),
+  });
+  core.loadWindows(mainSession, session.defaultSession);
 
   // make sure messages are not sent to a destroyed window
   core.getMainWindow().once("close", () => {
-    closed = true;
+    core.setClosed();
     serial.close();
     // close all other open windows
     core.getWindows().forEach((val, name) => {
@@ -110,12 +101,6 @@ const openWindows = () => {
 
 // when electron has initialized, create the appropriate window
 app.whenReady().then(() => {
-  // register base preload script
-  session.defaultSession.registerPreloadScript({
-    type: "frame",
-    filePath: path.join(__dirname, "preload.js"),
-  });
-
   openWindows();
 
   loadStreams();
@@ -245,11 +230,11 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
   try {
     tilePath = [tilePathNums[0], tilePathNums[1], tilePathNums[2]];
     while (
-      cacheMeta.runningSize + tile.byteLength >
+      core.cacheMeta.runningSize + tile.byteLength >
       core.getAppConfig().cacheMaxSize.value
     ) {
       // shift off the fileList and delete file and containing folders if necessary
-      let oldTile = cacheMeta.fileList.shift();
+      let oldTile = core.cacheMeta.fileList.shift();
       let oldFolders = oldTile.split(path.sep);
       let fileSize = fs.lstatSync(
         path.join(__dirname, "src", "cachedtiles", oldTile + ".png"),
@@ -258,8 +243,10 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       //remove the file
       fs.rmSync(path.join(__dirname, "src", "cachedtiles", oldTile + ".png"));
 
-      cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
-        cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(oldFolders[2]),
+      core.cacheMeta.tiles[oldFolders[0]][oldFolders[1]].splice(
+        core.cacheMeta.tiles[oldFolders[0]][oldFolders[1]].indexOf(
+          oldFolders[2],
+        ),
         1,
       );
 
@@ -284,7 +271,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
             oldFolders[1],
           ),
         );
-        delete cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
+        delete core.cacheMeta.tiles[oldFolders[0]][oldFolders[1]];
       }
 
       //remove the folder two levels above the file if it is empty
@@ -294,10 +281,10 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
         ).length === 0
       ) {
         fs.rmdirSync(path.join(__dirname, "src", "cachedtiles", oldFolders[0]));
-        delete cacheMeta.tiles[oldFolders[0]];
+        delete core.cacheMeta.tiles[oldFolders[0]];
       }
 
-      cacheMeta.runningSize -= fileSize;
+      core.cacheMeta.runningSize -= fileSize;
     }
 
     let folderPath = path.join(
@@ -316,21 +303,21 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
     }
 
     //see what folders/files already exist
-    let hasZoom = cacheMeta.tiles[tilePath[0]];
-    let hasX = hasZoom ? cacheMeta.tiles[tilePath[0]][tilePath[1]] : 0;
+    let hasZoom = core.cacheMeta.tiles[tilePath[0]];
+    let hasX = hasZoom ? core.cacheMeta.tiles[tilePath[0]][tilePath[1]] : 0;
     let hasY = hasX
-      ? cacheMeta.tiles[tilePath[0]][tilePath[1]].includes(tilePath[2])
+      ? core.cacheMeta.tiles[tilePath[0]][tilePath[1]].includes(tilePath[2])
       : 0;
 
     //add the appropriate amount of stucture to the metadata
     if (!hasZoom) {
-      cacheMeta.tiles[tilePath[0]] = {
+      core.cacheMeta.tiles[tilePath[0]] = {
         [tilePath[1]]: [tilePath[2]],
       };
     } else if (!hasX) {
-      cacheMeta.tiles[tilePath[0]][tilePath[1]] = [tilePath[2]];
+      core.cacheMeta.tiles[tilePath[0]][tilePath[1]] = [tilePath[2]];
     } else if (!hasY) {
-      cacheMeta.tiles[tilePath[0]][tilePath[1]].push(tilePath[2]);
+      core.cacheMeta.tiles[tilePath[0]][tilePath[1]].push(tilePath[2]);
     }
 
     if (hasY) {
@@ -339,8 +326,8 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
         path.join(folderPath, tilePath[2] + ".png"),
       ).size;
       if (fileSize != tile.byteLength) {
-        cacheMeta.runningSize -= fileSize;
-        cacheMeta.runningSize += tile.byteLength;
+        core.cacheMeta.runningSize -= fileSize;
+        core.cacheMeta.runningSize += tile.byteLength;
         fs.writeFileSync(
           path.join(folderPath, tilePath[2] + ".png"),
           Buffer.from(tile),
@@ -348,8 +335,10 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
       }
     } else {
       //add the file
-      cacheMeta.runningSize += tile.byteLength;
-      cacheMeta.fileList.push(path.join(tilePath[0], tilePath[1], tilePath[2]));
+      core.cacheMeta.runningSize += tile.byteLength;
+      core.cacheMeta.fileList.push(
+        path.join(tilePath[0], tilePath[1], tilePath[2]),
+      );
       fs.writeFileSync(
         path.join(folderPath, tilePath[2] + ".png"),
         Buffer.from(tile),
@@ -359,7 +348,7 @@ ipcMain.on("cache-tile", (event, tile, tilePathNums) => {
     //write metadata
     fs.writeFileSync(
       path.join(__dirname, "src", "cachedtiles", "metadata.json"),
-      JSON.stringify(cacheMeta, null, "\t"),
+      JSON.stringify(core.cacheMeta, null, "\t"),
     );
   } catch (err) {
     log.err('Error caching tile: "' + err.message + '"');
@@ -379,7 +368,7 @@ ipcMain.on("clear-tile-cache", (event, args) => {
     // check if the metadata file exists
     if (fs.existsSync(path.join(__dirname, "src", "cachedtiles"))) {
       // reset the metadata and remove the metadata file
-      cacheMeta = {
+      core.cacheMeta = {
         tiles: {},
         fileList: [],
         runningSize: 0,
@@ -397,7 +386,7 @@ ipcMain.on("clear-tile-cache", (event, args) => {
 
 ipcMain.on("export-stream-config", (event, args) => {
   let exportedCommandConfig = [];
-  cmdList.forEach((cmd) => {
+  core.cmdList.forEach((cmd) => {
     exportedCommandConfig.push({
       num: cmd.num,
       encoding: cmd.encoding,
@@ -414,10 +403,10 @@ ipcMain.on("export-stream-config", (event, args) => {
     log.err("Failed to export commands: " + err.message);
   }
 
-  config.streams.forEach((stream) => {
+  core.getAppConfig().streams.forEach((stream) => {
     if (stream.type === "APRSTelem") {
       let exportedStateflagsConfig = [];
-      stateflags.forEach((flag) => {
+      core.stateflags.forEach((flag) => {
         if (
           stream.settings &&
           stream.settings.stateflags &&
@@ -551,11 +540,15 @@ ipcMain.handle("set-port", (event, portConfig) => {
 ipcMain.on("update-settings", (event, settings) => {
   // make sure we were actually given a settings object
   if (settings) {
-    config = settings;
-    plugins.emit("config", config);
+    // TODO: make function
+    core.appConfig = settings;
+    plugins.emit("config", core.getAppConfig());
     try {
       // write the new settings to the file
-      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+      fs.writeFileSync(
+        "./config.json",
+        JSON.stringify(core.getAppConfig(), null, "\t"),
+      );
       log.debug("Successfully updated settings");
     } catch (err) {
       log.err('Failed to update settings: "' + err.message + '"');
@@ -581,15 +574,20 @@ ipcMain.on("set-plugin-settings", (event, configs) => {
 
 ipcMain.on("set-streams", (event, streams) => {
   if (streams) {
-    config.streams = streams;
+    core.getAppConfig().streams = streams;
     if (!core.getAppConfig().dataDebug.value) {
       // need to reload streams and reset serial to get everything updated
-      core.loadStreams(serial);
+      serial.clearStreams();
       serial.reset();
+      core.loadStreams();
     }
     try {
       // write the new settings to the file
-      fs.writeFileSync("./config.json", JSON.stringify(config, null, "\t"));
+      // TODO: this should be in core
+      fs.writeFileSync(
+        "./config.json",
+        JSON.stringify(core.getAppConfig(), null, "\t"),
+      );
       log.debug("Successfully updated stream settings");
     } catch (err) {
       log.err('Failed to update stream settings: "' + err.message + '"');
@@ -599,8 +597,8 @@ ipcMain.on("set-streams", (event, streams) => {
 
 ipcMain.on("set-command-list", (event, list) => {
   if (list) {
-    cmdList = list;
-    APRSCmd.createCommandList(cmdList);
+    core.cmdList = list;
+    APRSCmd.createCommandList(core.cmdList);
     try {
       // write the new settings to the file
       fs.writeFileSync("./commands.json", JSON.stringify(list, null, "\t"));
@@ -613,9 +611,9 @@ ipcMain.on("set-command-list", (event, list) => {
 
 ipcMain.on("set-stateflag-list", (event, list) => {
   if (list) {
-    stateflags = list;
+    core.stateflags = list;
 
-    APRSTelem.createStateflagList(stateflags);
+    APRSTelem.createStateflagList(core.stateflags);
     try {
       // write the new settings to the file
       fs.writeFileSync("./stateflags.json", JSON.stringify(list, null, "\t"));
@@ -634,8 +632,9 @@ serial.on("error", (message) => {
 serial.on("close", (path) => {
   log.info("Serial disconnected");
   plugins.emit("serial-closed", path);
-  if (!closed && windows.main)
-    windows.main.webContents.send("serial-close", path);
+  // TODO: send to all windows
+  if (!core.appClosed() && core.getMainWindow())
+    core.getMainWindow().webContents.send("serial-close", path);
 });
 
 serial.on("exit", () => {

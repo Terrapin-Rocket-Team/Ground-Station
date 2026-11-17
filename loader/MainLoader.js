@@ -28,27 +28,24 @@ class MainLoader extends EventEmitter {
     this.iconPath = iconPath;
 
     this.appConfig = null;
-    this.core = null;
 
     this.window = null;
     this.telemSources = [];
     this.commandSinks = [];
   }
 
-  init(appCore) {
-    this.core = appCore;
-    this.appConfig = this.core.getAppConfig();
-
+  init(appConfig) {
     // load config files
-    this.loadConfig();
+    this.loadConfig(appConfig);
 
     // define pages???
   }
 
-  loadConfig() {}
+  loadConfig(appConfig) {
+    this.appConfig = appConfig;
+  }
 
   initWindowInterfaces() {
-    // const windowRendererInterfaces = new Map();
     const windowMainEventInterfaces = new Map();
     // const windowMainHandleInterfaces = new Map();
 
@@ -58,7 +55,6 @@ class MainLoader extends EventEmitter {
     });
 
     return {
-      rendererEvent: undefined,
       mainEvent: windowMainEventInterfaces,
       mainHandle: undefined,
     };
@@ -77,7 +73,7 @@ class MainLoader extends EventEmitter {
     return streamTypes;
   }
 
-  createWindows() {
+  createWindows(session) {
     const width = 1200,
       height = 800;
 
@@ -97,6 +93,7 @@ class MainLoader extends EventEmitter {
       autoHideMenuBar: true,
       icon: path.join(this.iconPath, "logo" + iconSuffix),
       webPreferences: {
+        session: session,
         preload: path.join(MainLoader.root, "main-preload.js"),
       },
     });
@@ -135,23 +132,13 @@ class MainLoader extends EventEmitter {
     // TODO: fix
     // pLoader.emit("main-window-loaded", windows.main);
 
-    // TODO
-    // this.window.webContents.on("dom-ready", () => {
-    //   log.debug("Sending dynamic events test message");
-
-    //   this.window.webContents.send("test", "Hello World!");
-
-    //   ipcMain.on("test-send", (event, message1, message2) => {
-    //     log.debug(message1);
-    //     log.debug(message2);
-    //   });
-    // });
-
     log.debug("Main window created");
   }
 
   getWindows() {
-    return { main: this.window };
+    const m = new Map();
+    m.set("main", this.window);
+    return m;
   }
 
   clearStreams() {
@@ -215,20 +202,17 @@ class MainLoader extends EventEmitter {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
-            // TODO: better closed check
-            if (this.core.getMainWindow()) {
-              let aprsMsg = APRSTelem.fromCSV(data);
+            let aprsMsg = APRSTelem.fromCSV(data);
 
-              // The rawStateflags should be correctly populated from CSV data
-              // but the Stage is not being properly recognized because stateflagsFormat is empty
-              // Either use the existing raw state flags directly (already in our patched getStateflag method)
-              // or explicitly set the stateflags format
+            // The rawStateflags should be correctly populated from CSV data
+            // but the Stage is not being properly recognized because stateflagsFormat is empty
+            // Either use the existing raw state flags directly (already in our patched getStateflag method)
+            // or explicitly set the stateflags format
 
-              // We're using an empty stateflags array but our improved getStateflag will handle this
-              aprsMsg.stateflagsFormat = []; // Clear existing format if any
+            // We're using an empty stateflags array but our improved getStateflag will handle this
+            aprsMsg.stateflagsFormat = []; // Clear existing format if any
 
-              this.emit("data", "data", aprsMsg);
-            }
+            this.emit("data", "data", aprsMsg);
           },
         });
         this.telemSources.push(ts1D);
@@ -258,10 +242,8 @@ class MainLoader extends EventEmitter {
           datarate: 1,
           parser: (data) => {
             // make sure we got a valid line
-            if (!closed && windows.main) {
-              let m = Metrics.fromCSV(data);
-              this.emit("data", "metrics", m);
-            }
+            let m = Metrics.fromCSV(data);
+            this.emit("data", "metrics", m);
           },
         });
         this.telemSources.push(metrics);

@@ -21,12 +21,17 @@ class AppCore extends EventEmitter {
     this.main = mainLoader;
     this.plugins = pluginLoader;
 
+    this.closed = false;
+
     // configs
     this.appConfig = null;
     this.cmdList = null;
     this.stateflags = null;
     this.ctrlList = null;
     this.cacheMeta = null;
+
+    this.mainSession = null;
+    this.pluginsSession = null;
 
     // handlers
     this.windows = new Map(); // holds all windows
@@ -39,8 +44,8 @@ class AppCore extends EventEmitter {
   init() {
     this.loadConfig();
 
-    this.main.init(this);
-    // this.main.init(this.appConfig); // TODO: switch
+    this.main.init(this.appConfig);
+    this.plugins.init(this.appConfig);
 
     // ipcMain.on("get-interfaces", (event, args) => {
     //   log.debug("Got get-interfaces");
@@ -64,20 +69,14 @@ class AppCore extends EventEmitter {
     //   return -2;
     // });
 
-    const windowInterfaces = this.main.initWindowInterfaces();
-
-    if (windowInterfaces.mainEvent) {
-      windowInterfaces.mainEvent.forEach((callback, name) => {
-        this.initMainEvent(name, callback);
-      });
-    }
-    if (windowInterfaces.mainHandle) {
-      windowInterfaces.mainHandle.forEach((callback, name) => {
-        this.initMainHandler(name, callback);
-      });
-    }
+    this.setupWindowInterfaces(this.main.initWindowInterfaces());
+    this.setupWindowInterfaces(this.plugins.initWindowInterfaces());
 
     this.main.initStreamTypes().forEach((callback, name) => {
+      this.registerStreamCallback(name, callback);
+    });
+
+    this.plugins.initStreamTypes().forEach((callback, name) => {
       this.registerStreamCallback(name, callback);
     });
   }
@@ -265,6 +264,8 @@ class AppCore extends EventEmitter {
   loadStreams() {
     this.main.clearStreams();
 
+    this.plugins.clearStreams();
+
     if (!this.appConfig.dataDebug.value) {
       // reset everything
       // this.emit("reload-streams");
@@ -334,9 +335,13 @@ class AppCore extends EventEmitter {
   }
 
   addWindows(windows) {
-    Object.keys(windows).forEach((key) => {
-      this.windows.set(key, windows[key]);
-    });
+    if (windows instanceof Map) {
+      windows.forEach((val, key) => {
+        this.windows.set(key, val);
+      });
+    } else {
+      log.err("Expected Map, but did not get one. Windows not added!");
+    }
   }
 
   registerWindowReloadCallback(name, cb) {
@@ -345,29 +350,17 @@ class AppCore extends EventEmitter {
     else log.err(`Callback to load window ${name} already registered!`);
   }
 
-  loadWindows() {
-    this.main.createWindows();
+  loadWindows(mainSession, pluginsSession) {
+    this.mainSession = mainSession;
+    this.pluginsSession = pluginsSession;
+
+    this.main.createWindows(mainSession);
 
     this.addWindows(this.main.getWindows());
-  }
 
-  loadEvents() {
-    // const mainInterfaces = this.main.loadWindowInterfaces();
-    // if (mainInterfaces.rendererEvent) {
-    //   mainInterfaces.rendererEvent.forEach((channel, name) => {
-    //     this.loadRendererEvent(channel.window, name);
-    //   });
-    // }
-    // if (mainInterfaces.mainEvent) {
-    //   mainInterfaces.mainEvent.forEach((channel, name) => {
-    //     this.loadMainEvent(channel.window, name);
-    //   });
-    // }
-    // if (mainInterfaces.mainHandle) {
-    //   mainInterfaces.mainHandle.forEach((channel, name) => {
-    //     this.loadMainHandler(channel.window, name);
-    //   });
-    // }
+    this.plugins.createWindows(pluginsSession);
+
+    this.addWindows(this.plugins.getWindows());
   }
 
   reloadWindow(name) {
@@ -426,13 +419,34 @@ class AppCore extends EventEmitter {
     else log.err(`Callback to create stream ${name} already registered!`);
   }
 
-  registerWindowInterfaceCallback(name, cb) {
-    if (!this.windowInterfaceCallbacks.has(name)) {
-      this.windowInterfaceCallbacks.set(name, [cb]);
-    } else {
-      this.windowInterfaceCallbacks.get(name).push(cb);
-      log.debug(this.windowInterfaceCallbacks.get(name).length);
+  setupWindowInterfaces(interfaces) {
+    if (interfaces.mainEvent) {
+      interfaces.mainEvent.forEach((callback, name) => {
+        this.initMainEvent(name, callback);
+      });
     }
+    if (interfaces.mainHandle) {
+      interfaces.mainHandle.forEach((callback, name) => {
+        this.initMainHandler(name, callback);
+      });
+    }
+  }
+
+  // registerWindowInterfaceCallback(name, cb) {
+  //   if (!this.windowInterfaceCallbacks.has(name)) {
+  //     this.windowInterfaceCallbacks.set(name, [cb]);
+  //   } else {
+  //     this.windowInterfaceCallbacks.get(name).push(cb);
+  //     log.debug(this.windowInterfaceCallbacks.get(name).length);
+  //   }
+  // }
+
+  setClosed() {
+    this.closed = true;
+  }
+
+  appClosed() {
+    return this.closed;
   }
 }
 

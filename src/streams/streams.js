@@ -30,19 +30,19 @@ window.onload = () => {
     saveCallbacks.forEach((c) => c());
     // check if the configs are equal
     if (!configEquals(streamConfig, newStreamConfig)) {
-      api.setStreams(newStreamConfig);
+      mainApi.setStreams(newStreamConfig);
     }
 
     saveCommand(activeCommandIndex);
 
     if (!configEquals(commandList, newCommandList)) {
-      api.setCommandList(newCommandList);
+      mainApi.setCommandList(newCommandList);
     }
 
     saveStateflag(activeStateflagIndex);
 
     if (!configEquals(stateflagList, newStateflagList)) {
-      api.setStateflagList(newStateflagList);
+      mainApi.setStateflagList(newStateflagList);
     }
   };
 
@@ -175,7 +175,7 @@ window.onload = () => {
             if (index + 1 < streamContainer.childNodes.length)
               streamContainer.insertBefore(
                 div,
-                streamContainer.childNodes[index + 1]
+                streamContainer.childNodes[index + 1],
               );
             else streamContainer.appendChild(div);
 
@@ -193,12 +193,12 @@ window.onload = () => {
             resizeFillBar(
               stateFlagsBar,
               stateFlagsTotalBits,
-              thisStateflagsTotalBits
+              thisStateflagsTotalBits,
             );
 
             // setup buttons
             const sfSeletedCont = document.getElementById(
-              "stateflags-selected-container"
+              "stateflags-selected-container",
             );
 
             // make sure the right object structure exists
@@ -242,7 +242,7 @@ window.onload = () => {
                       stateFlagsTotalBits,
                       thisStateflagsTotalBits,
                       "#ca0000",
-                      "lightgray"
+                      "lightgray",
                     );
                     isSelected = true;
                   }
@@ -254,7 +254,7 @@ window.onload = () => {
                     stateFlagsTotalBits,
                     thisStateflagsTotalBits,
                     "#ca0000",
-                    "lightgray"
+                    "lightgray",
                   );
                   isSelected = false;
                 }
@@ -269,7 +269,7 @@ window.onload = () => {
               stateFlagsTotalBits,
               thisStateflagsTotalBits,
               "#ca0000",
-              "lightgray"
+              "lightgray",
             );
             configOpen = true;
           }
@@ -279,7 +279,7 @@ window.onload = () => {
           newStreamConfig[index].settings.stateflags = [];
           for (let i = 0; i < selectedEls.length; i++) {
             newStreamConfig[index].settings.stateflags.push(
-              selectedEls[i].textContent.split("\t")[0]
+              selectedEls[i].textContent.split("\t")[0],
             );
           }
           streamContainer.removeChild(div);
@@ -447,7 +447,7 @@ window.onload = () => {
   const getStreamSettings = (i) => {
     const nameVal = document.getElementById(`stream-${i}-name`).value; // TODO: input validation
     let typeVal = document.getElementById(
-      `stream-${i}-type-selected`
+      `stream-${i}-type-selected`,
     ).textContent;
     const idVal = document.getElementById(`stream-${i}-id`).value;
 
@@ -461,7 +461,7 @@ window.onload = () => {
     }
 
     newStreamConfig[i].enabled = getToggleState(
-      document.getElementById(`stream-${i}-toggle`)
+      document.getElementById(`stream-${i}-toggle`),
     );
   };
 
@@ -509,7 +509,7 @@ window.onload = () => {
   });
 
   document.getElementById("export-config").addEventListener("click", () => {
-    api.exportStreamConfig();
+    mainApi.exportStreamConfig();
   });
 
   document.getElementById("new-stream").addEventListener("click", () => {
@@ -567,7 +567,7 @@ window.onload = () => {
           slotWidth + 2 * i * slotWidth,
           verticalBuffer,
           slotWidth,
-          slotHeight
+          slotHeight,
         );
       } else {
         bar.ctx.fillStyle = offColor;
@@ -575,7 +575,7 @@ window.onload = () => {
           slotWidth + 2 * i * slotWidth,
           verticalBuffer,
           slotWidth,
-          slotHeight
+          slotHeight,
         );
       }
     }
@@ -650,7 +650,7 @@ window.onload = () => {
           commandNumSlots,
           thisCommandTotalBits,
           "#ca0000",
-          "lightgray"
+          "lightgray",
         );
       }
     });
@@ -712,7 +712,7 @@ window.onload = () => {
                 if (!newCommandList[commandIndex].conversionList)
                   newCommandList[commandIndex].conversionList = [];
                 newCommandList[commandIndex].conversionList.push(
-                  newConversionList
+                  newConversionList,
                 );
               }
             }
@@ -784,7 +784,7 @@ window.onload = () => {
         commandNumSlots,
         thisCommandTotalBits,
         "#ca0000",
-        "lightgray"
+        "lightgray",
       );
     } else if (commandIndex < newCommandList.length) {
       // load normally
@@ -827,7 +827,7 @@ window.onload = () => {
         commandNumSlots,
         thisCommandTotalBits,
         "#ca0000",
-        "lightgray"
+        "lightgray",
       );
 
       activeCommandIndex = commandIndex;
@@ -837,14 +837,14 @@ window.onload = () => {
           commandIndex +
           " that doesn't exist. Max is " +
           (newCommandList.length - 1) +
-          "."
+          ".",
       );
     }
   };
 
   const loadCommands = () => {
     const commandContainer = document.getElementById(
-      "command-configuration-wrapper"
+      "command-configuration-wrapper",
     );
 
     // remove all elements
@@ -861,7 +861,7 @@ window.onload = () => {
       commandWidthArgs.push(document.getElementById(`arg-${i}-width`));
       commandTypeArgs.push(document.getElementById(`arg-${i}-type`));
       commandConversionListArgs.push(
-        document.getElementById(`arg-${i}-conversion-list`)
+        document.getElementById(`arg-${i}-conversion-list`),
       );
       setupArgConfig(i);
     }

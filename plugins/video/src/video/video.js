@@ -4,10 +4,6 @@ window.onload = () => {
   let frameQueue = [];
   let fullscreen = false;
 
-  api.on("test", (message) => {
-    console.log(message);
-  });
-
   //get a bunch of DOM elements here that will be used alot
   const main = document.getElementById("main"),
     telemetry = document.getElementById("telemetry"),
@@ -271,7 +267,7 @@ window.onload = () => {
   //refresh canvases at ~50hz
   setInterval(() => {
     //get a new video frame, if available (should only be available at the video framerate)
-    api.getVideo().then((f) => {
+    videoApi.getVideo().then((f) => {
       if (f && f.length > 0) frameQueue.push(f);
     });
 
@@ -825,7 +821,7 @@ window.onload = () => {
   };
 
   //reconfigure layout when we get a new set of video controls
-  api.on("video-controls", async (controls) => {
+  videoApi.on("video-controls", async (controls) => {
     changeLayout(controls.layout);
 
     // Move whatever was mounted back into the pool before swapping

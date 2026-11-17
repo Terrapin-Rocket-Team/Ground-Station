@@ -12,7 +12,7 @@ window.onload = () => {
     saveCallbacks.forEach((c) => c());
     // check if the configs are equal
     if (!configEquals(config, newConfig)) {
-      api.setSettings(newConfig);
+      mainApi.setSettings(newConfig);
       if (showAlert)
         alert(
           "Application settings have changed. Please restart for changes to take affect!",
@@ -311,7 +311,7 @@ window.onload = () => {
   // click listener for the reset settings button
   document.getElementById("reset-settings").addEventListener("click", () => {
     // get defaults from main
-    api.resetSettings().then((defaultSettings) => {
+    mainApi.resetSettings().then((defaultSettings) => {
       newConfig = defaultSettings;
 
       // get rid of everything in the container for settings inputs

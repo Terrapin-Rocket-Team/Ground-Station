@@ -14,8 +14,7 @@ class PluginLoader extends EventEmitter {
     this.loaded = false;
 
     // arrays of assets registered by plugins
-    this.windows = {};
-    this.streamTypes = {};
+    this.windows = new Map();
   }
 
   init(appConfig) {
@@ -89,18 +88,76 @@ class PluginLoader extends EventEmitter {
     log.info("Loaded " + this.sockets.length + " plugins");
   }
 
-  createWindows() {
+  initWindowInterfaces() {
+    const windowMainEventInterfaces = new Map();
+    const windowMainHandleInterfaces = new Map();
+    // loop through each socket
     this.sockets.forEach((sock) => {
-      if (sock.plugin.createWindow) {
-        // TODO: bad
-        const win = sock.plugin.createWindow();
-        this.linkWindow(sock.name, win);
+      // if it has stream types
+      if (sock.plugin.initWindowInterfaces) {
+        // add the stream type unless it already exists
+        const interfaces = sock.plugin.initWindowInterfaces();
+        interfaces.mainEvent.forEach((val, name) => {
+          if (!windowMainEventInterfaces.has(name))
+            windowMainEventInterfaces.set(name, val);
+        });
+
+        interfaces.mainHandle.forEach((val, name) => {
+          if (!windowMainHandleInterfaces.has(name))
+            windowMainHandleInterfaces.set(name, val);
+        });
+      }
+    });
+
+    return {
+      mainEvent: windowMainEventInterfaces,
+      mainHandle: windowMainHandleInterfaces,
+    };
+  }
+
+  initStreamTypes() {
+    const m = new Map();
+    // loop through each socket
+    this.sockets.forEach((sock) => {
+      // if it has stream types
+      if (sock.plugin.initStreamTypes) {
+        // add the stream type unless it already exists
+        sock.plugin.initStreamTypes().forEach((val, name) => {
+          if (!m.has(name)) m.set(name, val);
+        });
+      }
+    });
+
+    return m;
+  }
+
+  createWindows(session) {
+    this.sockets.forEach((sock) => {
+      if (sock.plugin.createWindows) {
+        sock.plugin.createWindows(session);
+        this.addWindows(sock.plugin.getWindows());
       }
     });
   }
 
   getWindows() {
     return this.windows;
+  }
+
+  addWindows(windows) {
+    if (windows instanceof Map) {
+      windows.forEach((val, key) => {
+        this.windows.set(key, val);
+      });
+    } else {
+      log.err("Expected Map, but did not get one. Plugin windows not added!");
+    }
+  }
+
+  clearStreams() {
+    this.sockets.forEach((sock) => {
+      if (sock.plugin.clearStreams) sock.plugin.clearStreams();
+    });
   }
 
   getPluginConfigs() {
@@ -177,54 +234,6 @@ class PluginLoader extends EventEmitter {
 
     this.emit("plugins-loaded", this.windows);
     return true;
-  }
-
-  registerWindow(name) {
-    this.windows[name] = null;
-  }
-  registerStreamType(name) {
-    this.streamTypes[name] = null;
-  }
-  registerPage(name) {}
-
-  linkWindow(name, window) {
-    this.windows[name] = window;
-  }
-  linkStreamType(name, callback, debugCallback) {
-    this.streamTypes[name] = { create: callback, createDebug: debugCallback };
-  }
-
-  unlinkWindow(name) {
-    this.windows[name] = null;
-  }
-  unlinkStreamType(name) {
-    this.streamTypes[name] = null;
-  }
-
-  loadStream(stream) {
-    // call the relevant callback for the stream type, if it is registered
-    if (this.streamTypes[stream.type]) {
-      if (this.streamTypes[stream.type].create) {
-        this.streamTypes[stream.type].create(stream);
-        return true;
-      } else {
-        log.err(
-          `No stream creation function registered for type "${stream.type}"`,
-        );
-      }
-    }
-    return false;
-  }
-
-  loadDebugStreams() {
-    Object.keys(this.streamTypes).forEach((streamType) => {
-      if (this.streamTypes[streamType].createDebug)
-        this.streamTypes[streamType].createDebug();
-      else
-        log.warn(
-          `Stream type "${streamType}" does not have a debug configuration! No stream(s) will be created.`,
-        );
-    });
   }
 }
 

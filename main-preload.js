@@ -53,8 +53,7 @@ class API extends EventEmitter {
     // // TODO: move to dynamic
     // this.updateVideoControls = (controls) =>
     //   ipcRenderer.send("video-controls", controls);
-    // // TODO: move to dynamic
-    // this.exportStreamConfig = () => ipcRenderer.send("export-stream-config");
+    this.exportStreamConfig = () => ipcRenderer.send("export-stream-config");
 
     // // getters
     // this.getPorts = () => ipcRenderer.invoke("get-ports");
@@ -62,11 +61,9 @@ class API extends EventEmitter {
     // this.getSettings = () => ipcRenderer.invoke("get-settings");
     // this.getPluginSettings = (pluginName) =>
     //   ipcRenderer.invoke("get-plugin-settings", pluginName);
-    // // TODO: move to dynamic
-    // this.resetSettings = () => ipcRenderer.invoke("reset-settings");
-    // // TODO: move to dynamic
-    // this.resetPluginSettings = () =>
-    //   ipcRenderer.invoke("reset-plugin-settings");
+    this.resetSettings = () => ipcRenderer.invoke("reset-settings");
+    this.resetPluginSettings = () =>
+      ipcRenderer.invoke("reset-plugin-settings");
     // this.getStreams = () => ipcRenderer.invoke("get-streams");
     // this.getCommandList = () => ipcRenderer.invoke("get-command-list");
     // this.getStateflagList = () => ipcRenderer.invoke("get-stateflag-list");
@@ -76,18 +73,13 @@ class API extends EventEmitter {
 
     // // setters
     // this.setPort = (portConfig) => ipcRenderer.invoke("set-port", portConfig);
-    // // TODO: move to dynamic
-    // this.setSettings = (config) => ipcRenderer.send("update-settings", config);
-    // // TODO: move to dynamic
-    // this.setPluginSettings = (configs) =>
-    //   ipcRenderer.send("set-plugin-settings", configs);
-    // // TODO: move to dynamic
-    // this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
-    // // TODO: move to dynamic
-    // this.setCommandList = (list) => ipcRenderer.send("set-command-list", list);
-    // // TODO: move to dynamic
-    // this.setStateflagList = (list) =>
-    //   ipcRenderer.send("set-stateflag-list", list);
+    this.setSettings = (config) => ipcRenderer.send("update-settings", config);
+    this.setPluginSettings = (configs) =>
+      ipcRenderer.send("set-plugin-settings", configs);
+    this.setStreams = (streams) => ipcRenderer.send("set-streams", streams);
+    this.setCommandList = (list) => ipcRenderer.send("set-command-list", list);
+    this.setStateflagList = (list) =>
+      ipcRenderer.send("set-stateflag-list", list);
   }
 }
 
