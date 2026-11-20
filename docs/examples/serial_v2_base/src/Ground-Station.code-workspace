@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"name": "Serial_Driver_test",
+			"path": "../../../../../../Documents/PlatformIO/Projects/Serial_Driver_test"
+		},
+		{
+			"name": "serial_v2_base",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}

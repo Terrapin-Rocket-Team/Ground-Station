@@ -111,11 +111,7 @@ async function mountRocketScene() {
       });
 
       rocketModel.add(camera);
-<<<<<<< HEAD
       camera.position.set(0, 6, 10);
-=======
-      camera.position.set(0, 3, 10);
->>>>>>> origin/kansas-merge
       camera.lookAt(rocketModel.position);
     },
     undefined,
