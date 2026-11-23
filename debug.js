@@ -53,6 +53,7 @@ class Debug {
       if (reason instanceof Error) this.ws.write(message + reason.stack);
       if (typeof reason == "string" || reason instanceof String)
         this.ws.write(message + reason);
+      this.ws.write("\n");
       console.error(message, reason);
     });
 
@@ -61,6 +62,7 @@ class Debug {
         getLogPrefix("error") +
         "An uncaught execption occured in the main process:\n ";
       this.ws.write(message + err.stack);
+      this.ws.write("\n");
       console.error(message, err);
     });
   }

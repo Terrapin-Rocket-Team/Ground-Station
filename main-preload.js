@@ -47,9 +47,9 @@ class API extends EventEmitter {
     // this.cacheTile = (tile, path) => ipcRenderer.send("cache-tile", tile, path);
     // // TODO: move to dynamic
     // this.getCachedTiles = () => ipcRenderer.invoke("get-tiles");
-    // this.closePort = () => ipcRenderer.send("close-port");
+    this.closePort = () => ipcRenderer.send("close-port");
     // // TODO: move to dynamic
-    // this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
+    this.clearTileCache = () => ipcRenderer.send("clear-tile-cache");
     // // TODO: move to dynamic
     // this.updateVideoControls = (controls) =>
     //   ipcRenderer.send("video-controls", controls);

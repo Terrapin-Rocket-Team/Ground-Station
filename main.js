@@ -448,7 +448,18 @@ ipcMain.handle("get-ports", (event, args) => {
 });
 
 ipcMain.handle("get-port-status", (event, args) => {
-  return serial.isConnected();
+  return new Promise((res, rej) => {
+    serial
+      .isConnected()
+      .then((status) => {
+        // translate to frontend
+        if (status.path === "begin debug") status.path = "Begin driver debug";
+        res(status);
+      })
+      .catch((err) => {
+        rej(err);
+      });
+  });
 });
 
 ipcMain.handle("get-settings", (event, args) => {

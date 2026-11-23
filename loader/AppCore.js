@@ -48,28 +48,6 @@ class AppCore extends EventEmitter {
     this.main.init(this.appConfig);
     this.plugins.init(this.appConfig);
 
-    // ipcMain.on("get-interfaces", (event, args) => {
-    //   log.debug("Got get-interfaces");
-    //   this.windows.forEach(async (val, key) => {
-    //     if (val.webContents == event.sender) {
-    //       log.debug("Got get-interfaces from " + key);
-    //       if (this.windowInterfaceCallbacks.get(key)) {
-    //         // load each interface
-    //         await this.waitForResponses(
-    //           event.sender,
-    //           this.windowInterfaceCallbacks.get(key),
-    //         );
-    //         log.debug("here");
-    //         return 0;
-    //       } else {
-    //         log.warn("No interface registered for window: " + key);
-    //         return -1;
-    //       }
-    //     }
-    //   });
-    //   return -2;
-    // });
-
     this.setupWindowInterfaces(this.main.initWindowInterfaces());
     this.setupWindowInterfaces(this.plugins.initWindowInterfaces());
 
@@ -141,23 +119,89 @@ class AppCore extends EventEmitter {
           log.err("Failed to create config file: " + err.message);
         }
       } catch (err) {
-        log.err("Failed to load default config: " + err.message);
+        log.err("FATAL: Failed to load default config: " + err.message);
+        // new Promise((resolve) => {
+        //   // Force flush stdout
+        //   if (process.stdout.writableLength) {
+        //     process.stdout.write("", () => {
+        //       // Then flush stderr if needed
+        //       if (process.stderr.writableLength) {
+        //         process.stderr.write("", resolve);
+        //       } else {
+        //         resolve();
+        //       }
+        //     });
+        //   } else {
+        //     resolve();
+        //   }
+        // }).then(() => {
+        //   process.exit(1);
+        // });
       }
     }
 
     // load command list
     try {
-      this.streams = JSON.parse(
+      const streams = JSON.parse(
         fs.readFileSync(path.join(AppCore.root, "streams.json")),
       );
 
-      log.debug("Streams loaded");
+      if (this.setStreams(streams)) log.debug("Streams loaded");
+      else throw new Error("Invalid stream config");
     } catch (err) {
       log.warn(
         "Failed to load streams file, previously configured streams will not be available: " +
           err.message,
       );
-      this.streams = [];
+      this.setStreams([]);
+    }
+
+    // load command list
+    try {
+      const cmdList = JSON.parse(
+        fs.readFileSync(path.join(AppCore.root, "commands.json")),
+      );
+
+      if (this.setCommandList(cmdList)) log.debug("Commands loaded");
+      else throw new Error("Invalid commands config");
+    } catch (err) {
+      log.warn(
+        "Failed to load commands file, some features will not be available: " +
+          err.message,
+      );
+      this.setCommandList([]);
+    }
+
+    // load stateflags
+    try {
+      const stateflags = JSON.parse(
+        fs.readFileSync(path.join(AppCore.root, "stateflags.json")),
+      );
+
+      if (this.setStateflags(stateflags)) log.debug("Stateflags loaded");
+      else throw new Error("Invalid stageflags config");
+    } catch (err) {
+      log.warn(
+        "Failed to load stateflags file, some features will not be available: " +
+          err.message,
+      );
+      this.setStateflags([]);
+    }
+
+    // load control list
+    try {
+      const ctrlList = JSON.parse(
+        fs.readFileSync(path.join(AppCore.root, "control.json")),
+      );
+
+      if (this.setControlList(ctrlList)) log.debug("Control commands loaded");
+      else throw new Error("Invalid control commands config");
+    } catch (err) {
+      log.warn(
+        "Failed to load control command file, some features will not be available: " +
+          err.message,
+      );
+      this.setControlList([]);
     }
 
     // clear tile cache if disabled
@@ -167,11 +211,11 @@ class AppCore extends EventEmitter {
         // check if the metadata file exists
         if (fs.existsSync(path.join(AppCore.root, "src", "cachedtiles"))) {
           // reset the metadata and remove the metadata file
-          this.cacheMeta = {
+          this.setTileCacheMetadata({
             tiles: {},
             fileList: [],
             runningSize: 0,
-          };
+          });
           fs.rmSync(path.join(AppCore.root, "src", "cachedtiles"), {
             recursive: true,
             force: true,
@@ -183,72 +227,24 @@ class AppCore extends EventEmitter {
       }
     }
 
-    // load command list
-    try {
-      this.cmdList = JSON.parse(
-        fs.readFileSync(path.join(AppCore.root, "commands.json")),
-      );
-
-      APRSCmd.createCommandList(this.cmdList);
-
-      log.debug("Commands loaded");
-    } catch (err) {
-      log.warn(
-        "Failed to load commands file, some features will not be available: " +
-          err.message,
-      );
-      this.cmdList = [];
-    }
-
-    // load stateflags
-    try {
-      this.stateflags = JSON.parse(
-        fs.readFileSync(path.join(AppCore.root, "stateflags.json")),
-      );
-
-      APRSTelem.createStateflagList(this.stateflags);
-
-      log.debug("Stateflags loaded");
-    } catch (err) {
-      log.warn(
-        "Failed to load stateflags file, some features will not be available: " +
-          err.message,
-      );
-      this.stateflags = [];
-    }
-
-    // load control list
-    try {
-      this.ctrlList = JSON.parse(
-        fs.readFileSync(path.join(AppCore.root, "control.json")),
-      );
-
-      GSControl.createControlList(this.ctrlList);
-
-      log.debug("Control commands loaded");
-    } catch (err) {
-      log.warn(
-        "Failed to load control command file, some features will not be available: " +
-          err.message,
-      );
-      this.ctrlList = [];
-    }
-
     // load tile cache metadata
     try {
-      this.cacheMeta = JSON.parse(
+      const cacheMeta = JSON.parse(
         fs.readFileSync(
           path.join(AppCore.root, "src", "cachedtiles", "metadata.json"),
         ),
       );
-      log.debug("Cache metadata loaded");
+
+      if (this.setTileCacheMetadata(cacheMeta))
+        log.debug("Cache metadata loaded");
+      else throw new Error("Invalid tile cache metadata");
     } catch (err) {
       // load defaults if no metadata file
-      this.cacheMeta = {
+      this.setTileCacheMetadata({
         tiles: {},
         fileList: [],
         runningSize: 0,
-      };
+      });
       log.warn(
         'Failed to load cache metadata file, using defaults: "' +
           err.message +
@@ -267,7 +263,7 @@ class AppCore extends EventEmitter {
         ) {
           fs.writeFileSync(
             path.join(AppCore.root, "src", "cachedtiles", "metadata.json"),
-            JSON.stringify(cacheMeta, null, "\t"),
+            JSON.stringify(this.cacheMeta, null, "\t"),
           );
           log.info("Metadata file successfully created");
         }
@@ -275,6 +271,23 @@ class AppCore extends EventEmitter {
         log.err('Failed to create metadata file: "' + err.message + '"');
       }
     }
+  }
+
+  loadWindows(mainSession, pluginsSession) {
+    this.mainSession = mainSession;
+    this.pluginsSession = pluginsSession;
+
+    // expose plugin API's in main session
+
+    // create main window
+    this.main.createWindows(mainSession);
+
+    this.addWindows(this.main.getWindows());
+
+    // create plugin windows
+    this.plugins.createWindows(pluginsSession);
+
+    this.addWindows(this.plugins.getWindows());
   }
 
   loadStreams() {
@@ -332,14 +345,6 @@ class AppCore extends EventEmitter {
     });
   }
 
-  getStreamTypes() {
-    const types = [];
-    this.streamCallbacks.forEach((val, name) => {
-      if (!name.match("debug-.+")) types.push(name);
-    });
-    return types;
-  }
-
   listenForData() {
     this.main.on("data", (type, data) => {
       this.windows.forEach((val, key) => {
@@ -358,45 +363,6 @@ class AppCore extends EventEmitter {
     return this.appConfig;
   }
 
-  getStreams() {
-    return this.streams;
-  }
-
-  addWindows(windows) {
-    if (windows instanceof Map) {
-      windows.forEach((val, key) => {
-        this.windows.set(key, val);
-      });
-    } else {
-      log.err("Expected Map, but did not get one. Windows not added!");
-    }
-  }
-
-  registerWindowReloadCallback(name, cb) {
-    if (!this.windowReloadCallbacks.has(name))
-      this.windowReloadCallbacks.set(name, cb);
-    else log.err(`Callback to load window ${name} already registered!`);
-  }
-
-  loadWindows(mainSession, pluginsSession) {
-    this.mainSession = mainSession;
-    this.pluginsSession = pluginsSession;
-
-    this.main.createWindows(mainSession);
-
-    this.addWindows(this.main.getWindows());
-
-    this.plugins.createWindows(pluginsSession);
-
-    this.addWindows(this.plugins.getWindows());
-  }
-
-  reloadWindow(name) {
-    if (this.windowReloadCallbacks.has(name))
-      this.windowReloadCallbacks.get(name)();
-    else log.debug(`No load callbck registered for ${name}`);
-  }
-
   getWindows() {
     return this.windows;
   }
@@ -410,35 +376,126 @@ class AppCore extends EventEmitter {
     return this.windows.get("main");
   }
 
-  initRendererEvent(name, windowName) {
-    // this.registerWindowInterfaceCallback(windowName, () => {
-    //   if (this.windows.get(windowName))
-    //     this.windows.get(windowName).webContents.send("renderer-event", name);
-    // });
+  getStreams() {
+    return this.streams;
+  }
+
+  getStreamTypes() {
+    const types = [];
+    this.streamCallbacks.forEach((val, name) => {
+      if (!name.match("debug-.+")) types.push(name);
+    });
+    return types;
+  }
+
+  getCommandList() {
+    return this.cmdList;
+  }
+
+  getStateflags() {
+    return this.stateflags;
+  }
+
+  getControlList() {
+    return this.ctrlList;
+  }
+
+  getTileCacheMetadata() {
+    return this.cacheMeta;
+  }
+
+  setAppConfig(appConfig) {
+    if (appConfig instanceof Object) {
+      if (
+        appConfig.debugScale !== undefined ||
+        appConfig.noGUI !== undefined ||
+        appConfig.version !== this.version
+      ) {
+        log.err("Tried to set invalid config");
+      } else {
+        this.appConfig = appConfig;
+        // setup logger
+        log.useDebug = this.appConfig.debug.value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  addWindows(windows) {
+    if (windows instanceof Map) {
+      windows.forEach((val, key) => {
+        this.windows.set(key, val);
+      });
+      return true;
+    } else {
+      log.err("Expected Map, but did not get one. Windows not added!");
+    }
+    return false;
+  }
+
+  setStreams(streams) {
+    if (streams instanceof Array) this.streams = streams;
+    return streams instanceof Array;
+  }
+
+  setCommandList(cmdList) {
+    if (cmdList instanceof Array) {
+      this.cmdList = cmdList;
+      APRSCmd.createCommandList(this.cmdList);
+      return true;
+    }
+    return false;
+  }
+
+  setStateflags(stateflags) {
+    if (stateflags instanceof Array) {
+      this.stateflags = stateflags;
+      APRSTelem.createStateflagList(this.stateflags);
+      return true;
+    }
+    return false;
+  }
+
+  setControlList(ctrlList) {
+    if (ctrlList instanceof Array) {
+      this.ctrlList = ctrlList;
+      GSControl.createControlList(this.ctrlList);
+      return true;
+    }
+    return false;
+  }
+
+  setTileCacheMetadata(cacheMeta) {
+    if (cacheMeta instanceof Object) {
+      this.cacheMeta = cacheMeta;
+      return true;
+    }
+    return false;
+  }
+
+  registerWindowReloadCallback(name, cb) {
+    if (!this.windowReloadCallbacks.has(name))
+      this.windowReloadCallbacks.set(name, cb);
+    else log.err(`Callback to load window ${name} already registered!`);
+  }
+
+  reloadWindow(name) {
+    if (this.windowReloadCallbacks.has(name))
+      this.windowReloadCallbacks.get(name)();
+    else log.debug(`No load callbck registered for ${name}`);
   }
 
   initMainEvent(eventName, cb) {
     ipcMain.on(eventName, (event, ...args) => {
       cb(event, ...args);
     });
-
-    // this.registerWindowInterfaceCallback(windowName, () => {
-    //   if (this.windows.get(windowName)) {
-    //     log.debug("Loading event " + name);
-    //     this.windows.get(windowName).webContents.send("renderer-send", name);
-    //   }
-    // });
   }
 
   initMainHandler(eventName, cb) {
     ipcMain.handle(eventName, (event, ...args) => {
       return cb(event, ...args);
     });
-
-    // this.registerWindowInterfaceCallback(windowName, () => {
-    //   if (this.windows.get(windowName))
-    //     this.windows.get(windowName).webContents.send("renderer-invoke", name);
-    // });
   }
 
   registerStreamCallback(name, createCB) {
@@ -459,15 +516,6 @@ class AppCore extends EventEmitter {
       });
     }
   }
-
-  // registerWindowInterfaceCallback(name, cb) {
-  //   if (!this.windowInterfaceCallbacks.has(name)) {
-  //     this.windowInterfaceCallbacks.set(name, [cb]);
-  //   } else {
-  //     this.windowInterfaceCallbacks.get(name).push(cb);
-  //     log.debug(this.windowInterfaceCallbacks.get(name).length);
-  //   }
-  // }
 
   setClosed() {
     this.closed = true;
